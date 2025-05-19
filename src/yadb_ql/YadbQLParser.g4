@@ -61,8 +61,9 @@ delete_stmt
 	: DELETE_ FROM_ table_name WHERE_ expr
 ;
 
+// TODO FIX THIS
 select_stmt
-	: 
+	: SELECT_ STAR FROM_ table_name
 ;
 
 drop_table_stmt

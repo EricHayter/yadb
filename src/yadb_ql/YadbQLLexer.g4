@@ -37,6 +37,7 @@ NOT_EQ2   : '<>';
 CREATE_				: 'CREATE';
 DELETE_				: 'DELTE';
 INSERT_				: 'INSERT';
+SELECT_				: 'SELECT';
 DROP_				: 'DROP';
 WHERE_				: 'WHERE';
 FROM_				: 'FROM';
