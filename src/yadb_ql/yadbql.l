@@ -9,21 +9,24 @@ hex_digit [0-9A-F]
 
 %%
 
-";"                      { return SCOL;   // Basic symbols }
+";"                      { return SCOL; }
 ","                      { return COMMA; }
 "("                      { return OPEN_PAR; }
 ")"                      { return CLOSE_PAR; }
 "=="                     { return EQ; }
 
-"\"" (~"\"" | "\"\"")* "\""   	{ return IDENTIFIER;  // String-like identifier }
-"`" (~"`" | "``")* "`"         	{ return IDENTIFIER; }
-"[" ~"]"* "]"                 	{ return IDENTIFIER; }
 
-"\'" (~"\'" | "\'\'")* "\'"   	{ return STRING_LITERAL;  // String literal }
 
-"0x" {hex_digit}+               {  return NUMERIC_LITERAL;  // Hexadecimal literal }
+"\""(~"\""|"\"\"")*"\""   	{ return IDENTIFIER; }
+"`"(~"`"|"``")*"`"         	{ return IDENTIFIER; }
+"["~"]"*"]"                 { return IDENTIFIER; }
 
-[ \u00B\t\r\n]		
+"\'"(~"\'"|"\'\'")*"\'"   	{ return STRING_LITERAL; }
+
+(({digit})+("."{digit}*)?|("."{digit}+))("E"[-+]?{digit}+)? { return NUMERIC_LITERAL; }
+"0x"{hex_digit}+            { return NUMERIC_LITERAL; }
+
+[ \u00B\t\r\n]	
 
 %%
 
