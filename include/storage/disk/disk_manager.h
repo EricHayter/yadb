@@ -3,22 +3,22 @@
 #include "common/type_definitions.h"
 #include <filesystem>
 #include <fstream>
-#include <unordered_map>
 #include <list>
 #include <span>
+#include <unordered_map>
 
 using PageData = std::span<char, PAGE_SIZE>;
 
 class DiskManager {
 public:
     DiskManager(const std::filesystem::path& db_file);
-	~DiskManager();
+    ~DiskManager();
 
     // Write data to page to given id
     void WritePage(page_id_t page_id, PageData page_data);
 
     // Read contents of entire page
-	void ReadPage(page_id_t page_id, PageData page_data);
+    void ReadPage(page_id_t page_id, PageData page_data);
 
 private:
     std::size_t AllocatePage();
