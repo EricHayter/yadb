@@ -7,7 +7,6 @@
 #include <span>
 #include <unordered_map>
 
-using PageData = std::span<char, PAGE_SIZE>;
 
 class DiskManager {
 public:
