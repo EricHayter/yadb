@@ -11,6 +11,12 @@ DiskScheduler::DiskScheduler()
 			DiskIOTask &task = tasks_m.front();
 
 			// perform the logic here
+			if (task.is_write) {
+				disk_manager_m.WritePage(task.page_id, task.data);	
+				task.result.
+			} else {
+
+			}
 
 			tasks_m.pop();
 			lk.unlock();
