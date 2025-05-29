@@ -5,10 +5,6 @@
 layout: home
 ---
 
+Welcome to the Yet Another Database Homepage. If this if your first time here
+check out the [about](/about/) page to for the motivation of this project.
 
-Welcome to the Yet Another Database Homepage
-
-{% assign date = '2025-05-29T15:30:00Z' %}
-
-- Original date - {{ date }}
-- With timeago filter - {{ date | timeago }}
