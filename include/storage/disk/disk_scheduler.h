@@ -6,6 +6,7 @@
 #include <optional>
 #include <thread>
 #include <condition_variable>
+#include <stop_token>
 
 struct DiskIOTask
 {
@@ -23,10 +24,11 @@ class DiskScheduler
 	void Enqueue(const DiskIOTask& task);
 
 	private:
-	std::thread worker_thread_m;	
+	void WorkerFunction(std::stop_token st);
+
+	std::jthread worker_thread_m;	
 	std::condition_variable cv_m;
 	std::mutex mut_m;
 	std::queue<DiskIOTask> tasks_m;
 	DiskManager disk_manager_m;
-	// TODO
 };
