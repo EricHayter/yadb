@@ -7,7 +7,6 @@
 #include <span>
 #include <unordered_map>
 
-
 class DiskManager {
 public:
     DiskManager(const std::filesystem::path& db_file);
