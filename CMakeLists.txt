@@ -24,6 +24,7 @@ enable_testing()
 add_executable(
   hello_test
   tests/hello_test.cpp
+  tests/storage/disk/disk_manager_test.cpp src/storage/disk/disk_manager.cpp
 )
 target_link_libraries(
   hello_test
