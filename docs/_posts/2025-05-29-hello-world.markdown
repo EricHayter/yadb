@@ -5,8 +5,8 @@ date:   2025-05-29 15:45:10 -0400
 categories: dev
 ---
 
-> "A journey of a thousand miles begins with a single step."
-> - Lao Tzu
+> "A journey of a thousand miles begins with your first step... but ends with you collapsing a thousand miles away, probably in some desert somewhere."
+> - Dylan Macdonald
 
 This is the start of the developer logs. Here I will give updates on the
 development of yadb after most major changes. The project has been roughly
