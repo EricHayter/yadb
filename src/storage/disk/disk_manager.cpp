@@ -17,11 +17,12 @@ DiskManager::DiskManager(const std::filesystem::path& db_file, std::size_t page_
     db_io_m.open(db_file_m, std::ios::in | std::ios::out | std::ios::binary | std::ios::trunc);
     assert(db_io_m.is_open());
 
-	std::filesystem::resize_file(db_file_m, page_capacity_m * PAGE_SIZE);
-	assert(page_capacity * PAGE_SIZE == std::filesystem::file_size(db_file_m));
+	// TODO check to see if this could fail
+	std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
+	assert(GetDatabaseFileSize() == std::filesystem::file_size(db_file_m));
 	for (int i = 0; i < page_capacity_m; i++)
 	{
-		free_pages_m.push_back(i * PAGE_SIZE);
+		free_pages_m.insert(i);
 	}
 
 }
@@ -31,18 +32,10 @@ DiskManager::~DiskManager()
     db_io_m.close();
 }
 
-// maybe look returning an error code
 void DiskManager::WritePage(page_id_t page_id, PageData page_data)
 {
-    std::size_t offset;
-    if (offset_map_m.contains(page_id)) {
-        offset = offset_map_m[page_id];
-    } else {
-        // TODO should this really be how I am handling it?
-        offset = AllocatePage();
-        offset_map_m[page_id] = offset;
-    }
-
+	assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
+    std::size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
     db_io_m.write(page_data.data(), page_data.size());
 	assert(db_io_m.good());
@@ -51,40 +44,49 @@ void DiskManager::WritePage(page_id_t page_id, PageData page_data)
 // Read the contents of page data into page_data
 void DiskManager::ReadPage(page_id_t page_id, PageData page_data)
 {
-    assert(offset_map_m.contains(page_id));
-    size_t offset = offset_map_m[page_id];
+	assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
+    size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
     db_io_m.read(page_data.data(), page_data.size());
-
-    // check the codes to see if it failed...
+	assert(db_io_m.good());
 }
 
 void DiskManager::DeletePage(page_id_t page_id)
 {
-	if (not offset_map_m.contains(page_id))
-		return;
-
-	std::size_t offset = offset_map_m[page_id];
-	offset_map_m.erase(page_id);
-	free_pages_m.push_back(offset);
+	// TODO might be worth to validate that this isn't a repeat?
+	free_pages_m.insert(page_id);
 }
 
-std::size_t DiskManager::AllocatePage()
+page_id_t DiskManager::AllocatePage()
 {
-    size_t offset;
+    page_id_t page_id;
     if (not free_pages_m.empty()) {
-        offset = free_pages_m.back();
-        free_pages_m.pop_back();
-	} else if (page_capacity_m == 0) {
-		page_capacity_m = 1;
-		std::filesystem::resize_file(db_file_m, PAGE_SIZE);
-		offset = 0;
-    } else if (page_capacity_m > 0){
-        if (offset_map_m.size() == page_capacity_m) {
-            page_capacity_m *= 2;
-            std::filesystem::resize_file(db_file_m, page_capacity_m * PAGE_SIZE);
-        }
-        offset = offset_map_m.size() * PAGE_SIZE;
+		auto iter = free_pages_m.begin(); 
+		page_id = *iter;
+		free_pages_m.erase(iter);
+	} else {
+		page_id = page_capacity_m;
+		if (page_capacity_m == 0) {
+			page_capacity_m = 1;
+		} else {
+			page_capacity_m *= 2;
+		}
+		std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
+
+		// populate free page list with new pages
+		for (int id = page_id + 1;  id < page_capacity_m;  id++)
+			free_pages_m.insert(id);
     }
-    return offset;
+    return page_id;
+}
+
+std::size_t DiskManager::GetOffset(page_id_t page_id)
+{
+	return page_id * PAGE_SIZE;
+}
+
+
+std::size_t DiskManager::GetDatabaseFileSize()
+{
+	return page_capacity_m * PAGE_SIZE;
 }
