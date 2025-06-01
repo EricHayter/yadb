@@ -7,7 +7,8 @@
 class FrameHandle {
 	public:
 	FrameHandle(frame_id_t frame_id) : frame_id_m(frame_id) {}
-	PageData GetData() { return data_m; };
+	PageData GetMutData();
+	ImutPageData GetData();
 	
 	private:
 	const frame_id_t frame_id_m;
