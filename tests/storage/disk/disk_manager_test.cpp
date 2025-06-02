@@ -32,9 +32,10 @@ TEST_F(DiskManagerTest, TestSimpleWriteRead)
 	std::filesystem::path temp_db_file(temp_dir / "db_file");
 	std::array<char, PAGE_SIZE> page_data_write;
 	page_data_write.fill('A');
-	page_id_t page_id = 42;
 
 	DiskManager disk_manager(temp_db_file);
+
+	page_id_t page_id = disk_manager.AllocatePage();
 
 	disk_manager.WritePage(page_id, page_data_write);
 
@@ -55,15 +56,15 @@ TEST_F(DiskManagerTest, TestFreePage)
 	std::filesystem::path temp_db_file(temp_dir / "db_file");
 	std::array<char, PAGE_SIZE> page_data_write;
 	page_data_write.fill('A');
-	page_id_t page_id = 42;
 
 	DiskManager disk_manager(temp_db_file, 1);
+	page_id_t page_id = disk_manager.AllocatePage();
 
 	disk_manager.WritePage(page_id, page_data_write);
 	
 	disk_manager.DeletePage(page_id);
 
-	page_id_t new_page_id = 41;
+	page_id_t new_page_id = disk_manager.AllocatePage();
 	disk_manager.WritePage(new_page_id, page_data_write);
 	
 	// ensure that only one page was used (i.e. the free page was used)
@@ -81,8 +82,9 @@ TEST_F(DiskManagerTest, TestResizePage)
 	page_data_write.fill('A');
 	DiskManager disk_manager(temp_db_file, 1);
 
-	for (int id = 0; id < 8; id++)
+	for (int i = 0; i < 8; i++)
 	{
-		disk_manager.WritePage(id, page_data_write);	
+		page_id_t page_id = disk_manager.AllocatePage();
+		disk_manager.WritePage(page_id, page_data_write);	
 	}
 }
