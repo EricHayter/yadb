@@ -13,6 +13,7 @@ enable_testing()
 
 add_executable(
   yadb_test
+  EXCLUDE_FROM_ALL
   tests/storage/disk/disk_manager_test.cpp src/storage/disk/disk_manager.cpp
 )
 target_link_libraries(
