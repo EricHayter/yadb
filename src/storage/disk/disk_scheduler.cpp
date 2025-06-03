@@ -1,8 +1,11 @@
 #include "storage/disk/disk_scheduler.h"
+#include "common/type_definitions.h"
 #include "storage/disk/disk_manager.h"
 #include "storage/disk/io_tasks.h"
+#include <mutex>
 #include <stop_token>
 #include <thread>
+#include <variant>
 
 DiskScheduler::DiskScheduler(const std::filesystem::path& db_file) :
 	disk_manager_m(db_file),
@@ -13,58 +16,99 @@ DiskScheduler::DiskScheduler(const std::filesystem::path& db_file) :
 DiskScheduler::~DiskScheduler()
 {
 	worker_thread_m.request_stop();
+	cv_m.notify_one();
 }
+
+void DiskScheduler::AllocatePage(std::promise<page_id_t> &&result)
+{
+	IOTasks::AllocatePageTask task{
+		.result = std::move(result),
+	};
+
+	std::lock_guard<std::mutex> lk(mut_m);
+	tasks_m.push(std::move(task));
+	cv_m.notify_one();
+}
+
+void DiskScheduler::DeletePage(page_id_t page_id, std::promise<void> &&done)
+{
+	IOTasks::DeletePageTask task{
+		.done = std::move(done),
+	};
+
+	std::lock_guard<std::mutex> lk(mut_m);
+	tasks_m.push(std::move(task));
+	cv_m.notify_one();
+}
+
+void DiskScheduler::ReadPage(page_id_t page_id, PageData data, std::promise<void> &&done)
+{
+	IOTasks::ReadPageTask task{
+		.page_id = page_id,
+		.data = data,
+		.done = std::move(done),
+	};
+
+	std::lock_guard<std::mutex> lk(mut_m);
+	tasks_m.push(std::move(task));
+	cv_m.notify_one();
+}
+
+void DiskScheduler::WritePage(page_id_t page_id, PageData data, std::promise<void> &&done)
+{
+	IOTasks::WritePageTask task{
+		.page_id = page_id,
+		.data = data,
+		.done = std::move(done),
+	};
+
+	std::lock_guard<std::mutex> lk(mut_m);
+	tasks_m.push(std::move(task));
+	cv_m.notify_one();
+}
+
 
 void DiskScheduler::WorkerFunction(std::stop_token stop_token)
 {
-	std::unique_lock<std::mutex> lk(mut_m);
 	while (not stop_token.stop_requested())
 	{
-		cv_m.wait(lk, [this](){ return not tasks_m.empty(); });
+		std::unique_lock<std::mutex> lk(mut_m);
+		cv_m.wait(lk, [this, &stop_token](){ 
+			return not tasks_m.empty() || stop_token.stop_requested(); 
+		});
+
+		if (stop_token.stop_requested())
+			break;
+
 		while (not tasks_m.empty())
 		{
-			IOTasks::Task task = std::move(tasks_m.front());		
+			IOTasks::Task task = std::move(tasks_m.front());
 			tasks_m.pop();
 			lk.unlock();
 
-			// Process everything here
-			// TODO pass exceptions too
-			switch (task.type) {
-			case IOTasks::TaskType::CREATE_PAGE: {
-				IOTasks::CreatePageData data = std::move(std::get<IOTasks::CreatePageData>(task.data));
-				page_id_t page_id = disk_manager_m.AllocatePage();
-				data.page_promise.set_value(page_id);
-				break;
-			}
-			case IOTasks::TaskType::DELETE_PAGE: {
-				IOTasks::DeletePageData data = std::move(std::get<IOTasks::DeletePageData>(task.data));
-				disk_manager_m.DeletePage(data.page_id);
-				data.completed_promise.set_value();
-				break;
-			}
-			case IOTasks::TaskType::WRITE_PAGE: {
-				IOTasks::WritePageData data = std::move(std::get<IOTasks::WritePageData>(task.data));
-				disk_manager_m.WritePage(data.page_id, data.data);
-				data.completed_promise.set_value();
-				break;
-			}
-			case IOTasks::TaskType::READ_PAGE: {
-				IOTasks::ReadPageData data = std::move(std::get<IOTasks::ReadPageData>(task.data));
-				disk_manager_m.ReadPage(data.page_id, data.data);
-				data.data_promise.set_value(data.data);
-				break;
-			}
-			}
+			// Process the task accordingly
+			std::visit([this](auto&& task) {
+				using namespace IOTasks;
+				using T = std::decay_t<decltype(task)>;
+				if constexpr(std::is_same_v<T, AllocatePageTask>) {
+					page_id_t page_id = disk_manager_m.AllocatePage();
+					task.result.set_value(page_id);
+				} else if constexpr(std::is_same_v<T, IOTasks::DeletePageTask>) {
+					disk_manager_m.DeletePage(task.page_id);
+					task.done.set_value();	
+				} else if constexpr(std::is_same_v<T, IOTasks::ReadPageTask>) {
+					disk_manager_m.ReadPage(task.page_id, task.data);
+					task.done.set_value();
+				} else if constexpr(std::is_same_v<T, IOTasks::WritePageTask>) {
+					disk_manager_m.WritePage(task.page_id, task.data);
+					task.done.set_value();
+				}
+				// do nothing if an invalid task type.
+				// TODO maybe make this more rigid with an always_false<T>?
+			}, std::move(task));
 
 			lk.lock();
 		}
 	}
 }
 
-
-void DiskScheduler::Enqueue(const IOTasks::Task& task)
-{
-	std::lock_guard<std::mutex> lg(mut_m);
-	tasks_m.push(task);
-	cv_m.notify_one();
-}

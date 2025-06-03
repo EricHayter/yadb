@@ -5,36 +5,27 @@
 
 namespace IOTasks {
 
-enum class TaskType {
-	CREATE_PAGE,
-	DELETE_PAGE,
-	WRITE_PAGE,
-	READ_PAGE,
+struct AllocatePageTask {
+	std::promise<page_id_t> result;
 };
 
-struct CreatePageData {
-	std::promise<page_id_t> page_promise;
-};
-
-struct DeletePageData {
+struct DeletePageTask {
 	page_id_t page_id;
-	std::promise<void> completed_promise;
+	std::promise<void> done;
 };
 
-struct WritePageData {
+struct WritePageTask {
 	page_id_t page_id;
 	PageData data;
-	std::promise<void> completed_promise;
+	std::promise<void> done;
 };
 
-struct ReadPageData {
+struct ReadPageTask {
 	page_id_t page_id;
 	PageData data;
-	std::promise<PageData> data_promise;
+	std::promise<void> done;
 };
 
-struct Task {
-	TaskType type;
-	std::variant<CreatePageData, DeletePageData, WritePageData, ReadPageData> data;
-};
+using Task = std::variant<AllocatePageTask, DeletePageTask, WritePageTask, ReadPageTask>;
+
 }; // namespace IOTasks

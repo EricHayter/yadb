@@ -15,7 +15,11 @@ class DiskScheduler
 	public:
 	DiskScheduler(const std::filesystem::path& db_file);
 	~DiskScheduler();
-	void Enqueue(const IOTasks::Task& task);
+
+	void AllocatePage(std::promise<page_id_t> &&result);
+	void DeletePage(page_id_t page_id, std::promise<void> &&done);
+	void ReadPage(page_id_t page_id, PageData data, std::promise<void> &&done);
+	void WritePage(page_id_t page_id, PageData data, std::promise<void> &&done);
 
 	private:
 	void WorkerFunction(std::stop_token stop_token);
