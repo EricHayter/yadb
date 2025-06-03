@@ -33,7 +33,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
 	std::filesystem::path temp_db_file(temp_dir / "db_file");
 	DiskScheduler disk_scheduler(temp_db_file);
 	std::vector<std::jthread> threads;
-	int thread_count = 1;
+	int thread_count = 64;
 
 	auto thread_func = [&disk_scheduler](int i){
 		// create the page
