@@ -15,6 +15,7 @@ add_executable(
   yadb_test
   EXCLUDE_FROM_ALL
   tests/storage/disk/disk_manager_test.cpp src/storage/disk/disk_manager.cpp
+  tests/storage/disk/disk_scheduler_test.cpp src/storage/disk/disk_scheduler.cpp
 )
 target_link_libraries(
   yadb_test
