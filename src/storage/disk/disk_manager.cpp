@@ -20,9 +20,9 @@ DiskManager::DiskManager(const std::filesystem::path& db_file, std::size_t page_
 	// TODO check to see if this could fail
 	std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
 	assert(GetDatabaseFileSize() == std::filesystem::file_size(db_file_m));
-	for (int i = 0; i < page_capacity_m; i++)
+	for (page_id_t id = 0; id < page_capacity_m; id++)
 	{
-		free_pages_m.insert(i);
+		free_pages_m.insert(id);
 	}
 
 }
