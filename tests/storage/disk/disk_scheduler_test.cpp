@@ -24,9 +24,39 @@ class DiskSchedulerTest : public testing::Test {
 
 	~DiskSchedulerTest()
 	{
-		std::filesystem::remove_all(temp_dir);
+//		std::filesystem::remove_all(temp_dir);
 	}
 };
+
+TEST_F(DiskSchedulerTest, TestConcurrentPageAllocation_UniquePageIds)
+{
+    std::filesystem::path temp_db_file(temp_dir / "db_file_unique_ids");
+    DiskScheduler disk_scheduler(temp_db_file);
+    const int thread_count = 2048;
+
+    std::vector<std::jthread> threads;
+    std::vector<std::future<page_id_t>> futures(thread_count);
+    std::vector<std::promise<page_id_t>> promises(thread_count);
+
+    // Launch concurrent allocation
+    for (int i = 0; i < thread_count; ++i) {
+        futures[i] = promises[i].get_future();
+        threads.emplace_back([&disk_scheduler, p = std::move(promises[i])]() mutable {
+            disk_scheduler.AllocatePage(std::move(p));
+        });
+    }
+
+    // Collect page IDs
+    std::set<page_id_t> page_ids;
+    for (int i = 0; i < thread_count; ++i) {
+        page_id_t id = futures[i].get();
+        auto insert_result = page_ids.insert(id);
+		EXPECT_TRUE(insert_result.second) << "Page id: " << id << " already in set\n";
+    }
+
+    // Ensure all page IDs are unique
+    EXPECT_EQ(page_ids.size(), thread_count);
+}
 
 TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
 {
@@ -51,14 +81,14 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
 		write_future.get();
 
 		// perform the read
-		std::vector<char> read_buffer(PAGE_SIZE);
+		std::vector<char> read_buffer(PAGE_SIZE, 0);
 		PageData read_data_view(read_buffer.begin(), PAGE_SIZE);
 		std::promise<void> read_promise;
 		std::future<void> read_future = read_promise.get_future();
 		disk_scheduler.ReadPage(page_id, read_data_view, std::move(read_promise));
 		read_future.get();
 
-		EXPECT_EQ(read_buffer, write_buffer);
+		EXPECT_EQ(read_buffer, write_buffer) << "Integrity issue on " << page_id << "\n";
 
 		std::promise<void> delete_promise;
 		std::future<void> delete_future = delete_promise.get_future();
