@@ -22,7 +22,7 @@ DiskScheduler::~DiskScheduler()
 void DiskScheduler::AllocatePage(std::promise<page_id_t> &&result)
 {
 	IOTasks::AllocatePageTask task{
-		.result = std::move(result),
+		std::move(result),
 	};
 
 	std::lock_guard<std::mutex> lk(mut_m);
@@ -33,7 +33,8 @@ void DiskScheduler::AllocatePage(std::promise<page_id_t> &&result)
 void DiskScheduler::DeletePage(page_id_t page_id, std::promise<void> &&done)
 {
 	IOTasks::DeletePageTask task{
-		.done = std::move(done),
+		page_id,
+		std::move(done),
 	};
 
 	std::lock_guard<std::mutex> lk(mut_m);
@@ -44,9 +45,9 @@ void DiskScheduler::DeletePage(page_id_t page_id, std::promise<void> &&done)
 void DiskScheduler::ReadPage(page_id_t page_id, PageData data, std::promise<void> &&done)
 {
 	IOTasks::ReadPageTask task{
-		.page_id = page_id,
-		.data = data,
-		.done = std::move(done),
+		page_id,
+		data,
+		std::move(done),
 	};
 
 	std::lock_guard<std::mutex> lk(mut_m);
@@ -57,9 +58,9 @@ void DiskScheduler::ReadPage(page_id_t page_id, PageData data, std::promise<void
 void DiskScheduler::WritePage(page_id_t page_id, PageData data, std::promise<void> &&done)
 {
 	IOTasks::WritePageTask task{
-		.page_id = page_id,
-		.data = data,
-		.done = std::move(done),
+		page_id,
+		data,
+		std::move(done),
 	};
 
 	std::lock_guard<std::mutex> lk(mut_m);
@@ -103,8 +104,6 @@ void DiskScheduler::WorkerFunction(std::stop_token stop_token)
 					disk_manager_m.WritePage(task.page_id, task.data);
 					task.done.set_value();
 				}
-				// do nothing if an invalid task type.
-				// TODO maybe make this more rigid with an always_false<T>?
 			}, std::move(task));
 
 			lk.lock();
