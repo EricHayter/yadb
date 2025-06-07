@@ -10,7 +10,7 @@ struct FrameHeader;
 class ReadPageGuard
 {
 	public:
-	ReadPageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::shared_lock<std::shared_mutex> lk);
+	ReadPageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::shared_lock<std::shared_mutex>&& lk);
 	ImutPageData GetData();
 
 	private:
@@ -22,7 +22,7 @@ class ReadPageGuard
 class WritePageGuard
 {
 	public:
-	WritePageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::unique_lock<std::shared_mutex> lk);
+	WritePageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::unique_lock<std::shared_mutex>&& lk);
 	PageData GetData();
 
 	private:
