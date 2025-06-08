@@ -14,6 +14,14 @@ BufferPoolManager::BufferPoolManager(std::size_t num_frames, const std::filesyst
 	buffer_m(num_frames * PAGE_SIZE)
 {}
 
+BufferPoolManager::~BufferPoolManager()
+{
+	for (auto [page_id, _]: page_map_m)
+	{
+		FlushPage(page_id);
+	}
+}
+
 page_id_t BufferPoolManager::NewPage()
 {
 	std::promise<page_id_t> page_promise;
@@ -106,12 +114,14 @@ bool BufferPoolManager::LoadPage(page_id_t page_id)
 
 void BufferPoolManager::FlushPage(page_id_t page_id)
 {
+	std::lock_guard<std::mutex> lk(mut_m);
 	// TODO Could fit in some asserts here for sure
 	std::promise<void> done_promise;
 	std::future<void> done_future = done_promise.get_future();
 	FrameHeader& frame = frames_m[page_map_m[page_id]];
 	disk_scheduler_m.WritePage(page_id, frame.GetData(), std::move(done_promise));
 	done_future.get();
+    page_map_m.erase(page_id);
 }
 
 void BufferPoolManager::AddAccessor(frame_id_t frame_id, bool is_writer)
@@ -134,5 +144,4 @@ void BufferPoolManager::RemoveAccessor(frame_id_t frame_id)
 		replacer_m.SetEvictable(frame_id, true);
 		available_frame_m.notify_one();
 	}
-	frame.is_dirty = frame.is_dirty || is_writer;
 }

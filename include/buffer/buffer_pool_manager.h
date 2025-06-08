@@ -21,6 +21,7 @@ class BufferPoolManager {
 
 public:
     BufferPoolManager(std::size_t num_frames, const std::filesystem::path& db_file);
+	~BufferPoolManager();
     page_id_t NewPage();
 
     std::optional<ReadPageGuard> TryReadPage(page_id_t page_id);
