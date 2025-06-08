@@ -14,8 +14,8 @@ public:
     ~DiskManager();
 
     page_id_t AllocatePage();
-    void WritePage(page_id_t page_id, PageData page_data);
-    void ReadPage(page_id_t page_id, PageData page_data);
+    void WritePage(page_id_t page_id, PageView page_data);
+    void ReadPage(page_id_t page_id, MutPageView page_data);
 	void DeletePage(page_id_t page_id);
 
 private:

@@ -32,7 +32,7 @@ DiskManager::~DiskManager()
     db_io_m.close();
 }
 
-void DiskManager::WritePage(page_id_t page_id, PageData page_data)
+void DiskManager::WritePage(page_id_t page_id, PageView page_data)
 {
 	assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
     std::size_t offset = GetOffset(page_id);
@@ -42,7 +42,7 @@ void DiskManager::WritePage(page_id_t page_id, PageData page_data)
 }
 
 // Read the contents of page data into page_data
-void DiskManager::ReadPage(page_id_t page_id, PageData page_data)
+void DiskManager::ReadPage(page_id_t page_id, MutPageView page_data)
 {
 	assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
     size_t offset = GetOffset(page_id);
@@ -61,7 +61,7 @@ page_id_t DiskManager::AllocatePage()
 {
     page_id_t page_id;
     if (not free_pages_m.empty()) {
-		auto iter = free_pages_m.begin(); 
+		auto iter = free_pages_m.begin();
 		page_id = *iter;
 		free_pages_m.erase(iter);
 	} else {

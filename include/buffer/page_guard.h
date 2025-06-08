@@ -1,33 +1,48 @@
 #pragma once
+#include "buffer/buffer_pool_manager.h"
+#include "buffer/frame_header.h"
 #include "common/type_definitions.h"
 #include <memory>
-#include <shared_mutex>
 #include <mutex>
+#include <shared_mutex>
+
+/* ============================================================================
+ * Page Guards
+ * ============================================================================
+ * To allow for concurrent access to frames in the buffer pool manager, page
+ * guards allow for a thread safe view into the buffers. This is done using
+ * a shared_lock allowing multiple readers at once to a frame OR a single
+ * writer. Both page guards should be responsible for automatically interacting
+ * with the buffer pool manager to indicate when access has been gained and
+ * released to a page (needed for the replacement policy).
+ */
+
 
 class BufferPoolManager;
-struct FrameHeader;
 
 class ReadPageGuard
 {
-	public:
+public:
 	ReadPageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::shared_lock<std::shared_mutex>&& lk);
-	ImutPageData GetData();
+	~ReadPageGuard();
+	PageView GetData();
 
-	private:
+private:
     BufferPoolManager& buffer_pool_manager_m;
     FrameHeader& frame_header_m;
-    std::shared_lock<std::shared_mutex> lk_m;	
+    std::shared_lock<std::shared_mutex> lk_m;
 };
 
 class WritePageGuard
 {
-	public:
+public:
 	WritePageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::unique_lock<std::shared_mutex>&& lk);
-	PageData GetData();
+	~WritePageGuard();
+	MutPageView GetData();
 
-	private:
+private:
     BufferPoolManager& buffer_pool_manager_m;
     FrameHeader& frame_header_m;
-    std::shared_lock<std::shared_mutex> lk_m;	
+    std::unique_lock<std::shared_mutex> lk_m;
 };
 

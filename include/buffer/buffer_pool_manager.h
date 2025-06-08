@@ -2,25 +2,49 @@
 
 #include "common/type_definitions.h"
 #include "storage/disk/disk_scheduler.h"
+#include "buffer/frame_header.h"
+#include "buffer/page_guard.h"
 #include "buffer/lru_k_replacer.h"
 
+#include <condition_variable>
 #include <filesystem>
 #include <unordered_map>
+#include <optional>
+#include <shared_mutex>
 
-class BufferPoolManager
-{
-	public:
-	BufferPoolManager(std::size_t num_frames, const std::filesystem::path& db_file);
-	page_id_t NewPage();
-	void DeletePage(page_id_t page_id);
-	void WritePage(page_id_t page_id, PageData page_data);
-	void ReadPage(page_id_t page_id, PageData page_data);
+class ReadPageGuard;
+class WritePageGuard;
 
-	private:
-	std::size_t num_frames_m;
-	LRUKReplacer replacer_m;	
-	DiskScheduler disk_scheduler_m;
-	std::vector<char> buffer_m;
-	std::vector<frame_id_t> free_frames_m;
-	std::unordered_map<page_id_t, frame_id_t> page_map_m;
+class BufferPoolManager {
+    friend ReadPageGuard;
+    friend WritePageGuard;
+
+public:
+    BufferPoolManager(std::size_t num_frames, const std::filesystem::path& db_file);
+    page_id_t NewPage();
+
+    std::optional<ReadPageGuard> TryReadPage(page_id_t page_id);
+    ReadPageGuard WaitReadPage(page_id_t page_id);
+
+    std::optional<WritePageGuard> TryWritePage(page_id_t page_id);
+    WritePageGuard WaitWritePage(page_id_t page_id);
+
+private:
+	bool LoadPage(page_id_t page_id);
+	void FlushPage(page_id_t page_id);
+    void AddAccessor(frame_id_t frame_id, bool is_writer);
+    void RemoveAccessor(frame_id_t frame_id);
+
+private:
+    LRUKReplacer replacer_m;
+    DiskScheduler disk_scheduler_m;
+
+    std::vector<char> buffer_m;
+
+    std::size_t num_frames_m;
+    std::unordered_map<page_id_t, frame_id_t> page_map_m;
+    std::vector<FrameHeader> frames_m;
+
+	std::mutex mut_m;
+	std::condition_variable available_frame_m;
 };

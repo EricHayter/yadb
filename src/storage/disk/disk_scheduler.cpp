@@ -42,7 +42,7 @@ void DiskScheduler::DeletePage(page_id_t page_id, std::promise<void> &&done)
 	cv_m.notify_one();
 }
 
-void DiskScheduler::ReadPage(page_id_t page_id, PageData data, std::promise<void> &&done)
+void DiskScheduler::ReadPage(page_id_t page_id, MutPageView data, std::promise<void> &&done)
 {
 	IOTasks::ReadPageTask task{
 		page_id,
@@ -55,7 +55,7 @@ void DiskScheduler::ReadPage(page_id_t page_id, PageData data, std::promise<void
 	cv_m.notify_one();
 }
 
-void DiskScheduler::WritePage(page_id_t page_id, PageData data, std::promise<void> &&done)
+void DiskScheduler::WritePage(page_id_t page_id, PageView data, std::promise<void> &&done)
 {
 	IOTasks::WritePageTask task{
 		page_id,
@@ -74,8 +74,8 @@ void DiskScheduler::WorkerFunction(std::stop_token stop_token)
 	while (not stop_token.stop_requested())
 	{
 		std::unique_lock<std::mutex> lk(mut_m);
-		cv_m.wait(lk, [this, &stop_token](){ 
-			return not tasks_m.empty() || stop_token.stop_requested(); 
+		cv_m.wait(lk, [this, &stop_token](){
+			return not tasks_m.empty() || stop_token.stop_requested();
 		});
 
 		if (stop_token.stop_requested())
@@ -96,7 +96,7 @@ void DiskScheduler::WorkerFunction(std::stop_token stop_token)
 					task.result.set_value(page_id);
 				} else if constexpr(std::is_same_v<T, IOTasks::DeletePageTask>) {
 					disk_manager_m.DeletePage(task.page_id);
-					task.done.set_value();	
+					task.done.set_value();
 				} else if constexpr(std::is_same_v<T, IOTasks::ReadPageTask>) {
 					disk_manager_m.ReadPage(task.page_id, task.data);
 					task.done.set_value();

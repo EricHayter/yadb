@@ -74,7 +74,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
 
 		// perform the write
 		std::vector<char> write_buffer(PAGE_SIZE, i);
-		PageData write_data_view(write_buffer.begin(), PAGE_SIZE);
+		MutPageView write_data_view(write_buffer.begin(), PAGE_SIZE);
 		std::promise<void> write_promise;
 		std::future<void> write_future = write_promise.get_future();
 		disk_scheduler.WritePage(page_id, write_data_view, std::move(write_promise));
@@ -82,7 +82,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
 
 		// perform the read
 		std::vector<char> read_buffer(PAGE_SIZE, 0);
-		PageData read_data_view(read_buffer.begin(), PAGE_SIZE);
+		MutPageView read_data_view(read_buffer.begin(), PAGE_SIZE);
 		std::promise<void> read_promise;
 		std::future<void> read_future = read_promise.get_future();
 		disk_scheduler.ReadPage(page_id, read_data_view, std::move(read_promise));
