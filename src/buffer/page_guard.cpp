@@ -4,9 +4,9 @@
 #include <cassert>
 #include <memory>
 
-ReadPageGuard::ReadPageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader& frame, std::shared_lock<std::shared_mutex>&& lk)
-	: buffer_pool_manager_m(std::make_shared<BufferPoolManager>(buffer_pool_manager))
-	, frame_header_m(std::make_shared<FrameHeader>(frame))
+ReadPageGuard::ReadPageGuard(std::shared_ptr<BufferPoolManager> buffer_pool_manager, std::shared_ptr<FrameHeader> frame, std::shared_lock<std::shared_mutex>&& lk)
+	: buffer_pool_manager_m(buffer_pool_manager)
+	, frame_header_m(frame)
 	  , lk_m(std::move(lk))
 {
 	// Creating a page guard is contingent on owning a lock to the frame's
@@ -45,9 +45,9 @@ PageView ReadPageGuard::GetData()
 	return frame_header_m->GetData();
 }
 
-WritePageGuard::WritePageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::unique_lock<std::shared_mutex>&& lk)
-	: buffer_pool_manager_m(std::make_shared<BufferPoolManager>(buffer_pool_manager))
-	, frame_header_m(std::make_shared<FrameHeader>(frame))
+WritePageGuard::WritePageGuard::WritePageGuard(std::shared_ptr<BufferPoolManager> buffer_pool_manager, std::shared_ptr<FrameHeader> frame, std::unique_lock<std::shared_mutex>&& lk)
+	: buffer_pool_manager_m(buffer_pool_manager)
+	, frame_header_m(frame)
 	, lk_m(std::move(lk))
 {
     // Creating a page guard is contingent on owning a lock to the frame's
