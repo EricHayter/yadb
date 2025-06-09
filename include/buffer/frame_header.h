@@ -1,22 +1,28 @@
 #pragma once
 #include "common/type_definitions.h"
-#include <atomic>
 #include <shared_mutex>
 
 struct FrameHeader
 {
-	MutPageView GetMutData();
-	PageView GetData();
-    const frame_id_t id;
+	FrameHeader(frame_id_t id, MutPageView data_view);
 
-        // Which page's data does this frame hold
+	FrameHeader(FrameHeader& other) = delete;
+	FrameHeader& operator=(FrameHeader& other) = delete;
+	FrameHeader(FrameHeader&& other) = delete;
+	FrameHeader& operator=(FrameHeader&& other) = delete;
+
+	MutPageView GetMutData() { return data; };
+	PageView GetData() { return data; };
+
+    frame_id_t id;
+	MutPageView data;
 	page_id_t page_id;
 
 	// Has this page been altered?
-	bool is_dirty;
+	bool is_dirty{ false };
 
 	// concurrent readers/writers
-	std::atomic<int> pin_count;
+	int pin_count{ 0 };
 
 	// mutex for safely sharing access to the buffer
 	std::shared_mutex mut;
