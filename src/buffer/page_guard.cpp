@@ -1,9 +1,12 @@
 #include "buffer/page_guard.h"
+#include "buffer/buffer_pool_manager.h"
+#include "buffer/frame_header.h"
 #include <cassert>
+#include <memory>
 
 ReadPageGuard::ReadPageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader& frame, std::shared_lock<std::shared_mutex>&& lk)
-	: buffer_pool_manager_m(buffer_pool_manager)
-	, frame_header_m(frame)
+	: buffer_pool_manager_m(std::make_shared<BufferPoolManager>(buffer_pool_manager))
+	, frame_header_m(std::make_shared<FrameHeader>(frame))
 	  , lk_m(std::move(lk))
 {
 	// Creating a page guard is contingent on owning a lock to the frame's
@@ -14,17 +17,37 @@ ReadPageGuard::ReadPageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader
 
 ReadPageGuard::~ReadPageGuard()
 {
-	buffer_pool_manager_m.RemoveAccessor(frame_header_m.id);
+	if (buffer_pool_manager_m != nullptr)
+		buffer_pool_manager_m->RemoveAccessor(frame_header_m->id);
+}
+
+ReadPageGuard::ReadPageGuard(ReadPageGuard&& other)
+	: buffer_pool_manager_m(other.buffer_pool_manager_m)
+	, frame_header_m(other.frame_header_m)
+	, lk_m(std::move(other.lk_m))
+{
+	other.buffer_pool_manager_m = nullptr;
+	other.frame_header_m = nullptr;
+}
+
+ReadPageGuard& ReadPageGuard::operator=(ReadPageGuard&& other)
+{
+	buffer_pool_manager_m = other.buffer_pool_manager_m;
+	frame_header_m = other.frame_header_m;
+	lk_m = std::move(other.lk_m);
+	other.buffer_pool_manager_m = nullptr;
+	other.frame_header_m = nullptr;
+	return *this;
 }
 
 PageView ReadPageGuard::GetData()
 {
-	return frame_header_m.GetData();
+	return frame_header_m->GetData();
 }
 
 WritePageGuard::WritePageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::unique_lock<std::shared_mutex>&& lk)
-	: buffer_pool_manager_m(buffer_pool_manager)
-	, frame_header_m(frame)
+	: buffer_pool_manager_m(std::make_shared<BufferPoolManager>(buffer_pool_manager))
+	, frame_header_m(std::make_shared<FrameHeader>(frame))
 	, lk_m(std::move(lk))
 {
     // Creating a page guard is contingent on owning a lock to the frame's
@@ -35,10 +58,30 @@ WritePageGuard::WritePageGuard(BufferPoolManager& buffer_pool_manager, FrameHead
 
 WritePageGuard::~WritePageGuard()
 {
-	buffer_pool_manager_m.RemoveAccessor(frame_header_m.id);
+	if (buffer_pool_manager_m != nullptr)
+		buffer_pool_manager_m->RemoveAccessor(frame_header_m->id);
+}
+
+WritePageGuard::WritePageGuard(WritePageGuard&& other)
+	: buffer_pool_manager_m(other.buffer_pool_manager_m)
+	, frame_header_m(other.frame_header_m)
+	, lk_m(std::move(other.lk_m))
+{
+	other.buffer_pool_manager_m = nullptr;
+	other.frame_header_m = nullptr;
+}
+
+WritePageGuard& WritePageGuard::operator=(WritePageGuard&& other)
+{
+	buffer_pool_manager_m = other.buffer_pool_manager_m;
+	frame_header_m = other.frame_header_m;
+	lk_m = std::move(other.lk_m);
+	other.buffer_pool_manager_m = nullptr;
+	other.frame_header_m = nullptr;
+	return *this;
 }
 
 MutPageView WritePageGuard::GetData()
 {
-	return frame_header_m.GetMutData();
+	return frame_header_m->GetMutData();
 }

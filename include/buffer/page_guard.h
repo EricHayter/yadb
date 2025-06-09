@@ -25,11 +25,14 @@ class ReadPageGuard
 public:
 	ReadPageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::shared_lock<std::shared_mutex>&& lk);
 	~ReadPageGuard();
+	ReadPageGuard(ReadPageGuard&& other);
+	ReadPageGuard& operator=(ReadPageGuard&& other);
+
 	PageView GetData();
 
 private:
-    BufferPoolManager& buffer_pool_manager_m;
-    FrameHeader& frame_header_m;
+	std::shared_ptr<BufferPoolManager> buffer_pool_manager_m;
+	std::shared_ptr<FrameHeader> frame_header_m;
     std::shared_lock<std::shared_mutex> lk_m;
 };
 
@@ -38,11 +41,14 @@ class WritePageGuard
 public:
 	WritePageGuard(BufferPoolManager& buffer_pool_manager, FrameHeader &frame, std::unique_lock<std::shared_mutex>&& lk);
 	~WritePageGuard();
+	WritePageGuard(WritePageGuard&& other);
+	WritePageGuard& operator=(WritePageGuard&& other);
+
 	MutPageView GetData();
 
 private:
-    BufferPoolManager& buffer_pool_manager_m;
-    FrameHeader& frame_header_m;
+	std::shared_ptr<BufferPoolManager> buffer_pool_manager_m;
+	std::shared_ptr<FrameHeader> frame_header_m;
     std::unique_lock<std::shared_mutex> lk_m;
 };
 
