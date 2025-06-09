@@ -14,10 +14,11 @@ BufferPoolManager::BufferPoolManager(std::size_t num_frames, const std::filesyst
 	replacer_m(),
 	buffer_m(num_frames * PAGE_SIZE)
 {
-	for (frame_id_t id = 0; id < num_frames; num_frames++)
+	for (frame_id_t id = 0; id < num_frames; id++)
 	{
 		MutPageView data_view(buffer_m.begin() + id * PAGE_SIZE, PAGE_SIZE);
 		frames_m.push_back(std::make_shared<FrameHeader>(id, data_view));
+		replacer_m.SetEvictable(id, true);
 	}
 }
 
