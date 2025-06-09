@@ -14,8 +14,10 @@ enable_testing()
 add_executable(
   yadb_test
   EXCLUDE_FROM_ALL
-  tests/storage/disk/disk_manager_test.cpp src/storage/disk/disk_manager.cpp
-  tests/storage/disk/disk_scheduler_test.cpp src/storage/disk/disk_scheduler.cpp
+  tests/storage/disk/disk_manager_test.cpp src/storage/disk/disk_manager.cpp tests/storage/disk/disk_scheduler_test.cpp src/storage/disk/disk_scheduler.cpp
+  tests/buffer/buffer_pool_manager_test.cpp
+  	src/buffer/buffer_pool_manager.cpp src/buffer/lru_k_replacer.cpp
+	src/buffer/page_guard.cpp src/buffer/frame_header.cpp
 )
 target_link_libraries(
   yadb_test
