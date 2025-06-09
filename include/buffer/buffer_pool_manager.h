@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <optional>
 #include <shared_mutex>
+#include <memory>
 
 class ReadPageGuard;
 class WritePageGuard;
@@ -42,9 +43,8 @@ private:
 
     std::vector<char> buffer_m;
 
-    std::size_t num_frames_m;
     std::unordered_map<page_id_t, frame_id_t> page_map_m;
-    std::vector<FrameHeader> frames_m;
+    std::vector<std::shared_ptr<FrameHeader>> frames_m;
 
 	std::mutex mut_m;
 	std::condition_variable available_frame_m;
