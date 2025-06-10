@@ -17,6 +17,7 @@ ReadPageGuard::ReadPageGuard(BufferPoolManager* buffer_pool_manager, FrameHeader
     // shared lock. Otherwise, thread safety cannot be guaranteed, undermining
     // the job the guard itself.
     assert(lk_m.owns_lock());
+    buffer_pool_manager_m->AddAccessor(frame_header_m->id, false);
 }
 
 ReadPageGuard::~ReadPageGuard()
@@ -61,6 +62,7 @@ WritePageGuard::WritePageGuard::WritePageGuard(BufferPoolManager* buffer_pool_ma
     // shared lock. Otherwise, thread safety cannot be guaranteed, undermining
     // the job the guard itself.
     assert(lk_m.owns_lock());
+    buffer_pool_manager_m->AddAccessor(frame_header_m->id, true);
 }
 
 WritePageGuard::~WritePageGuard()
