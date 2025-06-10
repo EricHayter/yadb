@@ -5,7 +5,6 @@
 #include <mutex>
 #include <stop_token>
 #include <thread>
-#include <variant>
 
 DiskScheduler::DiskScheduler(const std::filesystem::path& db_file) :
     disk_manager_m(db_file),
