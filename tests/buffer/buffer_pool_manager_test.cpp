@@ -3,13 +3,13 @@
 #include "common/type_definitions.h"
 #include "gtest/gtest.h"
 #include <algorithm>
-#include <filesystem>
-#include <thread>
-#include <chrono>
-#include <vector>
 #include <atomic>
+#include <chrono>
+#include <filesystem>
 #include <future>
 #include <random>
+#include <thread>
+#include <vector>
 
 /**
  * \brief RAII class for creating a temporary directory for creating files in
@@ -29,55 +29,55 @@ protected:
     }
 };
 
-//TEST_F(DiskManagerTest, TestWaitWriteRead)
+// TEST_F(DiskManagerTest, TestWaitWriteRead)
 //{
-//    int number_frames = 1;
-//    std::filesystem::path temp_db_file(temp_dir / "db_file");
-//    BufferPoolManager buffer_pool_man(number_frames, temp_db_file);
-//    page_id_t page_id = buffer_pool_man.NewPage();
-//    {
-//        std::vector<char> buff(PAGE_SIZE, 'B');
-//        MutPageView page_view(buff.begin(), PAGE_SIZE);
-//        WritePageGuard page_guard = buffer_pool_man.WaitWritePage(page_id);
-//        std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
-//    }
-//    {
-//        const std::vector<char> expected_buf(PAGE_SIZE, 'B');
-//        std::vector<char> buff(PAGE_SIZE, 0);
-//        MutPageView page_view(buff.begin(), PAGE_SIZE);
-//        ReadPageGuard page_guard = buffer_pool_man.WaitReadPage(page_id);
-//        PageView page_data = page_guard.GetData();
-//        std::copy(page_data.begin(), page_data.end(), buff.begin());
-//        EXPECT_EQ(expected_buf, buff);
-//    }
-//}
+//     int number_frames = 1;
+//     std::filesystem::path temp_db_file(temp_dir / "db_file");
+//     BufferPoolManager buffer_pool_man(number_frames, temp_db_file);
+//     page_id_t page_id = buffer_pool_man.NewPage();
+//     {
+//         std::vector<char> buff(PAGE_SIZE, 'B');
+//         MutPageView page_view(buff.begin(), PAGE_SIZE);
+//         WritePageGuard page_guard = buffer_pool_man.WaitWritePage(page_id);
+//         std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
+//     }
+//     {
+//         const std::vector<char> expected_buf(PAGE_SIZE, 'B');
+//         std::vector<char> buff(PAGE_SIZE, 0);
+//         MutPageView page_view(buff.begin(), PAGE_SIZE);
+//         ReadPageGuard page_guard = buffer_pool_man.WaitReadPage(page_id);
+//         PageView page_data = page_guard.GetData();
+//         std::copy(page_data.begin(), page_data.end(), buff.begin());
+//         EXPECT_EQ(expected_buf, buff);
+//     }
+// }
 //
-//TEST_F(DiskManagerTest, TestTryWriteRead)
+// TEST_F(DiskManagerTest, TestTryWriteRead)
 //{
-//    int number_frames = 1;
-//    std::filesystem::path temp_db_file(temp_dir / "db_file");
-//    BufferPoolManager buffer_pool_man(number_frames, temp_db_file);
-//    page_id_t page_id = buffer_pool_man.NewPage();
-//    {
-//        std::vector<char> buff(PAGE_SIZE, 'B');
-//        MutPageView page_view(buff.begin(), PAGE_SIZE);
-//        auto page_guard_opt = buffer_pool_man.TryWritePage(page_id);
-//        ASSERT_TRUE(page_guard_opt.has_value());
-//        WritePageGuard page_guard = std::move(*page_guard_opt);
-//        std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
-//    }
-//    {
-//        const std::vector<char> expected_buf(PAGE_SIZE, 'B');
-//        std::vector<char> buff(PAGE_SIZE, 0);
-//        MutPageView page_view(buff.begin(), PAGE_SIZE);
-//        auto page_guard_opt = buffer_pool_man.TryReadPage(page_id);
-//        EXPECT_TRUE(page_guard_opt.has_value());
-//        ReadPageGuard page_guard = std::move(*page_guard_opt);
-//        PageView page_data = page_guard.GetData();
-//        std::copy(page_data.begin(), page_data.end(), buff.begin());
-//        EXPECT_EQ(expected_buf, buff);
-//    }
-//}
+//     int number_frames = 1;
+//     std::filesystem::path temp_db_file(temp_dir / "db_file");
+//     BufferPoolManager buffer_pool_man(number_frames, temp_db_file);
+//     page_id_t page_id = buffer_pool_man.NewPage();
+//     {
+//         std::vector<char> buff(PAGE_SIZE, 'B');
+//         MutPageView page_view(buff.begin(), PAGE_SIZE);
+//         auto page_guard_opt = buffer_pool_man.TryWritePage(page_id);
+//         ASSERT_TRUE(page_guard_opt.has_value());
+//         WritePageGuard page_guard = std::move(*page_guard_opt);
+//         std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
+//     }
+//     {
+//         const std::vector<char> expected_buf(PAGE_SIZE, 'B');
+//         std::vector<char> buff(PAGE_SIZE, 0);
+//         MutPageView page_view(buff.begin(), PAGE_SIZE);
+//         auto page_guard_opt = buffer_pool_man.TryReadPage(page_id);
+//         EXPECT_TRUE(page_guard_opt.has_value());
+//         ReadPageGuard page_guard = std::move(*page_guard_opt);
+//         PageView page_data = page_guard.GetData();
+//         std::copy(page_data.begin(), page_data.end(), buff.begin());
+//         EXPECT_EQ(expected_buf, buff);
+//     }
+// }
 
 // Test buffer pool eviction when full
 TEST_F(DiskManagerTest, TestBufferPoolEviction)
@@ -137,7 +137,7 @@ TEST_F(DiskManagerTest, TestConcurrentReaders)
 
     const int num_readers = 4;
     std::vector<std::thread> readers;
-    std::atomic<int> successful_reads{0};
+    std::atomic<int> successful_reads { 0 };
 
     for (int i = 0; i < num_readers; ++i) {
         readers.emplace_back([&buffer_pool_man, page_id, &successful_reads]() {
@@ -165,8 +165,8 @@ TEST_F(DiskManagerTest, TestWriterExclusivity)
 
     page_id_t page_id = buffer_pool_man.NewPage();
 
-    std::atomic<bool> first_writer_started{false};
-    std::atomic<bool> second_writer_blocked{true};
+    std::atomic<bool> first_writer_started { false };
+    std::atomic<bool> second_writer_blocked { true };
 
     std::thread writer1([&]() {
         WritePageGuard guard = buffer_pool_man.WaitWritePage(page_id);
@@ -235,7 +235,7 @@ TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
         page_ids.push_back(buffer_pool_man.NewPage());
     }
 
-    std::atomic<int> operations_completed{0};
+    std::atomic<int> operations_completed { 0 };
     std::vector<std::future<void>> futures;
 
     // Launch concurrent readers and writers
@@ -259,7 +259,7 @@ TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
                         // Wait write
                         WritePageGuard guard = buffer_pool_man.WaitWritePage(page_id);
                         std::fill(guard.GetData().begin(), guard.GetData().begin() + 10,
-                                static_cast<char>('A' + i));
+                            static_cast<char>('A' + i));
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     } else if (op == 2) {
                         // Try read
@@ -272,8 +272,8 @@ TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
                         auto guard_opt = buffer_pool_man.TryWritePage(page_id);
                         if (guard_opt.has_value()) {
                             std::fill(guard_opt->GetData().begin(),
-                                    guard_opt->GetData().begin() + 10,
-                                    static_cast<char>('a' + i));
+                                guard_opt->GetData().begin() + 10,
+                                static_cast<char>('a' + i));
                             std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         }
                     }
@@ -334,7 +334,7 @@ TEST_F(DiskManagerTest, TestStressConcurrency)
         page_ids.push_back(buffer_pool_man.NewPage());
     }
 
-    std::atomic<int> successful_operations{0};
+    std::atomic<int> successful_operations { 0 };
     std::vector<std::thread> threads;
 
     for (int t = 0; t < num_threads; ++t) {

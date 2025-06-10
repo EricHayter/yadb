@@ -55,7 +55,8 @@ std::optional<ReadPageGuard> BufferPoolManager::TryReadPage(page_id_t page_id)
     return std::make_optional<ReadPageGuard>(this, frame, std::move(frame_lk));
 }
 
-ReadPageGuard BufferPoolManager::WaitReadPage(page_id_t page_id) {
+ReadPageGuard BufferPoolManager::WaitReadPage(page_id_t page_id)
+{
     // This is not the prettiest solution, but it is effective. Without this
     // deadlocks become possible in cases where a page guard is constructed
     // for the same frame.
@@ -109,7 +110,8 @@ std::optional<WritePageGuard> BufferPoolManager::TryWritePage(page_id_t page_id)
     return std::make_optional<WritePageGuard>(this, frame, std::move(frame_lk));
 }
 
-WritePageGuard BufferPoolManager::WaitWritePage(page_id_t page_id) {
+WritePageGuard BufferPoolManager::WaitWritePage(page_id_t page_id)
+{
     // This is not the prettiest solution, but it is effective. Without this
     // deadlocks become possible in cases where a page guard is constructed
     // for the same frame.
@@ -162,7 +164,6 @@ bool BufferPoolManager::LoadPage(page_id_t page_id)
         return false;
     }
     FrameHeader* frame = frames_m[*frame_id_opt].get();
-
 
     // if the current frame contains page data that was updated
     if (frame->is_dirty) {
