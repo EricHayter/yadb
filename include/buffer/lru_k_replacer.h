@@ -49,7 +49,7 @@ public:
      * are evictable/available at any given time.
      *
      */
-    void TrackFrame(frame_id_t frame_id);
+    void RegisterFrame(frame_id_t frame_id);
 
     /*! \brief Find a frame (if any) to evict using the LRU-K policy
      * \returns The frame id of the frame to remove

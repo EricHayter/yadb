@@ -5,7 +5,7 @@ LRUKReplacer::LRUFrame::LRUFrame(frame_id_t frame_id)
     : frame_id(frame_id)
 {}
 
-void LRUKReplacer::TrackFrame(frame_id_t frame_id)
+void LRUKReplacer::RegisterFrame(frame_id_t frame_id)
 {
     frames_m.emplace(frame_id, LRUFrame(frame_id));
 }
