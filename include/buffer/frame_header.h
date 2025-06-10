@@ -4,27 +4,27 @@
 
 struct FrameHeader
 {
-	FrameHeader(frame_id_t id, MutPageView data_view);
+    FrameHeader(frame_id_t id, MutPageView data_view);
 
-	FrameHeader(FrameHeader& other) = delete;
-	FrameHeader& operator=(FrameHeader& other) = delete;
-	FrameHeader(FrameHeader&& other) = delete;
-	FrameHeader& operator=(FrameHeader&& other) = delete;
+    FrameHeader(FrameHeader& other) = delete;
+    FrameHeader& operator=(FrameHeader& other) = delete;
+    FrameHeader(FrameHeader&& other) = delete;
+    FrameHeader& operator=(FrameHeader&& other) = delete;
 
-	MutPageView GetMutData() { return data; };
-	PageView GetData() { return data; };
+    MutPageView GetMutData() { return data; };
+    PageView GetData() { return data; };
 
     frame_id_t id;
-	MutPageView data;
-	page_id_t page_id;
+    MutPageView data;
+    page_id_t page_id;
 
-	// Has this page been altered?
-	bool is_dirty{ false };
+    // Has this page been altered?
+    bool is_dirty{ false };
 
-	// concurrent readers/writers
-	int pin_count{ 0 };
+    // concurrent readers/writers
+    int pin_count{ 0 };
 
-	// mutex for safely sharing access to the buffer
-	std::shared_mutex mut;
+    // mutex for safely sharing access to the buffer
+    std::shared_mutex mut;
 };
 
