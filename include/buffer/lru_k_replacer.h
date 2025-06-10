@@ -35,7 +35,7 @@ class LRUKReplacer {
     struct LRUFrame {
         LRUFrame() = default;
         LRUFrame(frame_id_t frame_id);
-        frame_id_t frame_id{ frame_id_t(-1) };
+        frame_id_t frame_id { frame_id_t(-1) };
         std::deque<std::time_t> history; /// history of accesses
         bool is_evictable { true };
     };

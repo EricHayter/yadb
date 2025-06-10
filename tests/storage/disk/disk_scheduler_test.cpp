@@ -1,30 +1,29 @@
 #include "common/type_definitions.h"
 #include "storage/disk/disk_scheduler.h"
 #include "storage/disk/io_tasks.h"
-#include <gtest/gtest.h>
 #include <filesystem>
+#include <future>
+#include <gtest/gtest.h>
 #include <thread>
 #include <vector>
-#include <future>
 
 /**
  * \brief RAII class for creating a temporary directory for creating files in
  */
 class DiskSchedulerTest : public testing::Test {
-    protected:
-    std::filesystem::path temp_dir{"testing_temp"};
+protected:
+    std::filesystem::path temp_dir { "testing_temp" };
 
     DiskSchedulerTest()
     {
-        if (not std::filesystem::exists(temp_dir))
-        {
+        if (not std::filesystem::exists(temp_dir)) {
             std::filesystem::create_directory(temp_dir);
         }
     }
 
     ~DiskSchedulerTest()
     {
-//        std::filesystem::remove_all(temp_dir);
+        //        std::filesystem::remove_all(temp_dir);
     }
 };
 
@@ -65,7 +64,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
     std::vector<std::jthread> threads;
     int thread_count = 64;
 
-    auto thread_func = [&disk_scheduler](int i){
+    auto thread_func = [&disk_scheduler](int i) {
         // create the page
         std::promise<page_id_t> page_id_promise;
         std::future<page_id_t> page_id_future = page_id_promise.get_future();
@@ -97,6 +96,6 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
     };
 
     for (int i = 0; i < thread_count; i++) {
-            threads.push_back(std::jthread(thread_func, i));
+        threads.push_back(std::jthread(thread_func, i));
     }
 }

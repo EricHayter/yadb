@@ -3,25 +3,24 @@
 #include "storage/disk/disk_manager.h"
 #include "storage/disk/io_tasks.h"
 #include <condition_variable>
+#include <filesystem>
 #include <future>
 #include <optional>
 #include <queue>
 #include <stop_token>
 #include <thread>
-#include <filesystem>
 
-class DiskScheduler
-{
-    public:
+class DiskScheduler {
+public:
     DiskScheduler(const std::filesystem::path& db_file);
     ~DiskScheduler();
 
-    void AllocatePage(std::promise<page_id_t> &&result);
-    void DeletePage(page_id_t page_id, std::promise<void> &&done);
-    void ReadPage(page_id_t page_id, MutPageView data, std::promise<void> &&done);
-    void WritePage(page_id_t page_id, PageView data, std::promise<void> &&done);
+    void AllocatePage(std::promise<page_id_t>&& result);
+    void DeletePage(page_id_t page_id, std::promise<void>&& done);
+    void ReadPage(page_id_t page_id, MutPageView data, std::promise<void>&& done);
+    void WritePage(page_id_t page_id, PageView data, std::promise<void>&& done);
 
-    private:
+private:
     void WorkerFunction(std::stop_token stop_token);
     std::jthread worker_thread_m;
     std::condition_variable cv_m;

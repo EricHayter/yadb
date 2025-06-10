@@ -2,20 +2,19 @@
 #include "buffer/page_guard.h"
 #include "common/type_definitions.h"
 #include "gtest/gtest.h"
-#include <filesystem>
 #include <algorithm>
+#include <filesystem>
 
 /**
  * \brief RAII class for creating a temporary directory for creating files in
  */
 class DiskManagerTest : public testing::Test {
-    protected:
-    std::filesystem::path temp_dir{"testing_temp"};
+protected:
+    std::filesystem::path temp_dir { "testing_temp" };
 
     DiskManagerTest()
     {
-        if (not std::filesystem::exists(temp_dir))
-        {
+        if (not std::filesystem::exists(temp_dir)) {
             std::filesystem::create_directory(temp_dir);
         }
     }
@@ -31,7 +30,6 @@ TEST_F(DiskManagerTest, TestWaitWriteRead)
     std::filesystem::path temp_db_file(temp_dir / "db_file");
     BufferPoolManager buffer_pool_man(2, temp_db_file);
     page_id_t page_id = buffer_pool_man.NewPage();
-
 
     {
         std::vector<char> buff(PAGE_SIZE, 'B');
@@ -49,16 +47,13 @@ TEST_F(DiskManagerTest, TestWaitWriteRead)
         std::copy(page_data.begin(), page_data.end(), buff.begin());
         EXPECT_EQ(expected_buf, buff);
     }
-
 }
-
 
 TEST_F(DiskManagerTest, TestTryWriteRead)
 {
     std::filesystem::path temp_db_file(temp_dir / "db_file");
     BufferPoolManager buffer_pool_man(1, temp_db_file);
     page_id_t page_id = buffer_pool_man.NewPage();
-
 
     {
         std::vector<char> buff(PAGE_SIZE, 'B');
@@ -68,7 +63,6 @@ TEST_F(DiskManagerTest, TestTryWriteRead)
         WritePageGuard page_guard = std::move(*page_guard_opt);
         std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
     }
-
 
     {
         const std::vector<char> expected_buf(PAGE_SIZE, 'B');

@@ -1,19 +1,18 @@
 #include "common/type_definitions.h"
 #include "storage/disk/disk_manager.h"
-#include <gtest/gtest.h>
 #include <filesystem>
+#include <gtest/gtest.h>
 
 /**
  * \brief RAII class for creating a temporary directory for creating files in
  */
 class DiskManagerTest : public testing::Test {
-    protected:
-    std::filesystem::path temp_dir{"testing_temp"};
+protected:
+    std::filesystem::path temp_dir { "testing_temp" };
 
     DiskManagerTest()
     {
-        if (not std::filesystem::exists(temp_dir))
-        {
+        if (not std::filesystem::exists(temp_dir)) {
             std::filesystem::create_directory(temp_dir);
         }
     }
@@ -61,18 +60,18 @@ TEST_F(DiskManagerTest, TestFreePage)
     page_id_t page_id = disk_manager.AllocatePage();
 
     disk_manager.WritePage(page_id, page_data_write);
-    
+
     disk_manager.DeletePage(page_id);
 
     page_id_t new_page_id = disk_manager.AllocatePage();
     disk_manager.WritePage(new_page_id, page_data_write);
-    
+
     // ensure that only one page was used (i.e. the free page was used)
     EXPECT_EQ(std::filesystem::file_size(temp_db_file), PAGE_SIZE);
 }
 
 /**
- * \brief Ensure that resizing is done in the case that no free pages are 
+ * \brief Ensure that resizing is done in the case that no free pages are
  * available
  */
 TEST_F(DiskManagerTest, TestResizePage)
@@ -82,9 +81,8 @@ TEST_F(DiskManagerTest, TestResizePage)
     page_data_write.fill('A');
     DiskManager disk_manager(temp_db_file, 1);
 
-    for (int i = 0; i < 8; i++)
-    {
+    for (int i = 0; i < 8; i++) {
         page_id_t page_id = disk_manager.AllocatePage();
-        disk_manager.WritePage(page_id, page_data_write);    
+        disk_manager.WritePage(page_id, page_data_write);
     }
 }

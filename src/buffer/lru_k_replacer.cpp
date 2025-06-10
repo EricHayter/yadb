@@ -3,17 +3,17 @@
 
 LRUKReplacer::LRUFrame::LRUFrame(frame_id_t frame_id)
     : frame_id(frame_id)
-{}
+{
+}
 
 void LRUKReplacer::RegisterFrame(frame_id_t frame_id)
 {
     frames_m.emplace(frame_id, LRUFrame(frame_id));
 }
 
-
-std::optional<frame_id_t> LRUKReplacer::EvictFrame() {
-    if (frames_m.empty())
-    {
+std::optional<frame_id_t> LRUKReplacer::EvictFrame()
+{
+    if (frames_m.empty()) {
         return std::nullopt;
     }
 
@@ -45,8 +45,7 @@ std::optional<frame_id_t> LRUKReplacer::EvictFrame() {
             found_short_history = true;
         } else if (current_is_short == found_short_history) {
             // Prefer the older one
-            if ((current_is_short && frame.history.front() < candidate.history.front()) ||
-                (!current_is_short && frame.history.back() < candidate.history.back())) {
+            if ((current_is_short && frame.history.front() < candidate.history.front()) || (!current_is_short && frame.history.back() < candidate.history.back())) {
                 to_remove = frame_id;
             }
         }

@@ -3,7 +3,6 @@
 #include <cassert>
 #include <filesystem>
 
-
 DiskManager::DiskManager(const std::filesystem::path& db_file)
     : DiskManager(db_file, 1)
 {
@@ -20,11 +19,9 @@ DiskManager::DiskManager(const std::filesystem::path& db_file, std::size_t page_
     // TODO check to see if this could fail
     std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
     assert(GetDatabaseFileSize() == std::filesystem::file_size(db_file_m));
-    for (page_id_t id = 0; id < page_capacity_m; id++)
-    {
+    for (page_id_t id = 0; id < page_capacity_m; id++) {
         free_pages_m.insert(id);
     }
-
 }
 
 DiskManager::~DiskManager()
@@ -74,7 +71,7 @@ page_id_t DiskManager::AllocatePage()
         std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
 
         // populate free page list with new pages
-        for (int id = page_id + 1;  id < page_capacity_m;  id++)
+        for (int id = page_id + 1; id < page_capacity_m; id++)
             free_pages_m.insert(id);
     }
     return page_id;
@@ -84,7 +81,6 @@ std::size_t DiskManager::GetOffset(page_id_t page_id)
 {
     return page_id * PAGE_SIZE;
 }
-
 
 std::size_t DiskManager::GetDatabaseFileSize()
 {
