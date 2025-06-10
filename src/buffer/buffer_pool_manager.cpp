@@ -55,15 +55,42 @@ std::optional<ReadPageGuard> BufferPoolManager::TryReadPage(page_id_t page_id)
     return std::make_optional<ReadPageGuard>(this, frame, std::move(frame_lk));
 }
 
-ReadPageGuard BufferPoolManager::WaitReadPage(page_id_t page_id)
-{
-    // acquire a lock so that the page isn't flushed from the frame as
-    // we are creating the page guard.
-    std::unique_lock<std::mutex> lk(mut_m);
-    available_frame_m.wait(lk, [this, page_id]() { return LoadPage(page_id); });
-    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
-    std::shared_lock<std::shared_mutex> frame_lk(frame->mut);
-    return ReadPageGuard(this, frame, std::move(frame_lk));
+ReadPageGuard BufferPoolManager::WaitReadPage(page_id_t page_id) {
+    // This is not the prettiest solution, but it is effective. Without this
+    // deadlocks become possible in cases where a page guard is constructed
+    // for the same frame.
+    //
+    // For example 2 calls: WaitReadPage(0) and  WaitReadPage(0) could
+    // cause an deadlock.
+    //
+    // The first call runs perfectly fine and acquires a lock on the FrameHeader
+    // then second then acquires a lock to the buffer pool manager but then
+    // waits to acquire the lock on the frame. But then the mutex for the
+    // buffer pool manager cannot be released as it is required in the
+    // deconstructor of the page guard.
+    while (true) {
+        std::unique_lock<std::mutex> lk(mut_m);
+
+        // wait until the page is able to be loaded into a frame
+        available_frame_m.wait(lk, [this, page_id]() {
+            return LoadPage(page_id);
+        });
+
+        FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+
+        // attempt to lock the mutex for the header
+        if (frame->mut.try_lock_shared()) {
+            // Success: now we have both locks, safe to proceed
+            std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
+            return ReadPageGuard(this, frame, std::move(frame_lk));
+        }
+
+        // Could not acquire frame lock: release `mut_m` and retry
+        // This avoids deadlock and ensures consistency
+        lk.unlock();
+
+        std::this_thread::yield();
+    }
 }
 
 std::optional<WritePageGuard> BufferPoolManager::TryWritePage(page_id_t page_id)
@@ -82,33 +109,74 @@ std::optional<WritePageGuard> BufferPoolManager::TryWritePage(page_id_t page_id)
     return std::make_optional<WritePageGuard>(this, frame, std::move(frame_lk));
 }
 
-WritePageGuard BufferPoolManager::WaitWritePage(page_id_t page_id)
-{
-    // acquire a lock so that the page isn't flushed from the frame as
-    // we are creating the page guard.
-    std::unique_lock<std::mutex> lk(mut_m);
-    available_frame_m.wait(lk, [this, page_id]() { return LoadPage(page_id); });
-    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
-    std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
-    return WritePageGuard(this, frame, std::move(frame_lk));
+WritePageGuard BufferPoolManager::WaitWritePage(page_id_t page_id) {
+    // This is not the prettiest solution, but it is effective. Without this
+    // deadlocks become possible in cases where a page guard is constructed
+    // for the same frame.
+    //
+    // For example 2 calls: WaitWritePage(0) and  WaitWritePage(0) could
+    // cause an deadlock.
+    //
+    // The first call runs perfectly fine and acquires a lock on the FrameHeader
+    // then second then acquires a lock to the buffer pool manager but then
+    // waits to acquire the lock on the frame. But then the mutex for the
+    // buffer pool manager cannot be released as it is required in the
+    // deconstructor of the page guard.
+    while (true) {
+        std::unique_lock<std::mutex> lk(mut_m);
+
+        // wait until the page is able to be loaded into a frame
+        available_frame_m.wait(lk, [this, page_id]() {
+            return LoadPage(page_id);
+        });
+
+        FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+
+        // attempt to lock the mutex for the header
+        if (frame->mut.try_lock()) {
+            // Success: now we have both locks, safe to proceed
+            std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
+            return WritePageGuard(this, frame, std::move(frame_lk));
+        }
+
+        // Could not acquire frame lock: release `mut_m` and retry
+        // This avoids deadlock and ensures consistency
+        lk.unlock();
+
+        std::this_thread::yield();
+    }
 }
 
 bool BufferPoolManager::LoadPage(page_id_t page_id)
 {
+    // it's already loaded no more IO to handle
     if (page_map_m.contains(page_id)) {
         return true;
     }
 
-    // Evict a frame (if possible)
+    // Our page is not already in the buffer pool
+    // We must evict a frame to find a spot for our page
     std::optional<frame_id_t> frame_id_opt = replacer_m.EvictFrame();
     if (not frame_id_opt.has_value()) {
+        // TODO log couldn't find a viable frame to evict
         return false;
     }
     FrameHeader* frame = frames_m[*frame_id_opt].get();
+
+
+    // if the current frame contains page data that was updated
     if (frame->is_dirty) {
         FlushPage(frame->page_id);
-        page_map_m.erase(frame->page_id);
     }
+
+    // unmap the old page from the page-to-frame map.
+    page_map_m.erase(frame->page_id);
+
+    // read the desired page data from disk to the frame
+    std::promise<void> read_done_promise;
+    std::future<void> read_done_future = read_done_promise.get_future();
+    disk_scheduler_m.ReadPage(page_id, frame->GetMutData(), std::move(read_done_promise));
+    read_done_future.get();
 
     // update frame information
     page_map_m[page_id] = frame->id;
@@ -118,9 +186,9 @@ bool BufferPoolManager::LoadPage(page_id_t page_id)
     return true;
 }
 
+// TODO make this take a frame header
 void BufferPoolManager::FlushPage(page_id_t page_id)
 {
-    std::lock_guard<std::mutex> lk(mut_m);
     // TODO Could fit in some asserts here for sure
     std::promise<void> done_promise;
     std::future<void> done_future = done_promise.get_future();
@@ -131,7 +199,7 @@ void BufferPoolManager::FlushPage(page_id_t page_id)
 
 void BufferPoolManager::AddAccessor(frame_id_t frame_id, bool is_writer)
 {
-    std::lock_guard<std::mutex> lk(mut_m);
+    // TODO maybe move this type of logic to the page guard itself?
     replacer_m.RecordAccess(frame_id);
     FrameHeader* frame = frames_m[frame_id].get();
     frame->pin_count++;
