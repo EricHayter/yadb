@@ -3,6 +3,7 @@
 #include "common/type_definitions.h"
 #include <ctime>
 #include <deque>
+#include <limits>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -32,12 +33,24 @@
 class LRUKReplacer {
     /*! \brief Struct to represent a frame inside of the page buffer. */
     struct LRUFrame {
-        frame_id_t frame_id;
+        LRUFrame() = default;
+        LRUFrame(frame_id_t frame_id);
+        frame_id_t frame_id{ frame_id_t(-1) };
         std::deque<std::time_t> history; /// history of accesses
-        bool is_evictable { false };
+        bool is_evictable { true };
     };
 
 public:
+    /*!
+     * \brief begin tracking a given frame
+     *
+     * This function must be called for every frame that is meant to be used
+     * by the replacer. This is so that the replacer knows which frames
+     * are evictable/available at any given time.
+     *
+     */
+    void TrackFrame(frame_id_t frame_id);
+
     /*! \brief Find a frame (if any) to evict using the LRU-K policy
      * \returns The frame id of the frame to remove
      */

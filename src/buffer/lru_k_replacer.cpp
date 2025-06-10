@@ -1,41 +1,60 @@
 #include "buffer/lru_k_replacer.h"
 #include "common/type_definitions.h"
 
-std::optional<frame_id_t> LRUKReplacer::EvictFrame()
-{
-    if (frames_m.empty())
-        return std::nullopt;
+LRUKReplacer::LRUFrame::LRUFrame(frame_id_t frame_id)
+    : frame_id(frame_id)
+{}
 
-    // Frames with history of less than size k have been found
+void LRUKReplacer::TrackFrame(frame_id_t frame_id)
+{
+    frames_m.emplace(frame_id, LRUFrame(frame_id));
+}
+
+
+std::optional<frame_id_t> LRUKReplacer::EvictFrame() {
+    if (frames_m.empty())
+    {
+        return std::nullopt;
+    }
+
     bool found_short_history { false };
     std::optional<frame_id_t> to_remove {};
 
-    // keep track of which has the smallest value of k
     for (const auto& [frame_id, frame] : frames_m) {
-        // we cannot evict frames that are not evictable
-        if (not frame.is_evictable)
+        if (!frame.is_evictable)
             continue;
 
-        if (not to_remove.has_value()) {
+        // TODO can integrate this into the logic on line 46 below
+        if (frame.history.empty()) {
+            // Reset history before returning
+            frames_m[frame_id].history.clear();
+            return frame_id;
+        }
+
+        if (!to_remove.has_value()) {
             to_remove = frame_id;
             found_short_history = frame.history.size() < k_m;
             continue;
         }
 
         bool current_is_short = frame.history.size() < k_m;
+        const auto& candidate = frames_m[*to_remove];
 
-        // found first short history
-        if (current_is_short && not found_short_history) {
-            // Prefer frames with short history
+        if (current_is_short && !found_short_history) {
             to_remove = frame_id;
             found_short_history = true;
         } else if (current_is_short == found_short_history) {
-            // Both candidates are in the same category; pick the oldest
-            const auto& candidate = frames_m[*to_remove];
-            if ((current_is_short && frame.history.front() < candidate.history.front()) || (!current_is_short && frame.history.back() < candidate.history.back())) {
+            // Prefer the older one
+            if ((current_is_short && frame.history.front() < candidate.history.front()) ||
+                (!current_is_short && frame.history.back() < candidate.history.back())) {
                 to_remove = frame_id;
             }
         }
+    }
+
+    if (to_remove.has_value()) {
+        // Clear the history before eviction
+        frames_m[*to_remove].history.clear();
     }
 
     return to_remove;
@@ -43,6 +62,7 @@ std::optional<frame_id_t> LRUKReplacer::EvictFrame()
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id)
 {
+    // TODO make this an asssert or spdlog it or something??
     if (not frames_m.contains(frame_id))
         return;
     LRUFrame& frame = frames_m[frame_id];
