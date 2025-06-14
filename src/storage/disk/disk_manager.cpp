@@ -3,20 +3,22 @@
 #include <cassert>
 #include <filesystem>
 
-DiskManager::DiskManager(const std::filesystem::path& db_file)
-    : DiskManager(db_file, 1)
+DiskManager::DiskManager(const std::filesystem::path& db_directory)
+    : DiskManager(db_directory, 1)
 {
 }
 
-DiskManager::DiskManager(const std::filesystem::path& db_file, std::size_t page_capacity)
-    : db_file_m(db_file)
+DiskManager::DiskManager(const std::filesystem::path& db_directory, std::size_t page_capacity)
+    : db_file_m(db_directory / DB_FILE_NAME)
     , page_capacity_m(page_capacity)
 {
-    // TODO worry about persistence later maybe?
+    if (not std::filesystem::exists(db_directory)) {
+        std::filesystem::create_directory(db_directory);
+    }
+
     db_io_m.open(db_file_m, std::ios::in | std::ios::out | std::ios::binary | std::ios::trunc);
     assert(db_io_m.is_open());
 
-    // TODO check to see if this could fail
     std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
     assert(GetDatabaseFileSize() == std::filesystem::file_size(db_file_m));
     for (page_id_t id = 0; id < page_capacity_m; id++) {

@@ -6,8 +6,8 @@
 #include <stop_token>
 #include <thread>
 
-DiskScheduler::DiskScheduler(const std::filesystem::path& db_file)
-    : disk_manager_m(db_file)
+DiskScheduler::DiskScheduler(const std::filesystem::path& db_directory)
+    : disk_manager_m(db_directory)
     , worker_thread_m(&DiskScheduler::WorkerFunction, this)
 {
 }

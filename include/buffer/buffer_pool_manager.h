@@ -21,7 +21,7 @@ class BufferPoolManager {
     friend WritePageGuard;
 
 public:
-    BufferPoolManager(std::size_t num_frames, const std::filesystem::path& db_file);
+    BufferPoolManager(const std::filesystem::path& db_directory, std::size_t num_frames);
     ~BufferPoolManager();
     page_id_t NewPage();
 

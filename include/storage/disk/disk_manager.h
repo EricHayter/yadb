@@ -5,12 +5,13 @@
 #include <fstream>
 #include <list>
 #include <span>
+#include <string_view>
 #include <unordered_set>
 
 class DiskManager {
 public:
-    DiskManager(const std::filesystem::path& db_file);
-    DiskManager(const std::filesystem::path& db_file, std::size_t page_capacity);
+    DiskManager(const std::filesystem::path& db_directory);
+    DiskManager(const std::filesystem::path& db_directory, std::size_t page_capacity);
     ~DiskManager();
 
     page_id_t AllocatePage();
@@ -19,6 +20,8 @@ public:
     void DeletePage(page_id_t page_id);
 
 private:
+    static constexpr std::string_view DB_FILE_NAME = "data.db";
+
     std::size_t GetOffset(page_id_t page_id);
     std::size_t GetDatabaseFileSize();
 

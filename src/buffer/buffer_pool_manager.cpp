@@ -10,8 +10,8 @@
 #include <shared_mutex>
 #include <vector>
 
-BufferPoolManager::BufferPoolManager(std::size_t num_frames, const std::filesystem::path& db_file)
-    : disk_scheduler_m(db_file)
+BufferPoolManager::BufferPoolManager(const std::filesystem::path& db_directory, std::size_t num_frames)
+    : disk_scheduler_m(db_directory)
     , replacer_m()
     , buffer_m((char*)malloc(num_frames * PAGE_SIZE))
 {
