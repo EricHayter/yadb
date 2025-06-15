@@ -41,12 +41,12 @@ void DiskScheduler::DeletePage(page_id_t page_id, std::promise<void>&& done)
     cv_m.notify_one();
 }
 
-void DiskScheduler::ReadPage(page_id_t page_id, MutPageView data, std::promise<void>&& done)
+void DiskScheduler::ReadPage(page_id_t page_id, MutPageView data, std::promise<bool>&& status)
 {
     IOTasks::ReadPageTask task {
         page_id,
         data,
-        std::move(done),
+        std::move(status),
     };
 
     std::lock_guard<std::mutex> lk(mut_m);
@@ -54,12 +54,12 @@ void DiskScheduler::ReadPage(page_id_t page_id, MutPageView data, std::promise<v
     cv_m.notify_one();
 }
 
-void DiskScheduler::WritePage(page_id_t page_id, PageView data, std::promise<void>&& done)
+void DiskScheduler::WritePage(page_id_t page_id, PageView data, std::promise<bool>&& status)
 {
     IOTasks::WritePageTask task {
         page_id,
         data,
-        std::move(done),
+        std::move(status),
     };
 
     std::lock_guard<std::mutex> lk(mut_m);
@@ -94,11 +94,9 @@ void DiskScheduler::WorkerFunction(std::stop_token stop_token)
                     disk_manager_m.DeletePage(task.page_id);
                     task.done.set_value();
                 } else if constexpr (std::is_same_v<T, IOTasks::ReadPageTask>) {
-                    disk_manager_m.ReadPage(task.page_id, task.data);
-                    task.done.set_value();
+                    task.status.set_value(disk_manager_m.ReadPage(task.page_id, task.data));
                 } else if constexpr (std::is_same_v<T, IOTasks::WritePageTask>) {
-                    disk_manager_m.WritePage(task.page_id, task.data);
-                    task.done.set_value();
+                    task.status.set_value(disk_manager_m.WritePage(task.page_id, task.data));
                 }
             },
                 std::move(task));

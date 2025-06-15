@@ -17,13 +17,13 @@ struct DeletePageTask {
 struct WritePageTask {
     page_id_t page_id;
     PageView data;
-    std::promise<void> done;
+    std::promise<bool> status;
 };
 
 struct ReadPageTask {
     page_id_t page_id;
     MutPageView data;
-    std::promise<void> done;
+    std::promise<bool> status;
 };
 
 using Task = std::variant<AllocatePageTask, DeletePageTask, WritePageTask, ReadPageTask>;

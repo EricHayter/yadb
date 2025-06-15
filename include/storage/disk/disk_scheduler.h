@@ -17,8 +17,8 @@ public:
 
     void AllocatePage(std::promise<page_id_t>&& result);
     void DeletePage(page_id_t page_id, std::promise<void>&& done);
-    void ReadPage(page_id_t page_id, MutPageView data, std::promise<void>&& done);
-    void WritePage(page_id_t page_id, PageView data, std::promise<void>&& done);
+    void ReadPage(page_id_t page_id, MutPageView data, std::promise<bool>&& status);
+    void WritePage(page_id_t page_id, PageView data, std::promise<bool>&& status);
 
 private:
     void WorkerFunction(std::stop_token stop_token);
