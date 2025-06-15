@@ -1,5 +1,6 @@
 #include "storage/disk/disk_manager.h"
 #include "common/type_definitions.h"
+#include "spdlog/sinks/basic_file_sink.h"
 #include <cassert>
 #include <filesystem>
 
@@ -9,50 +10,63 @@ DiskManager::DiskManager(const std::filesystem::path& db_directory)
 }
 
 DiskManager::DiskManager(const std::filesystem::path& db_directory, std::size_t page_capacity)
-    : db_file_m(db_directory / DB_FILE_NAME)
+    : db_directory_m(db_directory / DB_FILE_NAME)
     , page_capacity_m(page_capacity)
 {
     if (not std::filesystem::exists(db_directory)) {
         std::filesystem::create_directory(db_directory);
     }
 
-    db_io_m.open(db_file_m, std::ios::in | std::ios::out | std::ios::binary | std::ios::trunc);
+    // create db file
+    db_io_m.open(db_directory_m, std::ios::in | std::ios::out | std::ios::binary | std::ios::trunc);
     assert(db_io_m.is_open());
 
-    std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
-    assert(GetDatabaseFileSize() == std::filesystem::file_size(db_file_m));
+    std::filesystem::resize_file(db_directory_m, GetDatabaseFileSize());
+    assert(GetDatabaseFileSize() == std::filesystem::file_size(db_directory_m));
     for (page_id_t id = 0; id < page_capacity_m; id++) {
         free_pages_m.insert(id);
     }
+
+    // create logger
+    auto test = spdlog::basic_logger_mt("disk_manager_logger", db_directory_m / DISK_MANAGER_LOG_FILE_NAME);
+    logger_m->info("Successfully initialized disk manager", db_directory_m);
 }
 
 DiskManager::~DiskManager()
 {
     db_io_m.close();
+    logger_m->info("Closed disk manager");
 }
 
-void DiskManager::WritePage(page_id_t page_id, PageView page_data)
+bool DiskManager::WritePage(page_id_t page_id, PageView page_data)
 {
     assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
     std::size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
     db_io_m.write(page_data.data(), page_data.size());
-    assert(db_io_m.good());
+    if (not db_io_m.good()) {
+        logger_m->warn("Failed to write data to page id {}", page_id);
+        return false;
+    }
+    return true;
 }
 
 // Read the contents of page data into page_data
-void DiskManager::ReadPage(page_id_t page_id, MutPageView page_data)
+bool DiskManager::ReadPage(page_id_t page_id, MutPageView page_data)
 {
     assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
     size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
     db_io_m.read(page_data.data(), page_data.size());
-    assert(db_io_m.good());
+    if (not db_io_m.good()) {
+        logger_m->warn("Failed to read data from page id {}", page_id);
+        return false;
+    }
+    return true;
 }
 
 void DiskManager::DeletePage(page_id_t page_id)
 {
-    // TODO might be worth to validate that this isn't a repeat?
     free_pages_m.insert(page_id);
 }
 
@@ -70,7 +84,7 @@ page_id_t DiskManager::AllocatePage()
         } else {
             page_capacity_m *= 2;
         }
-        std::filesystem::resize_file(db_file_m, GetDatabaseFileSize());
+        std::filesystem::resize_file(db_directory_m, GetDatabaseFileSize());
 
         // populate free page list with new pages
         for (int id = page_id + 1; id < page_capacity_m; id++)
