@@ -16,7 +16,7 @@
  */
 class DiskManagerTest : public testing::Test {
 protected:
-    std::filesystem::path temp_dir{ "testing_temp" };
+    std::filesystem::path temp_dir { "testing_temp" };
     DiskManagerTest() = default;
     ~DiskManagerTest()
     {
@@ -24,53 +24,53 @@ protected:
     }
 };
 
- TEST_F(DiskManagerTest, TestWaitWriteRead)
+TEST_F(DiskManagerTest, TestWaitWriteRead)
 {
-     int number_frames = 1;
-     BufferPoolManager buffer_pool_man(temp_dir, number_frames);
-     page_id_t page_id = buffer_pool_man.NewPage();
-     {
-         std::vector<char> buff(PAGE_SIZE, 'B');
-         MutPageView page_view(buff.begin(), PAGE_SIZE);
-         WritePageGuard page_guard = buffer_pool_man.WaitWritePage(page_id);
-         std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
-     }
-     {
-         const std::vector<char> expected_buf(PAGE_SIZE, 'B');
-         std::vector<char> buff(PAGE_SIZE, 0);
-         MutPageView page_view(buff.begin(), PAGE_SIZE);
-         ReadPageGuard page_guard = buffer_pool_man.WaitReadPage(page_id);
-         PageView page_data = page_guard.GetData();
-         std::copy(page_data.begin(), page_data.end(), buff.begin());
-         EXPECT_EQ(expected_buf, buff);
-     }
+    int number_frames = 1;
+    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    page_id_t page_id = buffer_pool_man.NewPage();
+    {
+        std::vector<char> buff(PAGE_SIZE, 'B');
+        MutPageView page_view(buff.begin(), PAGE_SIZE);
+        WritePageGuard page_guard = buffer_pool_man.WaitWritePage(page_id);
+        std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
+    }
+    {
+        const std::vector<char> expected_buf(PAGE_SIZE, 'B');
+        std::vector<char> buff(PAGE_SIZE, 0);
+        MutPageView page_view(buff.begin(), PAGE_SIZE);
+        ReadPageGuard page_guard = buffer_pool_man.WaitReadPage(page_id);
+        PageView page_data = page_guard.GetData();
+        std::copy(page_data.begin(), page_data.end(), buff.begin());
+        EXPECT_EQ(expected_buf, buff);
+    }
 }
 
 TEST_F(DiskManagerTest, TestTryWriteRead)
 {
-     int number_frames = 1;
-     BufferPoolManager buffer_pool_man(temp_dir, number_frames);
-     page_id_t page_id = buffer_pool_man.NewPage();
-     {
-         std::vector<char> buff(PAGE_SIZE, 'B');
-         MutPageView page_view(buff.begin(), PAGE_SIZE);
-         auto page_guard_opt = buffer_pool_man.TryWritePage(page_id);
-         ASSERT_TRUE(page_guard_opt.has_value());
-         WritePageGuard page_guard = std::move(*page_guard_opt);
-         std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
-     }
-     {
-         const std::vector<char> expected_buf(PAGE_SIZE, 'B');
-         std::vector<char> buff(PAGE_SIZE, 0);
-         MutPageView page_view(buff.begin(), PAGE_SIZE);
-         auto page_guard_opt = buffer_pool_man.TryReadPage(page_id);
-         EXPECT_TRUE(page_guard_opt.has_value());
-         ReadPageGuard page_guard = std::move(*page_guard_opt);
-         PageView page_data = page_guard.GetData();
-         std::copy(page_data.begin(), page_data.end(), buff.begin());
-         EXPECT_EQ(expected_buf, buff);
-     }
- }
+    int number_frames = 1;
+    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    page_id_t page_id = buffer_pool_man.NewPage();
+    {
+        std::vector<char> buff(PAGE_SIZE, 'B');
+        MutPageView page_view(buff.begin(), PAGE_SIZE);
+        auto page_guard_opt = buffer_pool_man.TryWritePage(page_id);
+        ASSERT_TRUE(page_guard_opt.has_value());
+        WritePageGuard page_guard = std::move(*page_guard_opt);
+        std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
+    }
+    {
+        const std::vector<char> expected_buf(PAGE_SIZE, 'B');
+        std::vector<char> buff(PAGE_SIZE, 0);
+        MutPageView page_view(buff.begin(), PAGE_SIZE);
+        auto page_guard_opt = buffer_pool_man.TryReadPage(page_id);
+        EXPECT_TRUE(page_guard_opt.has_value());
+        ReadPageGuard page_guard = std::move(*page_guard_opt);
+        PageView page_data = page_guard.GetData();
+        std::copy(page_data.begin(), page_data.end(), buff.begin());
+        EXPECT_EQ(expected_buf, buff);
+    }
+}
 
 // Test buffer pool eviction when full
 TEST_F(DiskManagerTest, TestBufferPoolEviction)
@@ -276,7 +276,6 @@ TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
 
     EXPECT_GT(operations_completed.load(), 0);
 }
-
 
 // Stress test with many concurrent operations
 TEST_F(DiskManagerTest, TestStressConcurrency)
