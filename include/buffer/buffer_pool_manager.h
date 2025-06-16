@@ -5,6 +5,8 @@
 #include "buffer/page_guard.h"
 #include "common/type_definitions.h"
 #include "storage/disk/disk_scheduler.h"
+#include <spdlog/logger.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #include <condition_variable>
 #include <filesystem>
@@ -33,11 +35,14 @@ public:
 
 private:
     bool LoadPage(page_id_t page_id);
-    void FlushPage(page_id_t page_id);
+    bool FlushPage(page_id_t page_id);
     void AddAccessor(frame_id_t frame_id, bool is_writer);
     void RemoveAccessor(frame_id_t frame_id);
 
 private:
+    static constexpr std::string_view BUFFER_POOL_LOG_FILENAME { "buffer_pool.log" };
+    std::shared_ptr<spdlog::logger> logger_m;
+
     LRUKReplacer replacer_m;
     DiskScheduler disk_scheduler_m;
 

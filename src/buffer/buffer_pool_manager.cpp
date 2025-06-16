@@ -21,6 +21,9 @@ BufferPoolManager::BufferPoolManager(const std::filesystem::path& db_directory, 
         frames_m.push_back(std::make_unique<FrameHeader>(id, data_view));
         replacer_m.RegisterFrame(id);
     }
+
+    logger_m = spdlog::basic_logger_mt("disk_manager_logger", db_directory / BUFFER_POOL_LOG_FILENAME);
+    logger_m->info("Successfully initialized buffer pool manager");
 }
 
 BufferPoolManager::~BufferPoolManager()
@@ -29,6 +32,7 @@ BufferPoolManager::~BufferPoolManager()
         FlushPage(page_id);
     }
     free(buffer_m);
+    logger_m->info("Closed buffer pool manager");
 }
 
 page_id_t BufferPoolManager::NewPage()
@@ -160,24 +164,28 @@ bool BufferPoolManager::LoadPage(page_id_t page_id)
     // We must evict a frame to find a spot for our page
     std::optional<frame_id_t> frame_id_opt = replacer_m.EvictFrame();
     if (not frame_id_opt.has_value()) {
-        // TODO log couldn't find a viable frame to evict
+        logger_m->info("Couldn't find a frame to evict for page {}", page_id);
         return false;
     }
     FrameHeader* frame = frames_m[*frame_id_opt].get();
 
     // if the current frame contains page data that was updated
-    if (frame->is_dirty) {
-        FlushPage(frame->page_id);
+    if (frame->is_dirty && not FlushPage(frame->page_id)) {
+        logger_m->warn("Failed to load page {} due to flush failure", page_id);
+        return false;
     }
 
     // unmap the old page from the page-to-frame map.
     page_map_m.erase(frame->page_id);
 
     // read the desired page data from disk to the frame
-    std::promise<void> read_done_promise;
-    std::future<void> read_done_future = read_done_promise.get_future();
-    disk_scheduler_m.ReadPage(page_id, frame->GetMutData(), std::move(read_done_promise));
-    read_done_future.get();
+    std::promise<bool> read_status_promise;
+    std::future<bool> read_status_future = read_status_promise.get_future();
+    disk_scheduler_m.ReadPage(page_id, frame->GetMutData(), std::move(read_status_promise));
+    if (not read_status_future.get()) {
+        logger_m->warn("Failed to load page {} due to read failure", page_id);
+        return false;
+    }
 
     // update frame information
     page_map_m[page_id] = frame->id;
@@ -188,19 +196,21 @@ bool BufferPoolManager::LoadPage(page_id_t page_id)
 }
 
 // TODO make this take a frame header
-void BufferPoolManager::FlushPage(page_id_t page_id)
+bool BufferPoolManager::FlushPage(page_id_t page_id)
 {
-    // TODO Could fit in some asserts here for sure
-    std::promise<void> done_promise;
-    std::future<void> done_future = done_promise.get_future();
+    std::promise<bool> write_status_promise;
+    std::future<bool> write_status_future = write_status_promise.get_future();
     FrameHeader* frame = frames_m[page_map_m[page_id]].get();
-    disk_scheduler_m.WritePage(page_id, frame->GetData(), std::move(done_promise));
-    done_future.get();
+    disk_scheduler_m.WritePage(page_id, frame->GetData(), std::move(write_status_promise));
+    if (not write_status_future.get()) {
+        logger_m->warn("Failed to flush page {}", page_id);
+        return false;
+    }
+    return true;
 }
 
 void BufferPoolManager::AddAccessor(frame_id_t frame_id, bool is_writer)
 {
-    // TODO maybe move this type of logic to the page guard itself?
     replacer_m.RecordAccess(frame_id);
     FrameHeader* frame = frames_m[frame_id].get();
     frame->pin_count++;
