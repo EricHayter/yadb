@@ -28,8 +28,8 @@ DiskManager::DiskManager(const std::filesystem::path& db_directory, std::size_t 
     }
 
     // create logger
-    auto test = spdlog::basic_logger_mt("disk_manager_logger", db_directory_m / DISK_MANAGER_LOG_FILE_NAME);
-    logger_m->info("Successfully initialized disk manager", db_directory_m);
+    logger_m = spdlog::basic_logger_mt("disk_manager_logger", db_directory_m / DISK_MANAGER_LOG_FILE_NAME);
+    logger_m->info("Successfully initialized disk manager");
 }
 
 DiskManager::~DiskManager()
