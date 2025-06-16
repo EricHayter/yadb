@@ -23,7 +23,7 @@ protected:
 
     ~DiskSchedulerTest()
     {
-        //        std::filesystem::remove_all(temp_dir);
+        std::filesystem::remove_all(temp_dir);
     }
 };
 
