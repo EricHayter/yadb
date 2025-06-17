@@ -1,46 +1,46 @@
 #include "buffer/page_guard.h"
-#include "buffer/buffer_pool_manager.h"
+#include "buffer/page_buffer_manager.h"
 #include "buffer/frame_header.h"
 #include <cassert>
 #include <iostream>
 #include <memory>
 
-ReadPageGuard::ReadPageGuard(BufferPoolManager* buffer_pool_manager, FrameHeader* frame_header, std::shared_lock<std::shared_mutex>&& lk)
-    : buffer_pool_manager_m(buffer_pool_manager)
+ReadPageGuard::ReadPageGuard(PageBufferManager* page_buffer_manager, FrameHeader* frame_header, std::shared_lock<std::shared_mutex>&& lk)
+    : page_buffer_manager_m(page_buffer_manager)
     , frame_header_m(frame_header)
     , lk_m(std::move(lk))
 {
-    assert(buffer_pool_manager != nullptr);
+    assert(page_buffer_manager != nullptr);
     assert(frame_header != nullptr);
 
     // Creating a page guard is contingent on owning a lock to the frame's
     // shared lock. Otherwise, thread safety cannot be guaranteed, undermining
     // the job the guard itself.
     assert(lk_m.owns_lock());
-    buffer_pool_manager_m->AddAccessor(frame_header_m->id, false);
+    page_buffer_manager_m->AddAccessor(frame_header_m->id, false);
 }
 
 ReadPageGuard::~ReadPageGuard()
 {
-    if (buffer_pool_manager_m != nullptr)
-        buffer_pool_manager_m->RemoveAccessor(frame_header_m->id);
+    if (page_buffer_manager_m != nullptr)
+        page_buffer_manager_m->RemoveAccessor(frame_header_m->id);
 }
 
 ReadPageGuard::ReadPageGuard(ReadPageGuard&& other)
-    : buffer_pool_manager_m(other.buffer_pool_manager_m)
+    : page_buffer_manager_m(other.page_buffer_manager_m)
     , frame_header_m(other.frame_header_m)
     , lk_m(std::move(other.lk_m))
 {
-    other.buffer_pool_manager_m = nullptr;
+    other.page_buffer_manager_m = nullptr;
     other.frame_header_m = nullptr;
 }
 
 ReadPageGuard& ReadPageGuard::operator=(ReadPageGuard&& other)
 {
-    buffer_pool_manager_m = other.buffer_pool_manager_m;
+    page_buffer_manager_m = other.page_buffer_manager_m;
     frame_header_m = other.frame_header_m;
     lk_m = std::move(other.lk_m);
-    other.buffer_pool_manager_m = nullptr;
+    other.page_buffer_manager_m = nullptr;
     other.frame_header_m = nullptr;
     return *this;
 }
@@ -50,42 +50,42 @@ PageView ReadPageGuard::GetData()
     return frame_header_m->GetData();
 }
 
-WritePageGuard::WritePageGuard::WritePageGuard(BufferPoolManager* buffer_pool_manager, FrameHeader* frame_header, std::unique_lock<std::shared_mutex>&& lk)
-    : buffer_pool_manager_m(buffer_pool_manager)
+WritePageGuard::WritePageGuard::WritePageGuard(PageBufferManager* page_buffer_manager, FrameHeader* frame_header, std::unique_lock<std::shared_mutex>&& lk)
+    : page_buffer_manager_m(page_buffer_manager)
     , frame_header_m(frame_header)
     , lk_m(std::move(lk))
 {
-    assert(buffer_pool_manager != nullptr);
+    assert(page_buffer_manager != nullptr);
     assert(frame_header != nullptr);
 
     // Creating a page guard is contingent on owning a lock to the frame's
     // shared lock. Otherwise, thread safety cannot be guaranteed, undermining
     // the job the guard itself.
     assert(lk_m.owns_lock());
-    buffer_pool_manager_m->AddAccessor(frame_header_m->id, true);
+    page_buffer_manager_m->AddAccessor(frame_header_m->id, true);
 }
 
 WritePageGuard::~WritePageGuard()
 {
-    if (buffer_pool_manager_m != nullptr)
-        buffer_pool_manager_m->RemoveAccessor(frame_header_m->id);
+    if (page_buffer_manager_m != nullptr)
+        page_buffer_manager_m->RemoveAccessor(frame_header_m->id);
 }
 
 WritePageGuard::WritePageGuard(WritePageGuard&& other)
-    : buffer_pool_manager_m(other.buffer_pool_manager_m)
+    : page_buffer_manager_m(other.page_buffer_manager_m)
     , frame_header_m(other.frame_header_m)
     , lk_m(std::move(other.lk_m))
 {
-    other.buffer_pool_manager_m = nullptr;
+    other.page_buffer_manager_m = nullptr;
     other.frame_header_m = nullptr;
 }
 
 WritePageGuard& WritePageGuard::operator=(WritePageGuard&& other)
 {
-    buffer_pool_manager_m = other.buffer_pool_manager_m;
+    page_buffer_manager_m = other.page_buffer_manager_m;
     frame_header_m = other.frame_header_m;
     lk_m = std::move(other.lk_m);
-    other.buffer_pool_manager_m = nullptr;
+    other.page_buffer_manager_m = nullptr;
     other.frame_header_m = nullptr;
     return *this;
 }

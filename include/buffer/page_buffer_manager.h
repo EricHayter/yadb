@@ -18,13 +18,13 @@
 class ReadPageGuard;
 class WritePageGuard;
 
-class BufferPoolManager {
+class PageBufferManager {
     friend ReadPageGuard;
     friend WritePageGuard;
 
 public:
-    BufferPoolManager(const std::filesystem::path& db_directory, std::size_t num_frames);
-    ~BufferPoolManager();
+    PageBufferManager(const std::filesystem::path& db_directory, std::size_t num_frames);
+    ~PageBufferManager();
     page_id_t NewPage();
 
     std::optional<ReadPageGuard> TryReadPage(page_id_t page_id);
@@ -40,7 +40,7 @@ private:
     void RemoveAccessor(frame_id_t frame_id);
 
 private:
-    static constexpr std::string_view BUFFER_POOL_LOG_FILENAME { "buffer_pool.log" };
+    static constexpr std::string_view PAGE_BUFFER_MANAGER_LOG_FILENAME{ "page_buffer_manager.log" };
     std::shared_ptr<spdlog::logger> logger_m;
 
     LRUKReplacer replacer_m;

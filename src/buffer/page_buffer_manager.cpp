@@ -1,4 +1,4 @@
-#include "buffer/buffer_pool_manager.h"
+#include "buffer/page_buffer_manager.h"
 #include "buffer/frame_header.h"
 #include "buffer/page_guard.h"
 #include "common/type_definitions.h"
@@ -10,7 +10,7 @@
 #include <shared_mutex>
 #include <vector>
 
-BufferPoolManager::BufferPoolManager(const std::filesystem::path& db_directory, std::size_t num_frames)
+PageBufferManager::PageBufferManager(const std::filesystem::path& db_directory, std::size_t num_frames)
     : disk_scheduler_m(db_directory)
     , replacer_m()
     , buffer_m((char*)malloc(num_frames * PAGE_SIZE))
@@ -22,20 +22,20 @@ BufferPoolManager::BufferPoolManager(const std::filesystem::path& db_directory, 
         replacer_m.RegisterFrame(id);
     }
 
-    logger_m = spdlog::basic_logger_mt("disk_manager_logger", db_directory / BUFFER_POOL_LOG_FILENAME);
-    logger_m->info("Successfully initialized buffer pool manager");
+    logger_m = spdlog::basic_logger_mt("page buffer_manager logger", db_directory / PAGE_BUFFER_MANAGER_LOG_FILENAME);
+    logger_m->info("Successfully initialized page buffer manager");
 }
 
-BufferPoolManager::~BufferPoolManager()
+PageBufferManager::~PageBufferManager()
 {
     for (auto [page_id, _] : page_map_m) {
         FlushPage(page_id);
     }
     free(buffer_m);
-    logger_m->info("Closed buffer pool manager");
+    logger_m->info("Closed page buffer manager");
 }
 
-page_id_t BufferPoolManager::NewPage()
+page_id_t PageBufferManager::NewPage()
 {
     std::promise<page_id_t> page_promise;
     std::future<page_id_t> page_future = page_promise.get_future();
@@ -43,7 +43,7 @@ page_id_t BufferPoolManager::NewPage()
     return page_future.get();
 }
 
-std::optional<ReadPageGuard> BufferPoolManager::TryReadPage(page_id_t page_id)
+std::optional<ReadPageGuard> PageBufferManager::TryReadPage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
@@ -59,7 +59,7 @@ std::optional<ReadPageGuard> BufferPoolManager::TryReadPage(page_id_t page_id)
     return std::make_optional<ReadPageGuard>(this, frame, std::move(frame_lk));
 }
 
-ReadPageGuard BufferPoolManager::WaitReadPage(page_id_t page_id)
+ReadPageGuard PageBufferManager::WaitReadPage(page_id_t page_id)
 {
     // This is not the prettiest solution, but it is effective. Without this
     // deadlocks become possible in cases where a page guard is constructed
@@ -69,9 +69,9 @@ ReadPageGuard BufferPoolManager::WaitReadPage(page_id_t page_id)
     // cause an deadlock.
     //
     // The first call runs perfectly fine and acquires a lock on the FrameHeader
-    // then second then acquires a lock to the buffer pool manager but then
+    // then second then acquires a lock to the page manager but then
     // waits to acquire the lock on the frame. But then the mutex for the
-    // buffer pool manager cannot be released as it is required in the
+    // page buffer manager cannot be released as it is required in the
     // deconstructor of the page guard.
     while (true) {
         std::unique_lock<std::mutex> lk(mut_m);
@@ -98,7 +98,7 @@ ReadPageGuard BufferPoolManager::WaitReadPage(page_id_t page_id)
     }
 }
 
-std::optional<WritePageGuard> BufferPoolManager::TryWritePage(page_id_t page_id)
+std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
@@ -114,7 +114,7 @@ std::optional<WritePageGuard> BufferPoolManager::TryWritePage(page_id_t page_id)
     return std::make_optional<WritePageGuard>(this, frame, std::move(frame_lk));
 }
 
-WritePageGuard BufferPoolManager::WaitWritePage(page_id_t page_id)
+WritePageGuard PageBufferManager::WaitWritePage(page_id_t page_id)
 {
     // This is not the prettiest solution, but it is effective. Without this
     // deadlocks become possible in cases where a page guard is constructed
@@ -124,9 +124,9 @@ WritePageGuard BufferPoolManager::WaitWritePage(page_id_t page_id)
     // cause an deadlock.
     //
     // The first call runs perfectly fine and acquires a lock on the FrameHeader
-    // then second then acquires a lock to the buffer pool manager but then
+    // then second then acquires a lock to the page buffer manager but then
     // waits to acquire the lock on the frame. But then the mutex for the
-    // buffer pool manager cannot be released as it is required in the
+    // page buffer manager cannot be released as it is required in the
     // deconstructor of the page guard.
     while (true) {
         std::unique_lock<std::mutex> lk(mut_m);
@@ -153,14 +153,14 @@ WritePageGuard BufferPoolManager::WaitWritePage(page_id_t page_id)
     }
 }
 
-bool BufferPoolManager::LoadPage(page_id_t page_id)
+bool PageBufferManager::LoadPage(page_id_t page_id)
 {
     // it's already loaded no more IO to handle
     if (page_map_m.contains(page_id)) {
         return true;
     }
 
-    // Our page is not already in the buffer pool
+    // Our page is not already in the page buffer
     // We must evict a frame to find a spot for our page
     std::optional<frame_id_t> frame_id_opt = replacer_m.EvictFrame();
     if (not frame_id_opt.has_value()) {
@@ -196,7 +196,7 @@ bool BufferPoolManager::LoadPage(page_id_t page_id)
 }
 
 // TODO make this take a frame header
-bool BufferPoolManager::FlushPage(page_id_t page_id)
+bool PageBufferManager::FlushPage(page_id_t page_id)
 {
     std::promise<bool> write_status_promise;
     std::future<bool> write_status_future = write_status_promise.get_future();
@@ -209,7 +209,7 @@ bool BufferPoolManager::FlushPage(page_id_t page_id)
     return true;
 }
 
-void BufferPoolManager::AddAccessor(frame_id_t frame_id, bool is_writer)
+void PageBufferManager::AddAccessor(frame_id_t frame_id, bool is_writer)
 {
     replacer_m.RecordAccess(frame_id);
     FrameHeader* frame = frames_m[frame_id].get();
@@ -217,7 +217,7 @@ void BufferPoolManager::AddAccessor(frame_id_t frame_id, bool is_writer)
     frame->is_dirty = frame->is_dirty || is_writer;
 }
 
-void BufferPoolManager::RemoveAccessor(frame_id_t frame_id)
+void PageBufferManager::RemoveAccessor(frame_id_t frame_id)
 {
     std::lock_guard<std::mutex> lk(mut_m);
     FrameHeader* frame = frames_m[frame_id].get();

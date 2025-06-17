@@ -1,5 +1,5 @@
 add_library(yadb_buffer
-    buffer_pool_manager.cpp
+    page_buffer_manager.cpp
     frame_header.cpp
     lru_k_replacer.cpp
     page_guard.cpp

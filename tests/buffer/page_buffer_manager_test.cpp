@@ -1,4 +1,4 @@
-#include "buffer/buffer_pool_manager.h"
+#include "buffer/page_buffer_manager.h"
 #include "buffer/page_guard.h"
 #include "common/type_definitions.h"
 #include "gtest/gtest.h"
@@ -27,19 +27,19 @@ protected:
 TEST_F(DiskManagerTest, TestWaitWriteRead)
 {
     int number_frames = 1;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
-    page_id_t page_id = buffer_pool_man.NewPage();
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
+    page_id_t page_id = page_buffer_man.NewPage();
     {
         std::vector<char> buff(PAGE_SIZE, 'B');
         MutPageView page_view(buff.begin(), PAGE_SIZE);
-        WritePageGuard page_guard = buffer_pool_man.WaitWritePage(page_id);
+        WritePageGuard page_guard = page_buffer_man.WaitWritePage(page_id);
         std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
     }
     {
         const std::vector<char> expected_buf(PAGE_SIZE, 'B');
         std::vector<char> buff(PAGE_SIZE, 0);
         MutPageView page_view(buff.begin(), PAGE_SIZE);
-        ReadPageGuard page_guard = buffer_pool_man.WaitReadPage(page_id);
+        ReadPageGuard page_guard = page_buffer_man.WaitReadPage(page_id);
         PageView page_data = page_guard.GetData();
         std::copy(page_data.begin(), page_data.end(), buff.begin());
         EXPECT_EQ(expected_buf, buff);
@@ -49,12 +49,12 @@ TEST_F(DiskManagerTest, TestWaitWriteRead)
 TEST_F(DiskManagerTest, TestTryWriteRead)
 {
     int number_frames = 1;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
-    page_id_t page_id = buffer_pool_man.NewPage();
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
+    page_id_t page_id = page_buffer_man.NewPage();
     {
         std::vector<char> buff(PAGE_SIZE, 'B');
         MutPageView page_view(buff.begin(), PAGE_SIZE);
-        auto page_guard_opt = buffer_pool_man.TryWritePage(page_id);
+        auto page_guard_opt = page_buffer_man.TryWritePage(page_id);
         ASSERT_TRUE(page_guard_opt.has_value());
         WritePageGuard page_guard = std::move(*page_guard_opt);
         std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
@@ -63,7 +63,7 @@ TEST_F(DiskManagerTest, TestTryWriteRead)
         const std::vector<char> expected_buf(PAGE_SIZE, 'B');
         std::vector<char> buff(PAGE_SIZE, 0);
         MutPageView page_view(buff.begin(), PAGE_SIZE);
-        auto page_guard_opt = buffer_pool_man.TryReadPage(page_id);
+        auto page_guard_opt = page_buffer_man.TryReadPage(page_id);
         EXPECT_TRUE(page_guard_opt.has_value());
         ReadPageGuard page_guard = std::move(*page_guard_opt);
         PageView page_data = page_guard.GetData();
@@ -72,42 +72,42 @@ TEST_F(DiskManagerTest, TestTryWriteRead)
     }
 }
 
-// Test buffer pool eviction when full
-TEST_F(DiskManagerTest, TestBufferPoolEviction)
+// Test page buffer eviction when full
+TEST_F(DiskManagerTest, TestPageBufferEviction)
 {
     int number_frames = 2;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
 
     // Create 3 pages to force eviction
-    page_id_t page1 = buffer_pool_man.NewPage();
-    page_id_t page2 = buffer_pool_man.NewPage();
-    page_id_t page3 = buffer_pool_man.NewPage();
+    page_id_t page1 = page_buffer_man.NewPage();
+    page_id_t page2 = page_buffer_man.NewPage();
+    page_id_t page3 = page_buffer_man.NewPage();
 
     // Write unique data to each page
     {
-        WritePageGuard guard1 = buffer_pool_man.WaitWritePage(page1);
+        WritePageGuard guard1 = page_buffer_man.WaitWritePage(page1);
         std::fill(guard1.GetData().begin(), guard1.GetData().end(), 'A');
     }
     {
-        WritePageGuard guard2 = buffer_pool_man.WaitWritePage(page2);
+        WritePageGuard guard2 = page_buffer_man.WaitWritePage(page2);
         std::fill(guard2.GetData().begin(), guard2.GetData().end(), 'B');
     }
     {
-        WritePageGuard guard3 = buffer_pool_man.WaitWritePage(page3);
+        WritePageGuard guard3 = page_buffer_man.WaitWritePage(page3);
         std::fill(guard3.GetData().begin(), guard3.GetData().end(), 'C');
     }
 
     // Verify all pages can still be read (from disk if evicted)
     {
-        ReadPageGuard guard1 = buffer_pool_man.WaitReadPage(page1);
+        ReadPageGuard guard1 = page_buffer_man.WaitReadPage(page1);
         EXPECT_EQ(guard1.GetData()[0], 'A');
     }
     {
-        ReadPageGuard guard2 = buffer_pool_man.WaitReadPage(page2);
+        ReadPageGuard guard2 = page_buffer_man.WaitReadPage(page2);
         EXPECT_EQ(guard2.GetData()[0], 'B');
     }
     {
-        ReadPageGuard guard3 = buffer_pool_man.WaitReadPage(page3);
+        ReadPageGuard guard3 = page_buffer_man.WaitReadPage(page3);
         EXPECT_EQ(guard3.GetData()[0], 'C');
     }
 }
@@ -116,13 +116,13 @@ TEST_F(DiskManagerTest, TestBufferPoolEviction)
 TEST_F(DiskManagerTest, TestConcurrentReaders)
 {
     int number_frames = 1;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
 
-    page_id_t page_id = buffer_pool_man.NewPage();
+    page_id_t page_id = page_buffer_man.NewPage();
 
     // Write initial data
     {
-        WritePageGuard guard = buffer_pool_man.WaitWritePage(page_id);
+        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
         std::fill(guard.GetData().begin(), guard.GetData().end(), 'X');
     }
 
@@ -131,8 +131,8 @@ TEST_F(DiskManagerTest, TestConcurrentReaders)
     std::atomic<int> successful_reads { 0 };
 
     for (int i = 0; i < num_readers; ++i) {
-        readers.emplace_back([&buffer_pool_man, page_id, &successful_reads]() {
-            ReadPageGuard guard = buffer_pool_man.WaitReadPage(page_id);
+        readers.emplace_back([&page_buffer_man, page_id, &successful_reads]() {
+            ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
             if (guard.GetData()[0] == 'X') {
                 successful_reads++;
             }
@@ -151,15 +151,15 @@ TEST_F(DiskManagerTest, TestConcurrentReaders)
 TEST_F(DiskManagerTest, TestWriterExclusivity)
 {
     int number_frames = 1;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
 
-    page_id_t page_id = buffer_pool_man.NewPage();
+    page_id_t page_id = page_buffer_man.NewPage();
 
     std::atomic<bool> first_writer_started { false };
     std::atomic<bool> second_writer_blocked { true };
 
     std::thread writer1([&]() {
-        WritePageGuard guard = buffer_pool_man.WaitWritePage(page_id);
+        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
         first_writer_started = true;
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         std::fill(guard.GetData().begin(), guard.GetData().end(), '1');
@@ -172,7 +172,7 @@ TEST_F(DiskManagerTest, TestWriterExclusivity)
         }
 
         auto start = std::chrono::steady_clock::now();
-        WritePageGuard guard = buffer_pool_man.WaitWritePage(page_id);
+        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
         auto end = std::chrono::steady_clock::now();
 
         // Should have been blocked for at least 40ms
@@ -187,7 +187,7 @@ TEST_F(DiskManagerTest, TestWriterExclusivity)
     EXPECT_TRUE(second_writer_blocked);
 
     // Verify final state
-    ReadPageGuard guard = buffer_pool_man.WaitReadPage(page_id);
+    ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
     EXPECT_EQ(guard.GetData()[0], '2');
 }
 
@@ -195,15 +195,15 @@ TEST_F(DiskManagerTest, TestWriterExclusivity)
 TEST_F(DiskManagerTest, TestTryOperationsBlocked)
 {
     int number_frames = 1;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
 
-    page_id_t page_id = buffer_pool_man.NewPage();
+    page_id_t page_id = page_buffer_man.NewPage();
 
-    WritePageGuard write_guard = buffer_pool_man.WaitWritePage(page_id);
+    WritePageGuard write_guard = page_buffer_man.WaitWritePage(page_id);
 
     // Try operations should fail while write guard is held
-    auto try_read = buffer_pool_man.TryReadPage(page_id);
-    auto try_write = buffer_pool_man.TryWritePage(page_id);
+    auto try_read = page_buffer_man.TryReadPage(page_id);
+    auto try_write = page_buffer_man.TryWritePage(page_id);
 
     EXPECT_FALSE(try_read.has_value());
     EXPECT_FALSE(try_write.has_value());
@@ -213,14 +213,14 @@ TEST_F(DiskManagerTest, TestTryOperationsBlocked)
 TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
 {
     int number_frames = 3;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
 
     const int num_pages = 5;
     std::vector<page_id_t> page_ids;
 
     // Create multiple pages
     for (int i = 0; i < num_pages; ++i) {
-        page_ids.push_back(buffer_pool_man.NewPage());
+        page_ids.push_back(page_buffer_man.NewPage());
     }
 
     std::atomic<int> operations_completed { 0 };
@@ -240,23 +240,23 @@ TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
 
                 if (op == 0) {
                     // Wait read
-                    ReadPageGuard guard = buffer_pool_man.WaitReadPage(page_id);
+                    ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 } else if (op == 1) {
                     // Wait write
-                    WritePageGuard guard = buffer_pool_man.WaitWritePage(page_id);
+                    WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
                     std::fill(guard.GetData().begin(), guard.GetData().begin() + 10,
                         static_cast<char>('A' + i));
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 } else if (op == 2) {
                     // Try read
-                    auto guard_opt = buffer_pool_man.TryReadPage(page_id);
+                    auto guard_opt = page_buffer_man.TryReadPage(page_id);
                     if (guard_opt.has_value()) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     }
                 } else {
                     // Try write
-                    auto guard_opt = buffer_pool_man.TryWritePage(page_id);
+                    auto guard_opt = page_buffer_man.TryWritePage(page_id);
                     if (guard_opt.has_value()) {
                         std::fill(guard_opt->GetData().begin(),
                             guard_opt->GetData().begin() + 10,
@@ -281,7 +281,7 @@ TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
 TEST_F(DiskManagerTest, TestStressConcurrency)
 {
     int number_frames = 5;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
 
     const int num_pages = 10;
     const int num_threads = 8;
@@ -289,7 +289,7 @@ TEST_F(DiskManagerTest, TestStressConcurrency)
 
     std::vector<page_id_t> page_ids;
     for (int i = 0; i < num_pages; ++i) {
-        page_ids.push_back(buffer_pool_man.NewPage());
+        page_ids.push_back(page_buffer_man.NewPage());
     }
 
     std::atomic<int> successful_operations { 0 };
@@ -308,14 +308,14 @@ TEST_F(DiskManagerTest, TestStressConcurrency)
 
                     if (op_dist(gen) == 0) {
                         // Read operation
-                        ReadPageGuard guard = buffer_pool_man.WaitReadPage(page_id);
+                        ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
                         // Simulate some work
                         volatile char dummy = guard.GetData()[0];
                         (void)dummy;
                         successful_operations++;
                     } else {
                         // Write operation
-                        WritePageGuard guard = buffer_pool_man.WaitWritePage(page_id);
+                        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
                         guard.GetData()[0] = static_cast<char>('A' + (t % 26));
                         successful_operations++;
                     }
@@ -332,18 +332,18 @@ TEST_F(DiskManagerTest, TestStressConcurrency)
     EXPECT_EQ(successful_operations.load(), num_threads * operations_per_thread);
 }
 
-// Test buffer pool behavior when no frames available
+// Test page buffer manager behavior when no frames available
 TEST_F(DiskManagerTest, TestNoFramesAvailable)
 {
     int number_frames = 1;
-    BufferPoolManager buffer_pool_man(temp_dir, number_frames);
+    PageBufferManager page_buffer_man(temp_dir, number_frames);
 
-    page_id_t page1 = buffer_pool_man.NewPage();
-    page_id_t page2 = buffer_pool_man.NewPage();
+    page_id_t page1 = page_buffer_man.NewPage();
+    page_id_t page2 = page_buffer_man.NewPage();
 
     // Hold a lock on page1
-    WritePageGuard guard1 = buffer_pool_man.WaitWritePage(page1);
+    WritePageGuard guard1 = page_buffer_man.WaitWritePage(page1);
 
     // Try to access page2 with Try operation - should fail if page1 can't be evicted
-    auto guard2_opt = buffer_pool_man.TryWritePage(page2);
+    auto guard2_opt = page_buffer_man.TryWritePage(page2);
 }
