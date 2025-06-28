@@ -6,7 +6,7 @@
 
 template <Comparable KeyType, typename ValueType>
 class InternalNode {
-    static constexpr std::size_t PAGE_CAPACITY = PAGE_SIZE / ( sizeof(KeyType) + sizeof(KeyType));
+    static constexpr std::size_t PAGE_CAPACITY = PAGE_SIZE / (sizeof(KeyType) + sizeof(KeyType));
 
     std::size_t current_size_m;
 

@@ -1,6 +1,6 @@
 #include "buffer/page_guard.h"
-#include "buffer/page_buffer_manager.h"
 #include "buffer/frame_header.h"
+#include "buffer/page_buffer_manager.h"
 #include <cassert>
 #include <iostream>
 #include <memory>

@@ -40,7 +40,7 @@ private:
     void RemoveAccessor(frame_id_t frame_id);
 
 private:
-    static constexpr std::string_view PAGE_BUFFER_MANAGER_LOG_FILENAME{ "page_buffer_manager.log" };
+    static constexpr std::string_view PAGE_BUFFER_MANAGER_LOG_FILENAME { "page_buffer_manager.log" };
     std::shared_ptr<spdlog::logger> logger_m;
 
     LRUKReplacer replacer_m;
