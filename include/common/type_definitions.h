@@ -12,3 +12,9 @@ using frame_id_t = uint32_t;
 // leg off by accidentally handling a mutable view.
 using MutPageView = std::span<char, PAGE_SIZE>;
 using PageView = std::span<const char, PAGE_SIZE>;
+
+enum class PageType {
+    Data,
+    BPTreeInner,
+    BPTreeLeaf
+};
