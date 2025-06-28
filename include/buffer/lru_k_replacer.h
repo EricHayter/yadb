@@ -8,11 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
-/* ============================================================================
- * LRU-K Replacement Policy
- * ============================================================================
+/**
+ * @brief LRU-K Replacement Policy
  *
- * The LRU-K Replacement Policy
  * To implement the page buffer/cache a policy must be created to determine
  * which pages should be "evicted" or removed from the buffer in place of new
  * pages that need to be added.
@@ -31,52 +29,63 @@
  * https://en.wikipedia.org/wiki/Page_replacement_algorithm#Least_recently_used
  */
 class LRUKReplacer {
-    /*! \brief Struct to represent a frame inside of the page buffer. */
-    struct LRUFrame {
-        LRUFrame() = default;
-        LRUFrame(frame_id_t frame_id);
+    /**
+     * @brief Struct to keep track of accesses of a frame
+     */
+    struct LRUFrameHistory {
+        LRUFrameHistory() = default;
+        LRUFrameHistory(frame_id_t frame_id);
+
         frame_id_t frame_id { frame_id_t(-1) };
         std::deque<std::time_t> history; /// history of accesses
-        bool is_evictable { true };
+        bool is_evictable { true }; /// can the frame evict the page inside of it
     };
 
 public:
-    /*!
-     * \brief begin tracking a given frame
+    /**
+     * @brief begin tracking a given frame
+     *
+     * @param frame_id the frame to register to the replacement policy
      *
      * This function must be called for every frame that is meant to be used
      * by the replacer. This is so that the replacer knows which frames
      * are evictable/available at any given time.
-     *
      */
     void RegisterFrame(frame_id_t frame_id);
 
-    /*! \brief Find a frame (if any) to evict using the LRU-K policy
-     * \returns The frame id of the frame to remove
+    /**
+     * @brief Find a frame (if any) to evict using the LRU-K policy
+     *
+     * @returns The frame id of the frame to remove if no frame is found return
+     * std::nullopt
      */
     std::optional<frame_id_t> EvictFrame();
 
-    /*! \brief Record an access to a given frame
-     * \param frame_id frame to record access to
+    /**
+     * @brief Record an access to a given frame
+     *
+     * @param frame_id the frame id of the frame that was accessed
      */
     void RecordAccess(frame_id_t frame_id);
 
-    void Remove(frame_id_t frame_id);
-
-    /*! \brief Set the evictable status on a frame
-     * \param frame_id the frame to change the evictable status of
-     * \param evictable the new evictable status for the frame
+    /**
+     * @brief Set the evictable status on a frame
+     *
+     * @param frame_id the frame to change the evictable status of
+     * @param evictable the new evictable status for the frame
      */
     void SetEvictable(frame_id_t frame_id, bool evictable);
 
-    /*! \brief Get the number of evictable frames
-     * \returns The amount of frames that are evictable
+    /**
+     * @brief Get the number of evictable frames
+     *
+     * @returns The amount of frames that are evictable
      */
     std::size_t GetEvictableCount();
 
 private:
     /// keeping track of all of the current frames.
-    std::unordered_map<frame_id_t, LRUFrame> frames_m;
+    std::unordered_map<frame_id_t, LRUFrameHistory> frames_m;
 
     std::size_t current_timestamp_m { 0 }; /// Timestamp for accesses
     std::size_t k_m; /// Length of history to compare to

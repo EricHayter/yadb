@@ -1,14 +1,14 @@
 #include "buffer/lru_k_replacer.h"
 #include "common/type_definitions.h"
 
-LRUKReplacer::LRUFrame::LRUFrame(frame_id_t frame_id)
+LRUKReplacer::LRUFrameHistory::LRUFrameHistory(frame_id_t frame_id)
     : frame_id(frame_id)
 {
 }
 
 void LRUKReplacer::RegisterFrame(frame_id_t frame_id)
 {
-    frames_m.emplace(frame_id, LRUFrame(frame_id));
+    frames_m.emplace(frame_id, LRUFrameHistory(frame_id));
 }
 
 std::optional<frame_id_t> LRUKReplacer::EvictFrame()
@@ -64,20 +64,13 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id)
     // TODO make this an asssert or spdlog it or something??
     if (not frames_m.contains(frame_id))
         return;
-    LRUFrame& frame = frames_m[frame_id];
+    LRUFrameHistory& frame = frames_m[frame_id];
 
     frame.history.push_back(current_timestamp_m);
     if (frame.history.size() > k_m)
         frame.history.pop_front();
 
     current_timestamp_m++;
-}
-
-void LRUKReplacer::Remove(frame_id_t frame_id)
-{
-    if (not frames_m.contains(frame_id))
-        return;
-    frames_m.erase(frame_id);
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool evictable)
