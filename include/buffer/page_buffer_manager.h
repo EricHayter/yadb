@@ -96,9 +96,19 @@ public:
     ReadPageGuard WaitReadPage(page_id_t page_id);
 
     std::optional<WritePageGuard> TryWritePage(page_id_t page_id);
+
     WritePageGuard WaitWritePage(page_id_t page_id);
 
 private:
+    /**
+     * @brief Status codes for calls to LoadPage
+     */
+    enum class LoadPageStatus {
+        Success,
+        IOError,
+        NoFreeFrameError,
+    };
+
     /**
      * @brief Attempts to load a page into the page buffer
      *
@@ -106,7 +116,15 @@ private:
      *
      * @returns true if the page was successfully loaded and false otherwise
      */
-    bool LoadPage(page_id_t page_id);
+    LoadPageStatus LoadPage(page_id_t page_id);
+
+    /**
+     * @brief Status codes for calls to FlushPage
+     */
+    enum class FlushPageStatus {
+        Success,
+        IOError,
+    };
 
     /**
      * @brief Flushes a page from the page buffer
@@ -117,7 +135,7 @@ private:
      *
      * @returns true if the flush was successful and false otherwise
      */
-    bool FlushPage(page_id_t page_id);
+    FlushPageStatus FlushPage(page_id_t page_id);
 
     /**
      * @brief Notify the page buffer manager that a frame has been accessed

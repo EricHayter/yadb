@@ -52,7 +52,7 @@ std::optional<ReadPageGuard> PageBufferManager::TryReadPage(page_id_t page_id)
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
     std::lock_guard<std::mutex> lk(mut_m);
-    if (not LoadPage(page_id)) {
+    if (LoadPage(page_id) != LoadPageStatus::Success) {
         return std::nullopt;
     }
     FrameHeader* frame = frames_m[page_map_m[page_id]].get();
@@ -80,9 +80,10 @@ ReadPageGuard PageBufferManager::WaitReadPage(page_id_t page_id)
     while (true) {
         std::unique_lock<std::mutex> lk(mut_m);
 
+        // TODO this is very hacky I need a more permanent solution
         // wait until the page is able to be loaded into a frame
         available_frame_m.wait(lk, [this, page_id]() {
-            return LoadPage(page_id);
+            return LoadPage(page_id) == LoadPageStatus::Success;
         });
 
         FrameHeader* frame = frames_m[page_map_m[page_id]].get();
@@ -107,7 +108,7 @@ std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
     std::lock_guard<std::mutex> lk(mut_m);
-    if (not LoadPage(page_id)) {
+    if (LoadPage(page_id) != LoadPageStatus::Success) {
         return std::nullopt;
     }
     FrameHeader* frame = frames_m[page_map_m[page_id]].get();
@@ -157,11 +158,11 @@ WritePageGuard PageBufferManager::WaitWritePage(page_id_t page_id)
     }
 }
 
-bool PageBufferManager::LoadPage(page_id_t page_id)
+PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
 {
     // it's already loaded no more IO to handle
     if (page_map_m.contains(page_id)) {
-        return true;
+        return LoadPageStatus::Success;
     }
 
     // Our page is not already in the page buffer
@@ -169,14 +170,14 @@ bool PageBufferManager::LoadPage(page_id_t page_id)
     std::optional<frame_id_t> frame_id_opt = replacer_m.EvictFrame();
     if (not frame_id_opt.has_value()) {
         logger_m->info("Couldn't find a frame to evict for page {}", page_id);
-        return false;
+        return LoadPageStatus::NoFreeFrameError;
     }
     FrameHeader* frame = frames_m[*frame_id_opt].get();
 
     // if the current frame contains page data that was updated
-    if (frame->is_dirty && not FlushPage(frame->page_id)) {
+    if (frame->is_dirty && FlushPage(frame->page_id) != FlushPageStatus::Success) {
         logger_m->warn("Failed to load page {} due to flush failure", page_id);
-        return false;
+        return LoadPageStatus::IOError;
     }
 
     // unmap the old page from the page-to-frame map.
@@ -188,7 +189,7 @@ bool PageBufferManager::LoadPage(page_id_t page_id)
     disk_scheduler_m.ReadPage(page_id, frame->GetMutData(), std::move(read_status_promise));
     if (not read_status_future.get()) {
         logger_m->warn("Failed to load page {} due to read failure", page_id);
-        return false;
+        return LoadPageStatus::IOError;
     }
 
     // update frame information
@@ -196,11 +197,11 @@ bool PageBufferManager::LoadPage(page_id_t page_id)
     frame->page_id = page_id;
     frame->is_dirty = false;
     frame->pin_count = 0;
-    return true;
+    return LoadPageStatus::Success;
 }
 
-// TODO make this take a frame header
-bool PageBufferManager::FlushPage(page_id_t page_id)
+// Make this function "Frame-centric"
+PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_id)
 {
     std::promise<bool> write_status_promise;
     std::future<bool> write_status_future = write_status_promise.get_future();
@@ -208,9 +209,9 @@ bool PageBufferManager::FlushPage(page_id_t page_id)
     disk_scheduler_m.WritePage(page_id, frame->GetData(), std::move(write_status_promise));
     if (not write_status_future.get()) {
         logger_m->warn("Failed to flush page {}", page_id);
-        return false;
+        return FlushPageStatus::IOError;
     }
-    return true;
+    return FlushPageStatus::Success;
 }
 
 void PageBufferManager::AddAccessor(frame_id_t frame_id, bool is_writer)
