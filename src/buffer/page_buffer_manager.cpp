@@ -138,7 +138,7 @@ WritePageGuard PageBufferManager::WaitWritePage(page_id_t page_id)
 
         // wait until the page is able to be loaded into a frame
         available_frame_m.wait(lk, [this, page_id]() {
-            return LoadPage(page_id);
+            return LoadPage(page_id) == LoadPageStatus::Success;
         });
 
         FrameHeader* frame = frames_m[page_map_m[page_id]].get();
