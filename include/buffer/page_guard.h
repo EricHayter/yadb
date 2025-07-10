@@ -54,7 +54,7 @@ public:
 private:
     PageBufferManager* page_buffer_manager_m;
     FrameHeader* frame_header_m;
-    std::shared_lock<std::shared_mutex> lk_m;
+    std::shared_lock<std::shared_mutex> frame_lk_m;
 };
 
 /**
@@ -90,5 +90,5 @@ public:
 private:
     PageBufferManager* page_buffer_manager_m;
     FrameHeader* frame_header_m;
-    std::unique_lock<std::shared_mutex> lk_m;
+    std::unique_lock<std::shared_mutex> frame_lk_m;
 };
