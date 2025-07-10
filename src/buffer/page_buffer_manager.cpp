@@ -8,6 +8,8 @@
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 PageBufferManager::PageBufferManager(const std::filesystem::path& db_directory, std::size_t num_frames)
@@ -22,7 +24,9 @@ PageBufferManager::PageBufferManager(const std::filesystem::path& db_directory, 
         replacer_m.RegisterFrame(id);
     }
 
-    logger_m = spdlog::basic_logger_mt("page buffer_manager logger", db_directory / PAGE_BUFFER_MANAGER_LOG_FILENAME);
+    logger_m = spdlog::get(LOGGER_NAME.data());
+    if (!logger_m)
+        logger_m = spdlog::basic_logger_mt(LOGGER_NAME.data(), db_directory / LOG_FILE_NAME);
     logger_m->info("Successfully initialized page buffer manager");
 }
 
