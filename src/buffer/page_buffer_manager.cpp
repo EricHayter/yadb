@@ -65,42 +65,22 @@ std::optional<ReadPageGuard> PageBufferManager::TryReadPage(page_id_t page_id)
 
 ReadPageGuard PageBufferManager::WaitReadPage(page_id_t page_id)
 {
-    // This is not the prettiest solution, but it is effective. Without this
-    // deadlocks become possible in cases where a page guard is constructed
-    // for the same frame.
-    //
-    // For example 2 calls: WaitReadPage(0) and  WaitReadPage(0) could
-    // cause an deadlock.
-    //
-    // The first call runs perfectly fine and acquires a lock on the FrameHeader
-    // then second then acquires a lock to the page manager but then
-    // waits to acquire the lock on the frame. But then the mutex for the
-    // page buffer manager cannot be released as it is required in the
-    // deconstructor of the page guard.
-    while (true) {
-        std::unique_lock<std::mutex> lk(mut_m);
+    std::unique_lock<std::mutex> lk(mut_m);
 
-        // TODO this is very hacky I need a more permanent solution
-        // wait until the page is able to be loaded into a frame
-        available_frame_m.wait(lk, [this, page_id]() {
-            return LoadPage(page_id) == LoadPageStatus::Success;
-        });
+    // wait until the page is able to be loaded into a frame
+    // TODO fix this. This will 100% cause a problem if not a successful return
+    // in that case this may need to be able to return a status and writepageguard OR optional?
 
-        FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+    available_frame_m.wait(lk, [this, page_id]() {
+        return LoadPage(page_id) == LoadPageStatus::Success;
+    });
 
-        // attempt to lock the mutex for the header
-        if (frame->mut.try_lock_shared()) {
-            // Success: now we have both locks, safe to proceed
-            std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-            return ReadPageGuard(this, frame, std::move(frame_lk));
-        }
+    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
 
-        // Could not acquire frame lock: release `mut_m` and retry
-        // This avoids deadlock and ensures consistency
-        lk.unlock();
-
-        std::this_thread::yield();
-    }
+    // lock the mutex for the header
+    frame->mut.lock_shared();
+    std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
+    return ReadPageGuard(this, frame, std::move(frame_lk));
 }
 
 std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
@@ -121,41 +101,21 @@ std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
 
 WritePageGuard PageBufferManager::WaitWritePage(page_id_t page_id)
 {
-    // This is not the prettiest solution, but it is effective. Without this
-    // deadlocks become possible in cases where a page guard is constructed
-    // for the same frame.
-    //
-    // For example 2 calls: WaitWritePage(0) and  WaitWritePage(0) could
-    // cause an deadlock.
-    //
-    // The first call runs perfectly fine and acquires a lock on the FrameHeader
-    // then second then acquires a lock to the page buffer manager but then
-    // waits to acquire the lock on the frame. But then the mutex for the
-    // page buffer manager cannot be released as it is required in the
-    // deconstructor of the page guard.
-    while (true) {
-        std::unique_lock<std::mutex> lk(mut_m);
+    std::unique_lock<std::mutex> lk(mut_m);
 
-        // wait until the page is able to be loaded into a frame
-        available_frame_m.wait(lk, [this, page_id]() {
-            return LoadPage(page_id) == LoadPageStatus::Success;
-        });
+    // wait until the page is able to be loaded into a frame
+    // TODO fix this. This will 100% cause a problem if not a successful return
+    // in that case this may need to be able to return a status and writepageguard OR optional?
+    available_frame_m.wait(lk, [this, page_id]() {
+        return LoadPage(page_id) == LoadPageStatus::Success;
+    });
 
-        FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
 
-        // attempt to lock the mutex for the header
-        if (frame->mut.try_lock()) {
-            // Success: now we have both locks, safe to proceed
-            std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-            return WritePageGuard(this, frame, std::move(frame_lk));
-        }
-
-        // Could not acquire frame lock: release `mut_m` and retry
-        // This avoids deadlock and ensures consistency
-        lk.unlock();
-
-        std::this_thread::yield();
-    }
+    // lock the mutex for the header
+    frame->mut.lock();
+    std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
+    return WritePageGuard(this, frame, std::move(frame_lk));
 }
 
 PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
