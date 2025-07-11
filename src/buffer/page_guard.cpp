@@ -24,7 +24,8 @@ ReadPageGuard::~ReadPageGuard()
 {
     // no longer need access to lock since no more I/O can be performed on
     // deconstructed page guard...
-    if (frame_lk_m) frame_lk_m.unlock();
+    if (frame_lk_m)
+        frame_lk_m.unlock();
     if (page_buffer_manager_m != nullptr)
         page_buffer_manager_m->RemoveAccessor(frame_header_m->id);
 }
@@ -72,7 +73,8 @@ WritePageGuard::~WritePageGuard()
 {
     // no longer need access to lock since no more I/O can be performed on
     // deconstructed page guard...
-    if (frame_lk_m) frame_lk_m.unlock();
+    if (frame_lk_m)
+        frame_lk_m.unlock();
     if (page_buffer_manager_m != nullptr)
         page_buffer_manager_m->RemoveAccessor(frame_header_m->id);
 }
