@@ -17,7 +17,6 @@ ReadPageGuard::ReadPageGuard(PageBufferManager* page_buffer_manager, FrameHeader
     // shared lock. Otherwise, thread safety cannot be guaranteed, undermining
     // the job the guard itself.
     assert(frame_lk_m.owns_lock());
-    page_buffer_manager_m->AddAccessor(frame_header_m->id, false);
 }
 
 ReadPageGuard::~ReadPageGuard()
@@ -66,7 +65,6 @@ WritePageGuard::WritePageGuard::WritePageGuard(PageBufferManager* page_buffer_ma
     // shared lock. Otherwise, thread safety cannot be guaranteed, undermining
     // the job the guard itself.
     assert(frame_lk_m.owns_lock());
-    page_buffer_manager_m->AddAccessor(frame_header_m->id, true);
 }
 
 WritePageGuard::~WritePageGuard()

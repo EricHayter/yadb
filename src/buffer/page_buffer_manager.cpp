@@ -59,6 +59,7 @@ std::optional<ReadPageGuard> PageBufferManager::TryReadPage(page_id_t page_id)
     if (not frame->mut.try_lock_shared()) {
         return std::nullopt;
     }
+    AddAccessor(frame->id, false);
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return std::make_optional<ReadPageGuard>(this, frame, std::move(frame_lk));
 }
@@ -75,8 +76,10 @@ std::optional<ReadPageGuard> PageBufferManager::WaitReadPage(page_id_t page_id)
             return std::nullopt;
         }
     }
-
     FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+    AddAccessor(frame->id, false);
+    lk.unlock();
+
     frame->mut.lock_shared();
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return ReadPageGuard(this, frame, std::move(frame_lk));
@@ -94,6 +97,7 @@ std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
     if (not frame->mut.try_lock()) {
         return std::nullopt;
     }
+    AddAccessor(frame->id, true);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return std::make_optional<WritePageGuard>(this, frame, std::move(frame_lk));
 }
@@ -112,6 +116,9 @@ std::optional<WritePageGuard> PageBufferManager::WaitWritePage(page_id_t page_id
     }
 
     FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+    AddAccessor(frame->id, true);
+    lk.unlock();
+
     frame->mut.lock();
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return WritePageGuard(this, frame, std::move(frame_lk));
