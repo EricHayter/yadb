@@ -89,5 +89,5 @@ private:
 
     std::size_t current_timestamp_m { 0 }; /// Timestamp for accesses
     std::size_t k_m; /// Length of history to compare to
-    std::size_t evictable_count_m { 0 }; /// Amount of evictable frames
+    std::size_t evictable_count_m; /// Amount of evictable frames
 };

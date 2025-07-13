@@ -9,6 +9,7 @@ LRUKReplacer::LRUFrameHistory::LRUFrameHistory(frame_id_t frame_id)
 void LRUKReplacer::RegisterFrame(frame_id_t frame_id)
 {
     frames_m.emplace(frame_id, LRUFrameHistory(frame_id));
+    evictable_count_m++;
 }
 
 std::optional<frame_id_t> LRUKReplacer::EvictFrame()
