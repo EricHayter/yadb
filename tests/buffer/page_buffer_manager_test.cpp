@@ -32,15 +32,17 @@ TEST_F(DiskManagerTest, TestWaitWriteRead)
     {
         std::vector<char> buff(PAGE_SIZE, 'B');
         MutPageView page_view(buff.begin(), PAGE_SIZE);
-        WritePageGuard page_guard = page_buffer_man.WaitWritePage(page_id);
-        std::copy(page_view.begin(), page_view.end(), page_guard.GetData().begin());
+        std::optional<WritePageGuard> page_guard = page_buffer_man.WaitWritePage(page_id);
+        EXPECT_TRUE(page_guard.has_value());
+        std::copy(page_view.begin(), page_view.end(), page_guard->GetData().begin());
     }
     {
         const std::vector<char> expected_buf(PAGE_SIZE, 'B');
         std::vector<char> buff(PAGE_SIZE, 0);
         MutPageView page_view(buff.begin(), PAGE_SIZE);
-        ReadPageGuard page_guard = page_buffer_man.WaitReadPage(page_id);
-        PageView page_data = page_guard.GetData();
+        std::optional<ReadPageGuard> page_guard = page_buffer_man.WaitReadPage(page_id);
+        EXPECT_TRUE(page_guard.has_value());
+        PageView page_data = page_guard->GetData();
         std::copy(page_data.begin(), page_data.end(), buff.begin());
         EXPECT_EQ(expected_buf, buff);
     }
@@ -85,30 +87,31 @@ TEST_F(DiskManagerTest, TestPageBufferEviction)
 
     // Write unique data to each page
     {
-        WritePageGuard guard1 = page_buffer_man.WaitWritePage(page1);
-        std::fill(guard1.GetData().begin(), guard1.GetData().end(), 'A');
+        std::optional<WritePageGuard> guard1 = page_buffer_man.WaitWritePage(page1);
+        ASSERT_TRUE(guard1.has_value());
+        std::fill(guard1->GetData().begin(), guard1->GetData().end(), 'A');
     }
     {
-        WritePageGuard guard2 = page_buffer_man.WaitWritePage(page2);
-        std::fill(guard2.GetData().begin(), guard2.GetData().end(), 'B');
+        std::optional<WritePageGuard> guard2 = page_buffer_man.WaitWritePage(page2);
+        std::fill(guard2->GetData().begin(), guard2->GetData().end(), 'B');
     }
     {
-        WritePageGuard guard3 = page_buffer_man.WaitWritePage(page3);
-        std::fill(guard3.GetData().begin(), guard3.GetData().end(), 'C');
+        std::optional<WritePageGuard> guard3 = page_buffer_man.WaitWritePage(page3);
+        std::fill(guard3->GetData().begin(), guard3->GetData().end(), 'C');
     }
 
     // Verify all pages can still be read (from disk if evicted)
     {
-        ReadPageGuard guard1 = page_buffer_man.WaitReadPage(page1);
-        EXPECT_EQ(guard1.GetData()[0], 'A');
+        std::optional<ReadPageGuard> guard1 = page_buffer_man.WaitReadPage(page1);
+        EXPECT_EQ(guard1->GetData()[0], 'A');
     }
     {
-        ReadPageGuard guard2 = page_buffer_man.WaitReadPage(page2);
-        EXPECT_EQ(guard2.GetData()[0], 'B');
+        std::optional<ReadPageGuard> guard2 = page_buffer_man.WaitReadPage(page2);
+        EXPECT_EQ(guard2->GetData()[0], 'B');
     }
     {
-        ReadPageGuard guard3 = page_buffer_man.WaitReadPage(page3);
-        EXPECT_EQ(guard3.GetData()[0], 'C');
+        std::optional<ReadPageGuard> guard3 = page_buffer_man.WaitReadPage(page3);
+        EXPECT_EQ(guard3->GetData()[0], 'C');
     }
 }
 
@@ -122,8 +125,9 @@ TEST_F(DiskManagerTest, TestConcurrentReaders)
 
     // Write initial data
     {
-        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
-        std::fill(guard.GetData().begin(), guard.GetData().end(), 'X');
+        std::optional<WritePageGuard> guard = page_buffer_man.WaitWritePage(page_id);
+        ASSERT_TRUE(guard.has_value());
+        std::fill(guard->GetData().begin(), guard->GetData().end(), 'X');
     }
 
     const int num_readers = 4;
@@ -132,8 +136,9 @@ TEST_F(DiskManagerTest, TestConcurrentReaders)
 
     for (int i = 0; i < num_readers; ++i) {
         readers.emplace_back([&page_buffer_man, page_id, &successful_reads]() {
-            ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
-            if (guard.GetData()[0] == 'X') {
+            std::optional<ReadPageGuard> guard = page_buffer_man.WaitReadPage(page_id);
+            ASSERT_TRUE(guard.has_value());
+            if (guard->GetData()[0] == 'X') {
                 successful_reads++;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -159,10 +164,11 @@ TEST_F(DiskManagerTest, TestWriterExclusivity)
     std::atomic<bool> second_writer_blocked { true };
 
     std::thread writer1([&]() {
-        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
+        std::optional<WritePageGuard> guard = page_buffer_man.WaitWritePage(page_id);
+        ASSERT_TRUE(guard.has_value());
         first_writer_started = true;
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        std::fill(guard.GetData().begin(), guard.GetData().end(), '1');
+        std::fill(guard->GetData().begin(), guard->GetData().end(), '1');
     });
 
     std::thread writer2([&]() {
@@ -172,13 +178,14 @@ TEST_F(DiskManagerTest, TestWriterExclusivity)
         }
 
         auto start = std::chrono::steady_clock::now();
-        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
+        std::optional<WritePageGuard> guard = page_buffer_man.WaitWritePage(page_id);
+        ASSERT_TRUE(guard.has_value());
         auto end = std::chrono::steady_clock::now();
 
         // Should have been blocked for at least 40ms
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         second_writer_blocked = (duration.count() >= 40);
-        std::fill(guard.GetData().begin(), guard.GetData().end(), '2');
+        std::fill(guard->GetData().begin(), guard->GetData().end(), '2');
     });
 
     writer1.join();
@@ -187,8 +194,9 @@ TEST_F(DiskManagerTest, TestWriterExclusivity)
     EXPECT_TRUE(second_writer_blocked);
 
     // Verify final state
-    ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
-    EXPECT_EQ(guard.GetData()[0], '2');
+    std::optional<ReadPageGuard> guard = page_buffer_man.WaitReadPage(page_id);
+    ASSERT_TRUE(guard.has_value());
+    EXPECT_EQ(guard->GetData()[0], '2');
 }
 
 // Test Try operations fail when page is locked
@@ -199,7 +207,8 @@ TEST_F(DiskManagerTest, TestTryOperationsBlocked)
 
     page_id_t page_id = page_buffer_man.NewPage();
 
-    WritePageGuard write_guard = page_buffer_man.WaitWritePage(page_id);
+    std::optional<WritePageGuard> write_guard = page_buffer_man.WaitWritePage(page_id);
+    EXPECT_TRUE(write_guard.has_value());
 
     // Try operations should fail while write guard is held
     auto try_read = page_buffer_man.TryReadPage(page_id);
@@ -240,12 +249,14 @@ TEST_F(DiskManagerTest, TestMixedConcurrentOperations)
 
                 if (op == 0) {
                     // Wait read
-                    ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
+                    std::optional<ReadPageGuard> guard = page_buffer_man.WaitReadPage(page_id);
+                    ASSERT_TRUE(guard.has_value());
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 } else if (op == 1) {
                     // Wait write
-                    WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
-                    std::fill(guard.GetData().begin(), guard.GetData().begin() + 10,
+                    std::optional<WritePageGuard> guard = page_buffer_man.WaitWritePage(page_id);
+                    ASSERT_TRUE(guard.has_value());
+                    std::fill(guard->GetData().begin(), guard->GetData().begin() + 10,
                         static_cast<char>('A' + i));
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 } else if (op == 2) {
@@ -308,15 +319,17 @@ TEST_F(DiskManagerTest, TestStressConcurrency)
 
                     if (op_dist(gen) == 0) {
                         // Read operation
-                        ReadPageGuard guard = page_buffer_man.WaitReadPage(page_id);
+                        std::optional<ReadPageGuard> guard = page_buffer_man.WaitReadPage(page_id);
+                        ASSERT_TRUE(guard.has_value());
                         // Simulate some work
-                        volatile char dummy = guard.GetData()[0];
+                        volatile char dummy = guard->GetData()[0];
                         (void)dummy;
                         successful_operations++;
                     } else {
                         // Write operation
-                        WritePageGuard guard = page_buffer_man.WaitWritePage(page_id);
-                        guard.GetData()[0] = static_cast<char>('A' + (t % 26));
+                        std::optional<WritePageGuard> guard = page_buffer_man.WaitWritePage(page_id);
+                        ASSERT_TRUE(guard.has_value());
+                        guard->GetData()[0] = static_cast<char>('A' + (t % 26));
                         successful_operations++;
                     }
                 } catch (...) {
@@ -342,7 +355,8 @@ TEST_F(DiskManagerTest, TestNoFramesAvailable)
     page_id_t page2 = page_buffer_man.NewPage();
 
     // Hold a lock on page1
-    WritePageGuard guard1 = page_buffer_man.WaitWritePage(page1);
+    std::optional<WritePageGuard> guard1 = page_buffer_man.WaitWritePage(page1);
+    ASSERT_TRUE(guard1.has_value());
 
     // Try to access page2 with Try operation - should fail if page1 can't be evicted
     auto guard2_opt = page_buffer_man.TryWritePage(page2);

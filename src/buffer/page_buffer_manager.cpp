@@ -63,21 +63,20 @@ std::optional<ReadPageGuard> PageBufferManager::TryReadPage(page_id_t page_id)
     return std::make_optional<ReadPageGuard>(this, frame, std::move(frame_lk));
 }
 
-ReadPageGuard PageBufferManager::WaitReadPage(page_id_t page_id)
+std::optional<ReadPageGuard> PageBufferManager::WaitReadPage(page_id_t page_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
-
-    // wait until the page is able to be loaded into a frame
-    // TODO fix this. This will 100% cause a problem if not a successful return
-    // in that case this may need to be able to return a status and writepageguard OR optional?
-
     available_frame_m.wait(lk, [this, page_id]() {
-        return LoadPage(page_id) == LoadPageStatus::Success;
+        return page_map_m.contains(page_id) || replacer_m.GetEvictableCount() > 0;
     });
 
-    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+    if (not page_map_m.contains(page_id)) {
+        if (LoadPage(page_id) != LoadPageStatus::Success) {
+            return std::nullopt;
+        }
+    }
 
-    // lock the mutex for the header
+    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
     frame->mut.lock_shared();
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return ReadPageGuard(this, frame, std::move(frame_lk));
@@ -99,20 +98,20 @@ std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
     return std::make_optional<WritePageGuard>(this, frame, std::move(frame_lk));
 }
 
-WritePageGuard PageBufferManager::WaitWritePage(page_id_t page_id)
+std::optional<WritePageGuard> PageBufferManager::WaitWritePage(page_id_t page_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
-
-    // wait until the page is able to be loaded into a frame
-    // TODO fix this. This will 100% cause a problem if not a successful return
-    // in that case this may need to be able to return a status and writepageguard OR optional?
     available_frame_m.wait(lk, [this, page_id]() {
-        return LoadPage(page_id) == LoadPageStatus::Success;
+        return page_map_m.contains(page_id) || replacer_m.GetEvictableCount() > 0;
     });
 
-    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
+    if (not page_map_m.contains(page_id)) {
+        if (LoadPage(page_id) != LoadPageStatus::Success) {
+            return std::nullopt;
+        }
+    }
 
-    // lock the mutex for the header
+    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
     frame->mut.lock();
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return WritePageGuard(this, frame, std::move(frame_lk));
@@ -151,6 +150,10 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
         logger_m->warn("Failed to load page {} due to read failure", page_id);
         return LoadPageStatus::IOError;
     }
+
+    // if the frame is now loaded you don't necessarily need to evict another
+    // page if a page guard requires data to this frame now.
+    available_frame_m.notify_all();
 
     // update frame information
     page_map_m[page_id] = frame->id;

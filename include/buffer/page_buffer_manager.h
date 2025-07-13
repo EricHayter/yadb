@@ -92,12 +92,11 @@ public:
      *
      * @returns a reading page guard
      */
-    // TODO this might need to be an optional since reads could fail
-    ReadPageGuard WaitReadPage(page_id_t page_id);
+    std::optional<ReadPageGuard> WaitReadPage(page_id_t page_id);
 
     std::optional<WritePageGuard> TryWritePage(page_id_t page_id);
 
-    WritePageGuard WaitWritePage(page_id_t page_id);
+    std::optional<WritePageGuard> WaitWritePage(page_id_t page_id);
 
 private:
     /**
