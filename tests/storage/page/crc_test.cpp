@@ -21,12 +21,12 @@ TEST(CRCTest, CRCTest)
     }
 
     // store the CRC in the empty slot meant to hold the CRC
-    arr[0] = checksum64sum64(std::span<uint64_t>(arr));
+    arr[0] = checksum64(std::span<uint64_t>(arr));
 
     // recomputing the CRC should yield 0
-    EXPECT_EQ(checksum64sum64(std::span<uint64_t>(arr)), 0x0ULL);
+    EXPECT_EQ(checksum64(std::span<uint64_t>(arr)), 0x0ULL);
 
     // increment the CRC to make sure it isn't giving false positives.
     arr[0]++;
-    EXPECT_NE(checksum64sum64(std::span<uint64_t>(arr)), 0x0ULL);
+    EXPECT_NE(checksum64(std::span<uint64_t>(arr)), 0x0ULL);
 }
