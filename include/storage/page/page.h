@@ -1,8 +1,8 @@
 #pragma once
 
-#include <span>
-#include <optional>
 #include <cstdint>
+#include <optional>
+#include <span>
 
 using slot_id_t = uint32_t; // slot id inside of slot directory
 using offset_t = uint32_t; // offset into slotted page.
@@ -10,13 +10,32 @@ using offset_t = uint32_t; // offset into slotted page.
 // view/span into a page-sized buffer. Immutable by default so I don't blow my
 // leg off by accidentally handling a mutable view.
 constexpr std::size_t PAGE_SIZE = 4096;
-using MutPageView = std::span<char, PAGE_SIZE>;
-using PageView = std::span<const char, PAGE_SIZE>;
+using MutPageView = std::span<std::byte, PAGE_SIZE>;
+using PageView = std::span<const std::byte, PAGE_SIZE>;
 
-enum class PageType {
-    Data,
-    BPTreeInner,
-    BPTreeLeaf
+enum class PageType : uint8_t {
+    Data = 0x0,
+    BPTreeRoot = 0x1,
+    BPTreeInner = 0x2,
+    BPTreeLeaf = 0x3,
+};
+
+namespace HeaderOffsets {
+constexpr offset_t PAGE_TYPE = 0x00;
+constexpr offset_t NUM_SLOTS = PAGE_TYPE + sizeof(PageType);
+constexpr offset_t FREE_START = NUM_SLOTS + sizeof(uint16_t);
+constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
+constexpr offset_t CHECKSUM = FREE_START + sizeof(offset_t);
+constexpr offset_t SLOT_DIR = CHECKSUM + sizeof(uint64_t);
+};
+
+namespace SlotEntry {
+namespace Offsets {
+constexpr offset_t DELETED = 0x00;
+constexpr offset_t OFFSET = DELETED + sizeof(uint8_t);
+constexpr offset_t SIZE = OFFSET + sizeof(offset_t);
+};
+constexpr offset_t SIZE = Offsets::SIZE + sizeof(uint16_t);
 };
 
 /**
@@ -25,7 +44,7 @@ enum class PageType {
  *
  * -------------------
  * | Header          |
- * ------------------|
+ * |-----------------|
  * | Slot Directory  |
  * |-----------------|
  * | | | | | | | | | |
@@ -43,23 +62,35 @@ enum class PageType {
  *  1. Header:
  *  the page header will contain important metadata for each page. In specific
  *  it will contain the following fields:
- *  - a bitfield for the type of page
+ *  - a bitfield for the type of page (1 byte)
  *      - data file
  *      - index leaf node
  *      - index root node
  *      - index internal node
- *  - the number of tuples in the page
- *  - offset to the start of the free space (inclusive)
- *  - offset to the end of the free space (exclusive)
- *  - 64 bit checksum
+ *  - the number of tuples in the page (2 bytes)
+ *  - offset to the start of the free space (inclusive) (2 bytes)
+ *  - offset to the end of the free space (exclusive) (2 bytes)
+ *  - 64 bit checksum (8 bytes)
+ *  total size:
+ *  15 bytes
  *
  *  2. Slot directory:
  *  The slot directory contains a layer of indirection to each of the tuples in
  *  the page. The slot directory will contain an array of TupleNodes (TODO
  *  find proper name for this) laid out contiguously in memory. Each tuple node
- *  will contain 8 bytes of information:
- *  - length (4 bytes): the size of the tuple being pointed to
- *  - offset (4 bytes): offset in the page to the start of the tuple
+ *  will contain 4 bytes of information:
+ *  - In-Use (1 byte): is the tuple that this slot entry points to deleted?
+ *  - Offset (2 bytes): offset in the page to the start of the tuple
+ *  - Size (2 bytes): the size of the tuple being pointed to
+ *
+ *  Slot Entry:
+ *  ------------------------------
+ *  | Deleted: uint8_t (1 byte)   |
+ *  |----------------------------|
+ *  | Offset: uint16_t (2 bytes) |
+ *  |----------------------------|
+ *  | Size: uint16_t (2 bytes) |
+ *  ------------------------------
  *
  *  The slot directory will grow "downwards" in the page increasing in offset
  *  as the number of entries grows.
@@ -75,25 +106,36 @@ enum class PageType {
  *  (likely going to use some pascal string type of thing).
  */
 
-
 class ReadPage {
 public:
-    std::size_t GetNumSlots() const;
-    std::size_t GetStartFreeSpace() const;
-    std::size_t GetEndFreeSpace() const;
+    PageType GetPageType() const;
+    uint16_t GetNumSlots() const;
+    offset_t GetStartFreeSpace() const;
+    offset_t GetEndFreeSpace() const;
+    uint64_t GetChecksum() const;
 
     std::span<const std::byte> ReadSlot(slot_id_t slot);
 
 protected:
-    offset_t GetOffset(slot_id_t id) const;
-    std::size_t GetSize(slot_id_t id) const;
+    uint8_t SlotDeleted(slot_id_t slot_id) const;
+    offset_t GetOffset(slot_id_t slot_id) const;
+    uint16_t GetSlotSize(slot_id_t slot_id) const;
+
 protected:
-    MutPageView data;
+    MutPageView page_data_m;
 };
 
 class WritePage : public ReadPage {
-    std::optional<slot_id_t> AllocateSlot(std::size_t size);
+public:
+    std::optional<slot_id_t> AllocateSlot(uint16_t size);
     void WriteSlot(slot_id_t slot_id, std::span<const std::byte> data);
     void DeleteSlot(slot_id_t slot_id);
     void CompressPage();
+
+private:
+    void SetNumSlots(uint16_t num_slots);
+    void SetStartFreeSpace(offset_t offset);
+    void SetEndFreeSpace(offset_t offset);
+    void SetSlotOffset(slot_id_t slot_id, offset_t offset);
+    void SetSlotSize(slot_id_t slot_id, uint16_t size);
 };
