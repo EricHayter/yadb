@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 
-using slot_id_t = uint32_t; // slot id inside of slot directory
-using offset_t = uint32_t; // offset into slotted page.
+using slot_id_t = uint16_t; // slot id inside of slot directory
+using offset_t = uint16_t; // offset into slotted page.
 
 // view/span into a page-sized buffer. Immutable by default so I don't blow my
 // leg off by accidentally handling a mutable view.
@@ -20,22 +21,28 @@ enum class PageType : uint8_t {
     BPTreeLeaf = 0x3,
 };
 
-namespace HeaderOffsets {
-constexpr offset_t PAGE_TYPE = 0x00;
-constexpr offset_t NUM_SLOTS = PAGE_TYPE + sizeof(PageType);
-constexpr offset_t FREE_START = NUM_SLOTS + sizeof(uint16_t);
-constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
-constexpr offset_t CHECKSUM = FREE_START + sizeof(offset_t);
-constexpr offset_t SLOT_DIR = CHECKSUM + sizeof(uint64_t);
+namespace Header {
+namespace Offsets {
+    constexpr offset_t PAGE_TYPE = 0x00;
+    constexpr offset_t NUM_SLOTS = PAGE_TYPE + sizeof(PageType);
+    constexpr offset_t FREE_START = NUM_SLOTS + sizeof(slot_id_t);
+    constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
+    constexpr offset_t CHECKSUM = FREE_END + sizeof(offset_t);
+};
+constexpr offset_t SIZE = Offsets::CHECKSUM + sizeof(uint64_t);
 };
 
 namespace SlotEntry {
 namespace Offsets {
-constexpr offset_t DELETED = 0x00;
-constexpr offset_t OFFSET = DELETED + sizeof(uint8_t);
-constexpr offset_t SIZE = OFFSET + sizeof(offset_t);
+    constexpr offset_t DELETED = 0x00;
+    constexpr offset_t OFFSET = DELETED + sizeof(uint8_t);
+    constexpr offset_t TUPLE_SIZE = OFFSET + sizeof(offset_t);
 };
-constexpr offset_t SIZE = Offsets::SIZE + sizeof(uint16_t);
+constexpr offset_t SIZE = Offsets::TUPLE_SIZE + sizeof(uint16_t);
+
+// The stale span in the buffer after logically deleting has been reclaimed by
+// another slot.
+constexpr offset_t RECLAIMED = std::numeric_limits<offset_t>::max();
 };
 
 /**
@@ -62,11 +69,7 @@ constexpr offset_t SIZE = Offsets::SIZE + sizeof(uint16_t);
  *  1. Header:
  *  the page header will contain important metadata for each page. In specific
  *  it will contain the following fields:
- *  - a bitfield for the type of page (1 byte)
- *      - data file
- *      - index leaf node
- *      - index root node
- *      - index internal node
+ *  - an enum indicating the type of page (1 byte)
  *  - the number of tuples in the page (2 bytes)
  *  - offset to the start of the free space (inclusive) (2 bytes)
  *  - offset to the end of the free space (exclusive) (2 bytes)
@@ -117,7 +120,7 @@ public:
     std::span<const std::byte> ReadSlot(slot_id_t slot);
 
 protected:
-    uint8_t SlotDeleted(slot_id_t slot_id) const;
+    bool IsSlotDeleted(slot_id_t slot_id) const;
     offset_t GetOffset(slot_id_t slot_id) const;
     uint16_t GetSlotSize(slot_id_t slot_id) const;
 
@@ -130,7 +133,7 @@ public:
     std::optional<slot_id_t> AllocateSlot(uint16_t size);
     void WriteSlot(slot_id_t slot_id, std::span<const std::byte> data);
     void DeleteSlot(slot_id_t slot_id);
-    void CompressPage();
+    void VacuumPage();
 
 private:
     void SetNumSlots(uint16_t num_slots);
@@ -138,4 +141,5 @@ private:
     void SetEndFreeSpace(offset_t offset);
     void SetSlotOffset(slot_id_t slot_id, offset_t offset);
     void SetSlotSize(slot_id_t slot_id, uint16_t size);
+    void SetSlotDeleted(slot_id_t slot_id, bool deleted);
 };
