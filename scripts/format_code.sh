@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Script to format all C++ files using clang-format-14
+# Script to format all C++ files using clang-format-19
 # Formats files in src/, tests/, and include/ directories
 
-# Check if clang-format-14 is available
-if ! command -v clang-format-14 &> /dev/null; then
-    echo "Error: clang-format-14 not found. Please install it first."
+# Check if clang-format-19 is available
+if ! command -v clang-format-19 &> /dev/null; then
+    echo "Error: clang-format-19 not found. Please install it first."
     exit 1
 fi
 
@@ -18,7 +18,7 @@ fi
 # Define directories to search
 DIRECTORIES=("src" "tests" "include")
 
-echo "Formatting C++ files with clang-format-14..."
+echo "Formatting C++ files with clang-format-19..."
 echo "Working directory: $(pwd)"
 
 # Counter for formatted files
@@ -38,7 +38,7 @@ for dir in "${DIRECTORIES[@]}"; do
             echo "  Formatting: $file"
 
             # Test the clang-format command and capture its exit status
-            if clang-format-14 -i -style=file "$file"; then
+            if clang-format-19 -i -style=file "$file"; then
                 ((formatted_count++))
                 echo "    ✓ Success"
             else
@@ -51,7 +51,7 @@ for dir in "${DIRECTORIES[@]}"; do
 
                 # Try to get more info about the failure
                 echo "    Testing clang-format on this file:"
-                clang-format-14 --dry-run -style=file "$file" || echo "    Dry run also failed"
+                clang-format-19 --dry-run -style=file "$file" || echo "    Dry run also failed"
 
                 exit 1
             fi
