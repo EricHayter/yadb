@@ -5,6 +5,7 @@
 #include <optional>
 #include <span>
 
+using page_id_t = uint32_t;
 using slot_id_t = uint16_t; // slot id inside of slot directory
 using offset_t = uint16_t; // offset into slotted page.
 
@@ -109,7 +110,7 @@ constexpr offset_t RECLAIMED = std::numeric_limits<offset_t>::max();
  *  (likely going to use some pascal string type of thing).
  */
 
-class ReadPage {
+class Page {
 public:
     PageType GetPageType() const;
     uint16_t GetNumSlots() const;
@@ -128,7 +129,7 @@ protected:
     MutPageView page_data_m;
 };
 
-class WritePage : public ReadPage {
+class PageMut : public Page {
 public:
     std::optional<slot_id_t> AllocateSlot(uint16_t size);
     void WriteSlot(slot_id_t slot_id, std::span<const std::byte> data);

@@ -5,47 +5,47 @@
 #include <optional>
 #include <queue>
 
-PageType ReadPage::GetPageType() const
+PageType Page::GetPageType() const
 {
     PageType page_type;
     memcpy(&page_type, page_data_m.data() + Header::Offsets::PAGE_TYPE, sizeof(PageType));
     return page_type;
 }
 
-uint16_t ReadPage::GetNumSlots() const
+uint16_t Page::GetNumSlots() const
 {
     uint16_t num_slots;
     memcpy(&num_slots, page_data_m.data() + Header::Offsets::NUM_SLOTS, sizeof(uint16_t));
     return num_slots;
 }
 
-offset_t ReadPage::GetStartFreeSpace() const
+offset_t Page::GetStartFreeSpace() const
 {
     offset_t start_free_space;
     memcpy(&start_free_space, page_data_m.data() + Header::Offsets::FREE_START, sizeof(offset_t));
     return start_free_space;
 }
 
-offset_t ReadPage::GetEndFreeSpace() const
+offset_t Page::GetEndFreeSpace() const
 {
     offset_t end_free_space;
     memcpy(&end_free_space, page_data_m.data() + Header::Offsets::FREE_END, sizeof(offset_t));
     return end_free_space;
 }
 
-uint64_t ReadPage::GetChecksum() const
+uint64_t Page::GetChecksum() const
 {
     uint64_t checksum;
     memcpy(&checksum, page_data_m.data() + Header::Offsets::CHECKSUM, sizeof(uint64_t));
     return checksum;
 }
 
-std::span<const std::byte> ReadPage::ReadSlot(slot_id_t slot_id)
+std::span<const std::byte> Page::ReadSlot(slot_id_t slot_id)
 {
     return std::span<const std::byte>(page_data_m.data() + GetOffset(slot_id), GetSlotSize(slot_id));
 }
 
-bool ReadPage::IsSlotDeleted(slot_id_t slot_id) const
+bool Page::IsSlotDeleted(slot_id_t slot_id) const
 {
     uint8_t deleted;
     offset_t deleted_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::DELETED;
@@ -53,7 +53,7 @@ bool ReadPage::IsSlotDeleted(slot_id_t slot_id) const
     return deleted > 0;
 }
 
-offset_t ReadPage::GetOffset(slot_id_t id) const
+offset_t Page::GetOffset(slot_id_t id) const
 {
     assert(id >= 0 && id < GetNumSlots());
     offset_t offset;
@@ -62,7 +62,7 @@ offset_t ReadPage::GetOffset(slot_id_t id) const
     return offset;
 }
 
-uint16_t ReadPage::GetSlotSize(slot_id_t slot_id) const
+uint16_t Page::GetSlotSize(slot_id_t slot_id) const
 {
     assert(slot_id >= 0 && slot_id < GetNumSlots());
     uint16_t slot_size;
@@ -72,7 +72,7 @@ uint16_t ReadPage::GetSlotSize(slot_id_t slot_id) const
 }
 
 //// simplest implementation (wastes space by not reusing old slots). Implement other way soon
-// std::optional<slot_id_t> WritePage::AllocateSlot(uint16_t size)
+// std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
 //{
 //     // need to have space for slot directory entry AND the tuple
 //     if (SlotEntry::SIZE + size > GetEndFreeSpace() - GetStartFreeSpace())
@@ -97,7 +97,7 @@ uint16_t ReadPage::GetSlotSize(slot_id_t slot_id) const
 // I should be able to reuse the slot regardless...
 // Technically I guess it's not incorrect but I think it's misleading...
 // Space saving implementation
-std::optional<slot_id_t> WritePage::AllocateSlot(uint16_t size)
+std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
 {
     // try and reuse a deleted entry first
     for (slot_id_t slot_id = 0; slot_id < GetNumSlots(); slot_id++) {
@@ -127,20 +127,20 @@ std::optional<slot_id_t> WritePage::AllocateSlot(uint16_t size)
     return old_slot_count;
 }
 
-void WritePage::WriteSlot(slot_id_t slot_id, std::span<const std::byte> data)
+void PageMut::WriteSlot(slot_id_t slot_id, std::span<const std::byte> data)
 {
     assert(slot_id < GetNumSlots());
     assert(data.size_bytes() == GetSlotSize(slot_id));
     memcpy(page_data_m.data(), data.data(), sizeof(data));
 }
 
-void WritePage::DeleteSlot(slot_id_t slot_id)
+void PageMut::DeleteSlot(slot_id_t slot_id)
 {
     assert(slot_id < GetNumSlots());
     SetSlotDeleted(slot_id, true);
 }
 
-void WritePage::VacuumPage()
+void PageMut::VacuumPage()
 {
     struct SlotEntry {
         slot_id_t slot_id;
@@ -183,22 +183,22 @@ void WritePage::VacuumPage()
     SetEndFreeSpace(freespace_end);
 }
 
-void WritePage::SetNumSlots(uint16_t num_slots)
+void PageMut::SetNumSlots(uint16_t num_slots)
 {
     memcpy(page_data_m.data() + Header::Offsets::NUM_SLOTS, &num_slots, sizeof(num_slots));
 }
 
-void WritePage::SetStartFreeSpace(offset_t offset)
+void PageMut::SetStartFreeSpace(offset_t offset)
 {
     memcpy(page_data_m.data() + Header::Offsets::FREE_START, &offset, sizeof(offset));
 }
 
-void WritePage::SetEndFreeSpace(offset_t offset)
+void PageMut::SetEndFreeSpace(offset_t offset)
 {
     memcpy(page_data_m.data() + Header::Offsets::FREE_END, &offset, sizeof(offset));
 }
 
-void WritePage::SetSlotOffset(slot_id_t slot_id, offset_t offset)
+void PageMut::SetSlotOffset(slot_id_t slot_id, offset_t offset)
 {
     assert(slot_id < GetNumSlots());
     offset_t slot_offset_offset = Header::SIZE
@@ -207,7 +207,7 @@ void WritePage::SetSlotOffset(slot_id_t slot_id, offset_t offset)
     memcpy(page_data_m.data() + slot_offset_offset, &offset, sizeof(offset));
 }
 
-void WritePage::SetSlotSize(slot_id_t slot_id, uint16_t size)
+void PageMut::SetSlotSize(slot_id_t slot_id, uint16_t size)
 {
     assert(slot_id < GetNumSlots());
     uint16_t slot_size_offset = Header::SIZE
@@ -216,7 +216,7 @@ void WritePage::SetSlotSize(slot_id_t slot_id, uint16_t size)
     memcpy(page_data_m.data() + slot_size_offset, &size, sizeof(size));
 }
 
-void WritePage::SetSlotDeleted(slot_id_t slot_id, bool deleted)
+void PageMut::SetSlotDeleted(slot_id_t slot_id, bool deleted)
 {
     uint8_t value = 1 ? deleted : 0;
     offset_t slot_deleted_offset = Header::SIZE
