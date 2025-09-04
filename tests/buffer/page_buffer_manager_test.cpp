@@ -1,6 +1,5 @@
 #include "buffer/page_buffer_manager.h"
 #include "buffer/page_guard.h"
-#include "common/type_definitions.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <atomic>

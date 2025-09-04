@@ -1,5 +1,6 @@
 #pragma once
-#include "common/type_definitions.h"
+
+#include "storage/page/page.h"
 #include <future>
 #include <variant>
 

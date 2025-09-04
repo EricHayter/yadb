@@ -1,6 +1,5 @@
 #pragma once
 #include "b_plus_tree.h"
-#include "common/type_definitions.h"
 #include <array>
 #include <cstddef>
 

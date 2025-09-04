@@ -1,5 +1,4 @@
 #include "storage/disk/disk_scheduler.h"
-#include "common/type_definitions.h"
 #include "storage/disk/disk_manager.h"
 #include "storage/disk/io_tasks.h"
 #include <mutex>

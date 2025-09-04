@@ -1,6 +1,9 @@
 #pragma once
-#include "common/type_definitions.h"
+
+#include "storage/page/page.h"
 #include <shared_mutex>
+
+using frame_id_t = uint32_t;
 
 /**
  * @brief Class to manage state of frames inside of the page buffer manager

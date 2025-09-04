@@ -1,11 +1,10 @@
 #pragma once
 
-#include "common/type_definitions.h"
+#include "storage/page/page.h"
+
 #include <filesystem>
 #include <fstream>
-#include <list>
 #include <memory>
-#include <span>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <string_view>
@@ -43,7 +42,7 @@ public:
      *
      * @returns true if the write was successful otherwise returns false
      */
-    bool WritePage(page_id_t page_id, PageView page_data);
+    bool WritePage(page_id_t page_id, PageView page);
 
     /**
      * @brief Read data from disk
@@ -53,7 +52,7 @@ public:
      *
      * @returns true if the read was successful otherwise returns false
      */
-    bool ReadPage(page_id_t page_id, MutPageView page_data);
+    bool ReadPage(page_id_t page_id, MutPageView page);
 
     /**
      * @brief Deletes a page from the database file

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/type_definitions.h"
+#include "buffer/frame_header.h"
 #include <ctime>
 #include <deque>
 #include <limits>

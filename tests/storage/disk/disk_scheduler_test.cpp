@@ -1,4 +1,3 @@
-#include "common/type_definitions.h"
 #include "storage/disk/disk_scheduler.h"
 #include "storage/disk/io_tasks.h"
 #include <filesystem>

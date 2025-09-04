@@ -12,8 +12,8 @@ using offset_t = uint16_t; // offset into slotted page.
 // view/span into a page-sized buffer. Immutable by default so I don't blow my
 // leg off by accidentally handling a mutable view.
 constexpr std::size_t PAGE_SIZE = 4096;
-using MutPageView = std::span<std::byte, PAGE_SIZE>;
-using PageView = std::span<const std::byte, PAGE_SIZE>;
+using MutPageView = std::span<char, PAGE_SIZE>;
+using PageView = std::span<const char, PAGE_SIZE>;
 
 enum class PageType : uint8_t {
     Data = 0x0,
@@ -118,6 +118,7 @@ public:
     offset_t GetEndFreeSpace() const;
     uint64_t GetChecksum() const;
 
+    PageView ReadPage() { return page_data_m; }
     std::span<const std::byte> ReadSlot(slot_id_t slot);
 
 protected:

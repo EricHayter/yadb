@@ -3,7 +3,6 @@
 #include "buffer/frame_header.h"
 #include "buffer/lru_k_replacer.h"
 #include "buffer/page_guard.h"
-#include "common/type_definitions.h"
 #include "storage/disk/disk_scheduler.h"
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -12,11 +11,11 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <shared_mutex>
 #include <unordered_map>
 
 class ReadPageGuard;
 class WritePageGuard;
+
 
 /**
  * @brief Page Buffer Manager
@@ -48,7 +47,6 @@ class WritePageGuard;
  * is handled by the disk scheduler.
  */
 class PageBufferManager {
-    // TODO refactor this to make the deconstructors friend classes
     friend ReadPageGuard;
     friend WritePageGuard;
 

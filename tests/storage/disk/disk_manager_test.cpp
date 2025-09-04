@@ -1,4 +1,3 @@
-#include "common/type_definitions.h"
 #include "storage/disk/disk_manager.h"
 #include <filesystem>
 #include <gtest/gtest.h>
