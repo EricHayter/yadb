@@ -2,7 +2,6 @@ add_library(yadb_buffer
     page_buffer_manager.cpp
     frame_header.cpp
     lru_k_replacer.cpp
-    page_guard.cpp
 )
 
 target_include_directories(yadb_buffer PUBLIC ${CMAKE_SOURCE_DIR}/include)
