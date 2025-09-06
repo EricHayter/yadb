@@ -6,11 +6,11 @@
 #include <optional>
 #include <queue>
 
-Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, PageView page_view, std::shared_lock<std::shared_mutex>&& lk) :
-    buffer_manager_m{buffer_manager},
-    page_id_m{page_id},
-    page_data_m{page_view},
-    lk_m{std::move(lk)}
+Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, PageView page_view, std::shared_lock<std::shared_mutex>&& lk)
+    : buffer_manager_m { buffer_manager }
+    , page_id_m { page_id }
+    , page_data_m { page_view }
+    , lk_m { std::move(lk) }
 {
     assert(lk_m.owns_lock());
     buffer_manager_m->AddAccessor(page_id, false);
@@ -23,7 +23,6 @@ Page::~Page()
     if (buffer_manager_m)
         buffer_manager_m->RemoveAccessor(page_id_m);
 }
-
 
 PageType Page::GetPageType() const
 {
@@ -91,10 +90,10 @@ uint16_t Page::GetSlotSize(slot_id_t slot_id) const
     return slot_size;
 }
 
-PageMut::PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk) :
-    Page{buffer_manager, page_id},
-    page_data_m{page_view},
-    lk_m{std::move(lk)}
+PageMut::PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk)
+    : Page { buffer_manager, page_id }
+    , page_data_m { page_view }
+    , lk_m { std::move(lk) }
 {
     assert(lk_m.owns_lock());
 }
@@ -104,8 +103,6 @@ PageMut::~PageMut()
     if (lk_m.owns_lock())
         lk_m.unlock();
 }
-
-
 
 //// simplest implementation (wastes space by not reusing old slots). Implement other way soon
 // std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
