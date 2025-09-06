@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <shared_mutex>
+#include <mutex>
 #include <span>
 
 using page_id_t = uint32_t;
@@ -110,8 +112,13 @@ constexpr offset_t RECLAIMED = std::numeric_limits<offset_t>::max();
  *  (likely going to use some pascal string type of thing).
  */
 
+class PageBufferManager;
+
 class Page {
 public:
+    Page(PageBufferManager* buffer_manager, page_id_t page_id, PageView page_view, std::shared_lock<std::shared_mutex>&& lk);
+    ~Page();
+    page_id_t GetPageId() const { return page_id_m; }
     PageType GetPageType() const;
     uint16_t GetNumSlots() const;
     offset_t GetStartFreeSpace() const;
@@ -119,21 +126,29 @@ public:
     uint64_t GetChecksum() const;
 
     PageView ReadPage() { return page_data_m; }
-    std::span<const std::byte> ReadSlot(slot_id_t slot);
+    std::span<const char> ReadSlot(slot_id_t slot);
 
 protected:
+    Page(PageBufferManager* buffer_manager, page_id_t page_id);
     bool IsSlotDeleted(slot_id_t slot_id) const;
     offset_t GetOffset(slot_id_t slot_id) const;
     uint16_t GetSlotSize(slot_id_t slot_id) const;
 
 protected:
-    MutPageView page_data_m;
+    page_id_t page_id_m;
+    PageBufferManager* buffer_manager_m;
+
+private:
+    std::shared_lock<std::shared_mutex>&& lk_m;
+    PageView page_data_m;
 };
 
 class PageMut : public Page {
 public:
+    PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk);
+    ~PageMut();
     std::optional<slot_id_t> AllocateSlot(uint16_t size);
-    void WriteSlot(slot_id_t slot_id, std::span<const std::byte> data);
+    void WriteSlot(slot_id_t slot_id, std::span<const char> data);
     void DeleteSlot(slot_id_t slot_id);
     void VacuumPage();
 
@@ -144,4 +159,8 @@ private:
     void SetSlotOffset(slot_id_t slot_id, offset_t offset);
     void SetSlotSize(slot_id_t slot_id, uint16_t size);
     void SetSlotDeleted(slot_id_t slot_id, bool deleted);
+
+private:
+    std::unique_lock<std::shared_mutex>&& lk_m;
+    MutPageView page_data_m;
 };

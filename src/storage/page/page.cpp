@@ -1,9 +1,29 @@
 #include "storage/page/page.h"
+#include "buffer/page_buffer_manager.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <optional>
 #include <queue>
+
+Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, PageView page_view, std::shared_lock<std::shared_mutex>&& lk) :
+    buffer_manager_m{buffer_manager},
+    page_id_m{page_id},
+    page_data_m{page_view},
+    lk_m{std::move(lk)}
+{
+    assert(lk_m.owns_lock());
+    buffer_manager_m->AddAccessor(page_id, false);
+}
+
+Page::~Page()
+{
+    if (lk_m.owns_lock())
+        lk_m.unlock();
+    if (buffer_manager_m)
+        buffer_manager_m->RemoveAccessor(page_id_m);
+}
+
 
 PageType Page::GetPageType() const
 {
@@ -40,9 +60,9 @@ uint64_t Page::GetChecksum() const
     return checksum;
 }
 
-std::span<const std::byte> Page::ReadSlot(slot_id_t slot_id)
+std::span<const char> Page::ReadSlot(slot_id_t slot_id)
 {
-    return std::span<const std::byte>(page_data_m.data() + GetOffset(slot_id), GetSlotSize(slot_id));
+    return page_data_m.subspan(GetOffset(slot_id), GetSlotSize(slot_id));
 }
 
 bool Page::IsSlotDeleted(slot_id_t slot_id) const
@@ -70,6 +90,22 @@ uint16_t Page::GetSlotSize(slot_id_t slot_id) const
     memcpy(&slot_size, page_data_m.data() + slot_entry_offset, sizeof(slot_size));
     return slot_size;
 }
+
+PageMut::PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk) :
+    Page{buffer_manager, page_id},
+    page_data_m{page_view},
+    lk_m{std::move(lk)}
+{
+    assert(lk_m.owns_lock());
+}
+
+PageMut::~PageMut()
+{
+    if (lk_m.owns_lock())
+        lk_m.unlock();
+}
+
+
 
 //// simplest implementation (wastes space by not reusing old slots). Implement other way soon
 // std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
@@ -127,11 +163,11 @@ std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
     return old_slot_count;
 }
 
-void PageMut::WriteSlot(slot_id_t slot_id, std::span<const std::byte> data)
+void PageMut::WriteSlot(slot_id_t slot_id, std::span<const char> data)
 {
     assert(slot_id < GetNumSlots());
     assert(data.size_bytes() == GetSlotSize(slot_id));
-    memcpy(page_data_m.data(), data.data(), sizeof(data));
+    memcpy(page_data_m.data(), data.data(), data.size_bytes());
 }
 
 void PageMut::DeleteSlot(slot_id_t slot_id)
