@@ -2,8 +2,8 @@
 
 #include "buffer/frame_header.h"
 #include "buffer/lru_k_replacer.h"
-#include "buffer/page_guard.h"
 #include "storage/disk/disk_scheduler.h"
+#include "storage/page/page.h"
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -12,10 +12,6 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
-
-class ReadPageGuard;
-class WritePageGuard;
-
 
 /**
  * @brief Page Buffer Manager
@@ -47,8 +43,8 @@ class WritePageGuard;
  * is handled by the disk scheduler.
  */
 class PageBufferManager {
-    friend ReadPageGuard;
-    friend WritePageGuard;
+    friend Page;
+    friend PageMut;
 
 public:
     PageBufferManager(const std::filesystem::path& db_directory, std::size_t num_frames);
@@ -62,39 +58,54 @@ public:
     page_id_t NewPage();
 
     /**
-     * @brief Try to create a reading page guard
+     * @brief Try to give access to a read-only page
      *
-     * Attempts to create a read guard for reading page data from the page
-     * buffer. The function may fail to acquire a read page guard and return
+     * Attempts to create a thread-safe handle to a page for reading page data
+     * from the page buffer. The function may fail to acquire a page and return
      * a std::nullopt in two cases:
      * 1. A read failure from the disk scheduler doesn't allow the page data
      *    to be read into the buffer.
-     * 2. A writer has already gained access to the page so I reading handle
-     *    cannot be created to allow for mutually exclusive single writers and
-     *    multiple readers.
+     * 2. Exclusive access to the page has already been given.
      *
-     * @param page_id the page to create a read guard for
+     * @param page_id the page to create a read-only page handle for
      *
-     * @returns a reading page guard if possible
+     * @returns a read-only page handle
      */
-    std::optional<ReadPageGuard> TryReadPage(page_id_t page_id);
+    std::optional<Page> TryReadPage(page_id_t page_id);
 
     /**
-     * @brief Wait to acquire a read page guard
+     * @brief Wait to acquire access to a read-only page
      *
-     * This function will wait until it is possible to create a read page
-     * guard. The function will block if a writing page guard already exists
-     * for the page and unblock once the write page guard is deconstructed
+     * @param page_id the page to create a read-only handle for
      *
-     * @param page_id the page to create a read guard for
-     *
-     * @returns a reading page guard
+     * @returns a read-only page handle
      */
-    std::optional<ReadPageGuard> WaitReadPage(page_id_t page_id);
+    std::optional<Page> WaitReadPage(page_id_t page_id);
 
-    std::optional<WritePageGuard> TryWritePage(page_id_t page_id);
+    /**
+     * @brief Try to give access to a writable page
+     *
+     * Attempts to create a thread-safe handle to a page for writing page data
+     * from the page buffer. The function may fail to acquire access and return
+     * a std::nullopt in two cases:
+     * 1. A read failure from the disk scheduler doesn't allow the page data
+     *    to be read into the buffer.
+     * 2. Exclusive access to the page cannot be acquired immediately.
+     *
+     * @param page_id the page to create a writable page handle for
+     *
+     * @returns a writable page handle
+     */
+    std::optional<PageMut> TryWritePage(page_id_t page_id);
 
-    std::optional<WritePageGuard> WaitWritePage(page_id_t page_id);
+    /**
+     * @brief Wait to acquire access to a writable page
+     *
+     * @param page_id the page to create a writable handle for
+     *
+     * @returns a writeable page handle
+     */
+    std::optional<PageMut> WaitWritePage(page_id_t page_id);
 
 private:
     /**
@@ -135,20 +146,19 @@ private:
     FlushPageStatus FlushPage(page_id_t page_id);
 
     /**
-     * @brief Notify the page buffer manager that a frame has been accessed
-     *
-     * @param frame_id the frame that was accessed
+     * @brief Notify the page buffer manager that a page has been accessed
+     * @param page_id the page that is being accessed
      * @param is_writer was the access for writes
      */
-    void AddAccessor(frame_id_t frame_id, bool is_writer);
+    void AddAccessor(page_id_t page_id, bool is_writer);
 
     /**
      * @brief Notify the page buffer manager that an accessor has been dropped
      * from a frame
      *
-     * @param frame_id the frame that was being accessed
+     * @param page_id the page that access has been given up
      */
-    void RemoveAccessor(frame_id_t frame_id);
+    void RemoveAccessor(page_id_t page_id);
 
 private:
     static constexpr std::string_view LOG_FILE_NAME { "page_buffer_manager.log" };

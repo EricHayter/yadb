@@ -1,15 +1,12 @@
 #include "buffer/page_buffer_manager.h"
 #include "buffer/frame_header.h"
-#include "buffer/page_guard.h"
 #include <cassert>
 #include <future>
-#include <memory>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
-#include <vector>
 
 PageBufferManager::PageBufferManager(const std::filesystem::path& db_directory, std::size_t num_frames)
     : disk_scheduler_m(db_directory)
@@ -46,7 +43,7 @@ page_id_t PageBufferManager::NewPage()
     return page_future.get();
 }
 
-std::optional<ReadPageGuard> PageBufferManager::TryReadPage(page_id_t page_id)
+std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
@@ -60,10 +57,10 @@ std::optional<ReadPageGuard> PageBufferManager::TryReadPage(page_id_t page_id)
     }
     AddAccessor(frame->id, false);
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<ReadPageGuard>(this, frame, std::move(frame_lk));
+    return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-std::optional<ReadPageGuard> PageBufferManager::WaitReadPage(page_id_t page_id)
+std::optional<Page> PageBufferManager::WaitReadPage(page_id_t page_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     available_frame_m.wait(lk, [this, page_id]() {
@@ -81,10 +78,10 @@ std::optional<ReadPageGuard> PageBufferManager::WaitReadPage(page_id_t page_id)
 
     frame->mut.lock_shared();
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return ReadPageGuard(this, frame, std::move(frame_lk));
+    return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
+std::optional<PageMut> PageBufferManager::TryWritePage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
@@ -98,10 +95,10 @@ std::optional<WritePageGuard> PageBufferManager::TryWritePage(page_id_t page_id)
     }
     AddAccessor(frame->id, true);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<WritePageGuard>(this, frame, std::move(frame_lk));
+    return std::make_optional<PageMut>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-std::optional<WritePageGuard> PageBufferManager::WaitWritePage(page_id_t page_id)
+std::optional<PageMut> PageBufferManager::WaitWritePage(page_id_t page_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     available_frame_m.wait(lk, [this, page_id]() {
@@ -120,7 +117,7 @@ std::optional<WritePageGuard> PageBufferManager::WaitWritePage(page_id_t page_id
 
     frame->mut.lock();
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return WritePageGuard(this, frame, std::move(frame_lk));
+    return std::make_optional<PageMut>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
 PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
@@ -183,23 +180,23 @@ PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_i
     return FlushPageStatus::Success;
 }
 
-void PageBufferManager::AddAccessor(frame_id_t frame_id, bool is_writer)
+void PageBufferManager::AddAccessor(page_id_t page_id, bool is_writer)
 {
-    replacer_m.RecordAccess(frame_id);
-    FrameHeader* frame = frames_m[frame_id].get();
+    replacer_m.RecordAccess(page_id);
+    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
     frame->pin_count++;
     frame->is_dirty = frame->is_dirty || is_writer;
 }
 
-void PageBufferManager::RemoveAccessor(frame_id_t frame_id)
+void PageBufferManager::RemoveAccessor(page_id_t page_id)
 {
     std::lock_guard<std::mutex> lk(mut_m);
-    FrameHeader* frame = frames_m[frame_id].get();
+    FrameHeader* frame = frames_m[page_map_m[page_id]].get();
     frame->pin_count--;
 
     // This frame is now ready for eviction if needed
     if (frame->pin_count == 0) {
-        replacer_m.SetEvictable(frame_id, true);
+        replacer_m.SetEvictable(frame->id, true);
         available_frame_m.notify_one();
     }
 }
