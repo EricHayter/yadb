@@ -3,10 +3,8 @@
 #include "buffer/frame_header.h"
 #include <ctime>
 #include <deque>
-#include <limits>
 #include <optional>
 #include <unordered_map>
-#include <vector>
 
 /**
  * @brief LRU-K Replacement Policy
