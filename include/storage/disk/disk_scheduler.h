@@ -61,7 +61,6 @@ private:
      * @param stop_token stop token for stopping worker thread
      */
     void WorkerFunction(std::stop_token stop_token);
-    std::jthread worker_thread_m;
 
     /// thread-safe task queue with a condition variable to notify worker thread
     /// of task arrival
@@ -71,4 +70,5 @@ private:
 
     /// underlying disk manager for worker thread to perform I/O operations
     DiskManager disk_manager_m;
+    std::jthread worker_thread_m;
 };
