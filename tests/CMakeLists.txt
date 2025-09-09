@@ -5,6 +5,14 @@ add_executable(
     buffer/page_buffer_manager_test.cpp
     storage/page/crc_test.cpp
 )
+
+target_compile_options(
+    yadb_test
+    PUBLIC
+    -fprofile-arcs
+    -ftest-coverage
+)
+
 target_link_libraries(
     yadb_test
     PRIVATE yadb_core
