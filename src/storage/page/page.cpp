@@ -6,7 +6,7 @@
 #include <optional>
 #include <queue>
 
-Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, PageView page_view, std::shared_lock<std::shared_mutex>&& lk)
+Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::shared_lock<std::shared_mutex>&& lk)
     : buffer_manager_m { buffer_manager }
     , page_id_m { page_id }
     , page_data_m { page_view }
@@ -24,10 +24,10 @@ Page::~Page()
         buffer_manager_m->RemoveAccessor(page_id_m);
 }
 
-Page::Page(PageBufferManager* buffer_manager, page_id_t page_id)
+Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view)
     : buffer_manager_m{buffer_manager}
     , page_id_m{ page_id }
-    , page_data_m{ (const char *)nullptr, 0 }
+    , page_data_m{ page_view }
 {
     buffer_manager_m->AddAccessor(page_id_m, false);
 }
@@ -99,8 +99,7 @@ uint16_t Page::GetSlotSize(slot_id_t slot_id) const
 }
 
 PageMut::PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk)
-    : Page { buffer_manager, page_id }
-    , page_data_m { page_view }
+    : Page { buffer_manager, page_id, page_view}
     , lk_m { std::move(lk) }
 {
     assert(lk_m.owns_lock());

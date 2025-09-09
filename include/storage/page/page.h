@@ -116,7 +116,7 @@ class PageBufferManager;
 
 class Page {
 public:
-    Page(PageBufferManager* buffer_manager, page_id_t page_id, PageView page_view, std::shared_lock<std::shared_mutex>&& lk);
+    Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::shared_lock<std::shared_mutex>&& lk);
     ~Page();
     page_id_t GetPageId() const { return page_id_m; }
     PageType GetPageType() const;
@@ -129,10 +129,11 @@ public:
     std::span<const char> ReadSlot(slot_id_t slot);
 
 protected:
-    Page(PageBufferManager* buffer_manager, page_id_t page_id);
+    Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view);
     bool IsSlotDeleted(slot_id_t slot_id) const;
     offset_t GetOffset(slot_id_t slot_id) const;
     uint16_t GetSlotSize(slot_id_t slot_id) const;
+    MutPageView page_data_m;
 
 protected:
     page_id_t page_id_m;
@@ -140,7 +141,6 @@ protected:
 
 private:
     std::shared_lock<std::shared_mutex> lk_m;
-    PageView page_data_m;
 };
 
 class PageMut : public Page {
@@ -163,5 +163,4 @@ private:
 
 private:
     std::unique_lock<std::shared_mutex> lk_m;
-    MutPageView page_data_m;
 };
