@@ -139,7 +139,7 @@ protected:
     PageBufferManager* buffer_manager_m;
 
 private:
-    std::shared_lock<std::shared_mutex>&& lk_m;
+    std::shared_lock<std::shared_mutex> lk_m;
     PageView page_data_m;
 };
 
@@ -147,6 +147,7 @@ class PageMut : public Page {
 public:
     PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk);
     ~PageMut();
+    void InitPage();
     std::optional<slot_id_t> AllocateSlot(uint16_t size);
     void WriteSlot(slot_id_t slot_id, std::span<const char> data);
     void DeleteSlot(slot_id_t slot_id);
@@ -161,6 +162,6 @@ private:
     void SetSlotDeleted(slot_id_t slot_id, bool deleted);
 
 private:
-    std::unique_lock<std::shared_mutex>&& lk_m;
+    std::unique_lock<std::shared_mutex> lk_m;
     MutPageView page_data_m;
 };
