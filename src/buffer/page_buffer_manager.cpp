@@ -40,7 +40,11 @@ page_id_t PageBufferManager::NewPage()
     std::promise<page_id_t> page_promise;
     std::future<page_id_t> page_future = page_promise.get_future();
     disk_scheduler_m.AllocatePage(std::move(page_promise));
-    return page_future.get();
+    page_id_t page_id = page_future.get();
+    auto page = WaitWritePage(page_id);
+    assert(page.has_value());
+    page->InitPage();
+    return page_id;
 }
 
 std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
