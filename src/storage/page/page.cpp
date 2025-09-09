@@ -24,6 +24,14 @@ Page::~Page()
         buffer_manager_m->RemoveAccessor(page_id_m);
 }
 
+Page::Page(PageBufferManager* buffer_manager, page_id_t page_id)
+    : buffer_manager_m{buffer_manager}
+    , page_id_m{ page_id }
+    , page_data_m{ (const char *)nullptr, 0 }
+{
+    buffer_manager_m->AddAccessor(page_id_m, false);
+}
+
 PageType Page::GetPageType() const
 {
     PageType page_type;
@@ -102,6 +110,12 @@ PageMut::~PageMut()
 {
     if (lk_m.owns_lock())
         lk_m.unlock();
+}
+
+void PageMut::InitPage() {
+    SetNumSlots(0);
+    SetStartFreeSpace(Header::SIZE);
+    SetEndFreeSpace(PAGE_SIZE);
 }
 
 //// simplest implementation (wastes space by not reusing old slots). Implement other way soon
