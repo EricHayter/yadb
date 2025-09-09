@@ -74,9 +74,6 @@ void DiskScheduler::WorkerFunction(std::stop_token stop_token)
             return not tasks_m.empty() || stop_token.stop_requested();
         });
 
-        if (stop_token.stop_requested())
-            break;
-
         while (not tasks_m.empty()) {
             IOTasks::Task task = std::move(tasks_m.front());
             tasks_m.pop();
