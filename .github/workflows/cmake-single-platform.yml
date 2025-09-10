@@ -25,6 +25,9 @@ jobs:
       with:
         submodules: 'true'
 
+    - name: Install Dependencies
+      run: sudo apt update && sudo apt install -y cmake g++ gcovr
+
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
@@ -37,3 +40,17 @@ jobs:
     - name: Test
       run: ${{github.workspace}}/build/tests/${{env.TEST_EXECUTABLE}}
 
+    - name: Run gcovr
+      run: |
+        mkdir gcovr
+        cd gcovr
+        gcovr -r .. \
+        --exclude ../thirdparty/ \
+        --html-details coverage.html \
+        --html-theme github.dark-green
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: gcovr/
