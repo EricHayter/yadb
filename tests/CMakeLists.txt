@@ -6,18 +6,14 @@ add_executable(
     storage/page/crc_test.cpp
 )
 
-target_compile_options(
-    yadb_test
-    PUBLIC
-    -fprofile-arcs
-    -ftest-coverage
-)
 
 target_link_libraries(
     yadb_test
     PRIVATE yadb_core
     PRIVATE GTest::gtest_main
 )
+
+enable_coverage(yadb_test)
 
 include(GoogleTest)
 gtest_discover_tests(yadb_test)
