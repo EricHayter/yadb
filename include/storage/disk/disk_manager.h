@@ -21,7 +21,7 @@
 class DiskManager {
 public:
     DiskManager();
-    DiskManager(const DatabaseConfig& config);
+    DiskManager(std::size_t page_capacity);
     DiskManager(const DatabaseConfig& config, std::size_t page_capacity);
     ~DiskManager();
 

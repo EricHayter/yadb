@@ -10,12 +10,12 @@
 #include <spdlog/spdlog.h>
 
 PageBufferManager::PageBufferManager()
-    : PageBufferManager(DatabaseConfig::CreateNull())
+    : PageBufferManager(128)
 {
 }
 
-PageBufferManager::PageBufferManager(const DatabaseConfig& config)
-    : PageBufferManager(config, 128)
+PageBufferManager::PageBufferManager(std::size_t num_frames)
+    : PageBufferManager(DatabaseConfig::CreateNull(), num_frames)
 {
 }
 

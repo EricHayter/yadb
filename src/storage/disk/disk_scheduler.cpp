@@ -12,7 +12,7 @@ DiskScheduler::DiskScheduler()
 }
 
 DiskScheduler::DiskScheduler(const DatabaseConfig& config)
-    : disk_manager_m(config)
+    : disk_manager_m(config, 128)
     , logger_m(config.disk_scheduler_logger)
     , worker_thread_m(&DiskScheduler::WorkerFunction, this)
 {

@@ -48,7 +48,7 @@ class PageBufferManager {
 
 public:
     PageBufferManager();
-    PageBufferManager(const DatabaseConfig& config);
+    PageBufferManager(std::size_t num_frames);
     PageBufferManager(const DatabaseConfig& config, std::size_t num_frames);
     ~PageBufferManager();
 

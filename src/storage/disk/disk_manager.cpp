@@ -7,16 +7,16 @@
 #include <spdlog/spdlog.h>
 
 DiskManager::DiskManager()
-    : DiskManager(DatabaseConfig::CreateNull())
+    : DiskManager(128)
 {
 }
 
-DiskManager::DiskManager(const DatabaseConfig& config)
-    : DiskManager(config, 1)
+DiskManager::DiskManager(std::size_t page_capacity)
+    : DiskManager(DatabaseConfig::CreateNull(), page_capacity)
 {
 }
 
-DiskManager::DiskManager(const DatabaseConfig& config, std::size_t page_capacity)
+DiskManager::DiskManager(const DatabaseConfig& config, std::size_t page_capacity = 128)
     : db_file_path_m(config.database_file)
     , logger_m(config.disk_manager_logger)
     , page_capacity_m(page_capacity)
