@@ -1,5 +1,6 @@
 #include "buffer/page_buffer_manager.h"
 #include "buffer/frame_header.h"
+#include "config/config.h"
 #include <cassert>
 #include <future>
 #include <mutex>
@@ -8,8 +9,9 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 
-PageBufferManager::PageBufferManager(const std::filesystem::path& db_directory, std::size_t num_frames)
-    : disk_scheduler_m(db_directory)
+PageBufferManager::PageBufferManager(const DatabaseConfig& config, std::size_t num_frames)
+    : disk_scheduler_m(config)
+    , logger_m(config.page_buffer_manager_logger)
     , replacer_m()
     , buffer_m((char*)malloc(num_frames * PAGE_SIZE))
 {
@@ -19,11 +21,6 @@ PageBufferManager::PageBufferManager(const std::filesystem::path& db_directory, 
         frames_m.push_back(std::make_unique<FrameHeader>(id, data_view));
         replacer_m.RegisterFrame(id);
     }
-
-    logger_m = spdlog::get(LOGGER_NAME.data());
-    if (!logger_m)
-        logger_m = spdlog::basic_logger_mt(LOGGER_NAME.data(), db_directory / LOG_FILE_NAME);
-    logger_m->info("Successfully initialized page buffer manager");
 }
 
 PageBufferManager::~PageBufferManager()
