@@ -1,24 +1,21 @@
 #include "storage/disk/disk_manager.h"
+#include "config/config.h"
 #include "storage/page/page.h"
 #include <cassert>
 #include <filesystem>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 
-DiskManager::DiskManager(const std::filesystem::path& db_directory)
-    : DiskManager(db_directory, 1)
+DiskManager::DiskManager(const DatabaseConfig& config)
+    : DiskManager(config, 1)
 {
 }
 
-DiskManager::DiskManager(const std::filesystem::path& db_directory, std::size_t page_capacity)
-    : db_directory_m(db_directory)
-    , db_file_path_m(db_directory / DB_FILE_NAME)
+DiskManager::DiskManager(const DatabaseConfig& config, std::size_t page_capacity)
+    : db_file_path_m(config.database_file)
+    , logger_m(config.disk_manager_logger)
     , page_capacity_m(page_capacity)
 {
-    if (not std::filesystem::exists(db_directory_m)) {
-        std::filesystem::create_directory(db_directory_m);
-    }
-
     // create db file
     db_io_m.open(db_file_path_m, std::ios::in | std::ios::out | std::ios::binary | std::ios::trunc);
     assert(db_io_m.is_open());
@@ -28,18 +25,11 @@ DiskManager::DiskManager(const std::filesystem::path& db_directory, std::size_t 
     for (page_id_t id = 0; id < page_capacity_m; id++) {
         free_pages_m.insert(id);
     }
-
-    // create logges
-    logger_m = spdlog::get(LOGGER_NAME.data());
-    if (!logger_m)
-        logger_m = spdlog::basic_logger_st(LOGGER_NAME.data(), db_directory_m / LOG_FILE_NAME);
-    logger_m->info("Successfully initialized disk manager");
 }
 
 DiskManager::~DiskManager()
 {
     db_io_m.close();
-    logger_m->info("Closed disk manager");
 }
 
 bool DiskManager::WritePage(page_id_t page_id, PageView page)
