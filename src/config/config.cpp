@@ -1,9 +1,10 @@
 #include "config/config.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include <memory>
 
-DatabaseConfig DatabaseConfig::CreateDefaultConsole() {
+DatabaseConfig DatabaseConfig::CreateDefaultConsole()
+{
     DatabaseConfig config;
     config.disk_manager_logger = spdlog::stderr_color_mt(DEFAULT_DISK_MANAGER_LOGGER_NAME);
     config.disk_scheduler_logger = spdlog::stderr_color_mt(DEFAULT_DISK_SCHEDULER_LOGGER_NAME);
@@ -11,7 +12,8 @@ DatabaseConfig DatabaseConfig::CreateDefaultConsole() {
     return config;
 }
 
-DatabaseConfig DatabaseConfig::CreateDefaultFile() {
+DatabaseConfig DatabaseConfig::CreateDefaultFile()
+{
     DatabaseConfig config;
     config.disk_manager_logger = spdlog::basic_logger_mt(DEFAULT_DISK_MANAGER_LOGGER_NAME, DEFAULT_DISK_MANAGER_LOGGER_NAME + ".log");
     config.disk_scheduler_logger = spdlog::basic_logger_mt(DEFAULT_DISK_SCHEDULER_LOGGER_NAME, DEFAULT_DISK_SCHEDULER_LOGGER_NAME + ".log");
@@ -19,7 +21,8 @@ DatabaseConfig DatabaseConfig::CreateDefaultFile() {
     return config;
 }
 
-DatabaseConfig DatabaseConfig::CreateNull() {
+DatabaseConfig DatabaseConfig::CreateNull()
+{
     DatabaseConfig config;
     config.disk_manager_logger = std::make_shared<spdlog::logger>(DEFAULT_DISK_MANAGER_LOGGER_NAME);
     config.disk_scheduler_logger = std::make_shared<spdlog::logger>(DEFAULT_DISK_SCHEDULER_LOGGER_NAME);

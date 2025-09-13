@@ -8,7 +8,6 @@
 #include <memory>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <string_view>
 #include <unordered_set>
 
 /**
@@ -21,6 +20,7 @@
  */
 class DiskManager {
 public:
+    DiskManager();
     DiskManager(const DatabaseConfig& config);
     DiskManager(const DatabaseConfig& config, std::size_t page_capacity);
     ~DiskManager();

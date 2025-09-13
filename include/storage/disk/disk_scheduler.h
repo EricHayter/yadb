@@ -19,6 +19,7 @@
  */
 class DiskScheduler {
 public:
+    DiskScheduler();
     DiskScheduler(const DatabaseConfig& config);
     ~DiskScheduler();
 

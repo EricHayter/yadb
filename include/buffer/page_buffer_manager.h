@@ -47,6 +47,8 @@ class PageBufferManager {
     friend PageMut;
 
 public:
+    PageBufferManager();
+    PageBufferManager(const DatabaseConfig& config);
     PageBufferManager(const DatabaseConfig& config, std::size_t num_frames);
     ~PageBufferManager();
 

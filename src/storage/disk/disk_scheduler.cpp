@@ -6,6 +6,11 @@
 #include <stop_token>
 #include <thread>
 
+DiskScheduler::DiskScheduler()
+    : DiskScheduler(DatabaseConfig::CreateNull())
+{
+}
+
 DiskScheduler::DiskScheduler(const DatabaseConfig& config)
     : disk_manager_m(config)
     , logger_m(config.disk_scheduler_logger)

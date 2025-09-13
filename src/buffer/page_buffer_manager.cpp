@@ -9,6 +9,16 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 
+PageBufferManager::PageBufferManager()
+    : PageBufferManager(DatabaseConfig::CreateNull())
+{
+}
+
+PageBufferManager::PageBufferManager(const DatabaseConfig& config)
+    : PageBufferManager(config, 128)
+{
+}
+
 PageBufferManager::PageBufferManager(const DatabaseConfig& config, std::size_t num_frames)
     : disk_scheduler_m(config)
     , logger_m(config.page_buffer_manager_logger)

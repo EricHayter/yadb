@@ -6,6 +6,11 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 
+DiskManager::DiskManager()
+    : DiskManager(DatabaseConfig::CreateNull())
+{
+}
+
 DiskManager::DiskManager(const DatabaseConfig& config)
     : DiskManager(config, 1)
 {
