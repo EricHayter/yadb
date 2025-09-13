@@ -46,6 +46,11 @@ uint16_t Page::GetNumSlots() const
     return num_slots;
 }
 
+offset_t Page::GetFreeSpaceSize() const
+{
+    return GetEndFreeSpace() - GetStartFreeSpace();
+}
+
 offset_t Page::GetStartFreeSpace() const
 {
     offset_t start_free_space;

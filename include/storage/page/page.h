@@ -121,8 +121,7 @@ public:
     page_id_t GetPageId() const { return page_id_m; }
     PageType GetPageType() const;
     uint16_t GetNumSlots() const;
-    offset_t GetStartFreeSpace() const;
-    offset_t GetEndFreeSpace() const;
+    offset_t GetFreeSpaceSize() const;
     uint64_t GetChecksum() const;
 
     PageView ReadPage() { return page_data_m; }
@@ -133,6 +132,8 @@ protected:
     bool IsSlotDeleted(slot_id_t slot_id) const;
     offset_t GetOffset(slot_id_t slot_id) const;
     uint16_t GetSlotSize(slot_id_t slot_id) const;
+    offset_t GetStartFreeSpace() const;
+    offset_t GetEndFreeSpace() const;
     MutPageView page_data_m;
 
 protected:
