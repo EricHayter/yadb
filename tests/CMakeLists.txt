@@ -11,9 +11,8 @@ target_link_libraries(
     yadb_test
     PRIVATE yadb_core
     PRIVATE GTest::gtest_main
+    INTERFACE lib_compile_flags
 )
-
-enable_coverage(yadb_test)
 
 include(GoogleTest)
 gtest_discover_tests(yadb_test)

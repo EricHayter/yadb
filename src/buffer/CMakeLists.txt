@@ -9,6 +9,5 @@ target_include_directories(yadb_buffer PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(yadb_buffer
     PUBLIC yadb_storage
     PUBLIC spdlog::spdlog
+    INTERFACE lib_compile_flags
 )
-
-enable_coverage(yadb_buffer)
