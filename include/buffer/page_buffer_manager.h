@@ -2,9 +2,9 @@
 
 #include "buffer/frame_header.h"
 #include "buffer/lru_k_replacer.h"
+#include "config/config.h"
 #include "storage/disk/disk_scheduler.h"
 #include "storage/page/page.h"
-#include "config/config.h"
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
 

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "spdlog/logger.h"
 #include <filesystem>
 #include <memory>
-#include "spdlog/logger.h"
 
 struct DatabaseConfig {
     std::filesystem::path database_file { "data.db" };
