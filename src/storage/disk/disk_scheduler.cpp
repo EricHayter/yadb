@@ -1,12 +1,14 @@
 #include "storage/disk/disk_scheduler.h"
+#include "config/config.h"
 #include "storage/disk/disk_manager.h"
 #include "storage/disk/io_tasks.h"
 #include <mutex>
 #include <stop_token>
 #include <thread>
 
-DiskScheduler::DiskScheduler(const std::filesystem::path& db_directory)
-    : disk_manager_m(db_directory)
+DiskScheduler::DiskScheduler(const DatabaseConfig& config)
+    : disk_manager_m(config)
+    , logger_m(config.disk_scheduler_logger)
     , worker_thread_m(&DiskScheduler::WorkerFunction, this)
 {
 }
