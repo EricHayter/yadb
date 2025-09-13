@@ -6,6 +6,6 @@ add_library(yadb_storage
 )
 target_include_directories(yadb_storage PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(yadb_storage
-    PUBLIC spdlog::spdlog
+    PRIVATE spdlog::spdlog
     INTERFACE lib_compile_flags
 )
