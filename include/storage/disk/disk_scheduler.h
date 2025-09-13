@@ -1,8 +1,8 @@
 #pragma once
+#include "config/config.h"
 #include "storage/disk/disk_manager.h"
 #include "storage/disk/io_tasks.h"
 #include <condition_variable>
-#include <filesystem>
 #include <future>
 #include <queue>
 #include <stop_token>
@@ -19,7 +19,8 @@
  */
 class DiskScheduler {
 public:
-    DiskScheduler(const std::filesystem::path& db_file);
+    DiskScheduler();
+    DiskScheduler(const DatabaseConfig& config);
     ~DiskScheduler();
 
     /**
@@ -70,5 +71,6 @@ private:
 
     /// underlying disk manager for worker thread to perform I/O operations
     DiskManager disk_manager_m;
+    std::shared_ptr<spdlog::logger> logger_m;
     std::jthread worker_thread_m;
 };

@@ -2,13 +2,13 @@
 
 #include "buffer/frame_header.h"
 #include "buffer/lru_k_replacer.h"
+#include "config/config.h"
 #include "storage/disk/disk_scheduler.h"
 #include "storage/page/page.h"
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
 #include <condition_variable>
-#include <filesystem>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -47,7 +47,9 @@ class PageBufferManager {
     friend PageMut;
 
 public:
-    PageBufferManager(const std::filesystem::path& db_directory, std::size_t num_frames);
+    PageBufferManager();
+    PageBufferManager(std::size_t num_frames);
+    PageBufferManager(const DatabaseConfig& config, std::size_t num_frames);
     ~PageBufferManager();
 
     /**
@@ -161,8 +163,6 @@ private:
     void RemoveAccessor(page_id_t page_id);
 
 private:
-    static constexpr std::string_view LOG_FILE_NAME { "page_buffer_manager.log" };
-    static constexpr std::string_view LOGGER_NAME { "page buffer_manager logger" };
     std::shared_ptr<spdlog::logger> logger_m;
 
     LRUKReplacer replacer_m;
