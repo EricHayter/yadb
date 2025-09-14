@@ -3,7 +3,7 @@ add_executable(
     storage/disk/disk_manager_test.cpp
     storage/disk/disk_scheduler_test.cpp
     buffer/page_buffer_manager_test.cpp
-    storage/page/crc_test.cpp
+    storage/page/checksum_test.cpp
 )
 
 
