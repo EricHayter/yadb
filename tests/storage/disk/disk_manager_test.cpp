@@ -22,11 +22,11 @@ protected:
 TEST_F(DiskManagerTest, TestCreateManagerTwice)
 {
     {
-        DiskManager disk_manager(temp_dir);
+        DiskManager disk_manager{};
     }
 
     {
-        DiskManager disk_manager(temp_dir);
+        DiskManager disk_manager{};
     }
 }
 
@@ -38,7 +38,7 @@ TEST_F(DiskManagerTest, TestSimpleWriteRead)
     std::array<char, PAGE_SIZE> page_data_write;
     page_data_write.fill('A');
 
-    DiskManager disk_manager(temp_dir);
+    DiskManager disk_manager{};
 
     page_id_t page_id = disk_manager.AllocatePage();
 
@@ -58,7 +58,7 @@ TEST_F(DiskManagerTest, TestFreePage)
     std::array<char, PAGE_SIZE> page_data_write;
     page_data_write.fill('A');
 
-    DiskManager disk_manager(temp_dir, 1);
+    DiskManager disk_manager(1);
     page_id_t page_id = disk_manager.AllocatePage();
 
     disk_manager.WritePage(page_id, page_data_write);
@@ -77,7 +77,7 @@ TEST_F(DiskManagerTest, TestResizePage)
 {
     std::array<char, PAGE_SIZE> page_data_write;
     page_data_write.fill('A');
-    DiskManager disk_manager(temp_dir, 1);
+    DiskManager disk_manager(1);
 
     for (int i = 0; i < 8; i++) {
         page_id_t page_id = disk_manager.AllocatePage();

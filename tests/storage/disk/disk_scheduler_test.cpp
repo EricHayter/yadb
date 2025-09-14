@@ -28,8 +28,7 @@ protected:
 
 TEST_F(DiskSchedulerTest, TestConcurrentPageAllocation_UniquePageIds)
 {
-    std::filesystem::path temp_db_file(temp_dir / "db_file_unique_ids");
-    DiskScheduler disk_scheduler(temp_db_file);
+    DiskScheduler disk_scheduler{};
     const int thread_count = 2048;
 
     std::vector<std::jthread> threads;
@@ -58,8 +57,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentPageAllocation_UniquePageIds)
 
 TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
 {
-    std::filesystem::path temp_db_file(temp_dir / "db_file");
-    DiskScheduler disk_scheduler(temp_db_file);
+    DiskScheduler disk_scheduler{};
     std::vector<std::jthread> threads;
     int thread_count = 64;
 
