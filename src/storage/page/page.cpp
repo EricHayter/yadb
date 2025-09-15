@@ -10,7 +10,7 @@ Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView pag
     : buffer_manager_m { buffer_manager }
     , page_id_m { page_id }
     , page_data_m { page_view }
-    , lk_m { std::move(lk) }
+    , data_lk_m { std::move(lk) }
 {
     assert(lk_m.owns_lock());
     buffer_manager_m->AddAccessor(page_id, false);
@@ -18,8 +18,8 @@ Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView pag
 
 Page::~Page()
 {
-    if (lk_m.owns_lock())
-        lk_m.unlock();
+    if (data_lk_m.owns_lock())
+        data_lk_m.unlock();
     if (buffer_manager_m)
         buffer_manager_m->RemoveAccessor(page_id_m);
 }
@@ -105,15 +105,16 @@ uint16_t Page::GetSlotSize(slot_id_t slot_id) const
 
 PageMut::PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk)
     : Page { buffer_manager, page_id, page_view }
-    , lk_m { std::move(lk) }
+    , data_lk_m { std::move(lk) }
 {
     assert(lk_m.owns_lock());
 }
 
 PageMut::~PageMut()
 {
-    if (lk_m.owns_lock())
-        lk_m.unlock();
+    UpdateChecksum();
+    if (data_lk_m.owns_lock())
+        data_lk_m.unlock();
 }
 
 void PageMut::InitPage()
@@ -153,7 +154,7 @@ std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
 {
     // try and reuse a deleted entry first
     for (slot_id_t slot_id = 0; slot_id < GetNumSlots(); slot_id++) {
-        if (IsSlotDeleted(slot_id) && GetOffset(slot_id) != SlotEntry::RECLAIMED && GetSlotSize(slot_id) <= size) {
+        if (IsSlotDeleted(slot_id) && GetSlotSize(slot_id) <= size) {
             SetSlotSize(slot_id, size);
             SetSlotDeleted(slot_id, false);
         }
@@ -217,7 +218,7 @@ void PageMut::VacuumPage()
         };
 
         if (IsSlotDeleted(id)) {
-            SetSlotOffset(id, ::SlotEntry::RECLAIMED);
+            SetSlotSize(id, 0);
         } else {
             pq.push(slot_entry);
         }
