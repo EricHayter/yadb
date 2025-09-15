@@ -40,6 +40,11 @@ Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView pag
     buffer_manager_m->AddAccessor(page_id_m, false);
 }
 
+bool Page::ValidChecksum() const
+{
+    return checksum64(page_data_m) == 0x00;
+}
+
 PageType Page::GetPageType() const
 {
     PageType page_type;
