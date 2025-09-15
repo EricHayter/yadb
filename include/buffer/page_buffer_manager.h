@@ -73,7 +73,7 @@ public:
      *
      * @returns a read-only page handle
      */
-    std::optional<Page> TryReadPage(page_id_t page_id);
+    std::optional<Page> TryReadPage(page_id_t page_id, bool validate_checksum = true);
 
     /**
      * @brief Wait to acquire access to a read-only page
@@ -82,7 +82,7 @@ public:
      *
      * @returns a read-only page handle
      */
-    std::optional<Page> WaitReadPage(page_id_t page_id);
+    std::optional<Page> WaitReadPage(page_id_t page_id, bool validate_checksum = true);
 
     /**
      * @brief Try to give access to a writable page
@@ -98,7 +98,7 @@ public:
      *
      * @returns a writable page handle
      */
-    std::optional<MutPage> TryWritePage(page_id_t page_id);
+    std::optional<MutPage> TryWritePage(page_id_t page_id, bool validate_checksum = true);
 
     /**
      * @brief Wait to acquire access to a writable page
@@ -107,7 +107,7 @@ public:
      *
      * @returns a writeable page handle
      */
-    std::optional<MutPage> WaitWritePage(page_id_t page_id);
+    std::optional<MutPage> WaitWritePage(page_id_t page_id, bool validate_checksum = true);
 
 private:
     /**
