@@ -1,12 +1,16 @@
 #include "storage/page/page.h"
-#include "buffer/page_buffer_manager.h"
+
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+
 #include <optional>
 #include <queue>
 
-Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::shared_lock<std::shared_mutex>&& lk)
+#include "buffer/page_buffer_manager.h"
+#include "storage/page/checksum.h"
+
+Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::shared_lock<std::shared_mutex>&& lk, bool fresh_page = false)
     : buffer_manager_m { buffer_manager }
     , page_id_m { page_id }
     , page_data_m { page_view }
@@ -14,6 +18,10 @@ Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView pag
 {
     assert(lk_m.owns_lock());
     buffer_manager_m->AddAccessor(page_id, false);
+
+    if (!fresh_page && !ValidChecksum()) {
+        throw ChecksumValidationException(page_id_m, "Checksum validation failure: possible data corruption");
+    }
 }
 
 Page::~Page()
@@ -24,7 +32,7 @@ Page::~Page()
         buffer_manager_m->RemoveAccessor(page_id_m);
 }
 
-Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view)
+Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool fresh_page = false)
     : buffer_manager_m { buffer_manager }
     , page_id_m { page_id }
     , page_data_m { page_view }
@@ -103,25 +111,32 @@ uint16_t Page::GetSlotSize(slot_id_t slot_id) const
     return slot_size;
 }
 
-PageMut::PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk)
-    : Page { buffer_manager, page_id, page_view }
+MutPage::MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk, bool fresh_page = false)
+    : Page { buffer_manager, page_id, page_view, fresh_page }
     , data_lk_m { std::move(lk) }
 {
     assert(lk_m.owns_lock());
 }
 
-PageMut::~PageMut()
+MutPage::~MutPage()
 {
     UpdateChecksum();
     if (data_lk_m.owns_lock())
         data_lk_m.unlock();
 }
 
-void PageMut::InitPage()
+void MutPage::InitPage()
 {
     SetNumSlots(0);
     SetStartFreeSpace(Header::SIZE);
     SetEndFreeSpace(PAGE_SIZE);
+}
+
+void MutPage::UpdateChecksum()
+{
+    SetChecksum(0x00);
+    uint64_t new_checksum = checksum64(page_data_m);
+    SetChecksum(new_checksum);
 }
 
 //// simplest implementation (wastes space by not reusing old slots). Implement other way soon
@@ -150,7 +165,7 @@ void PageMut::InitPage()
 // I should be able to reuse the slot regardless...
 // Technically I guess it's not incorrect but I think it's misleading...
 // Space saving implementation
-std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
+std::optional<slot_id_t> MutPage::AllocateSlot(uint16_t size)
 {
     // try and reuse a deleted entry first
     for (slot_id_t slot_id = 0; slot_id < GetNumSlots(); slot_id++) {
@@ -180,20 +195,20 @@ std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
     return old_slot_count;
 }
 
-void PageMut::WriteSlot(slot_id_t slot_id, std::span<const char> data)
+void MutPage::WriteSlot(slot_id_t slot_id, std::span<const char> data)
 {
     assert(slot_id < GetNumSlots());
     assert(data.size_bytes() == GetSlotSize(slot_id));
     memcpy(page_data_m.data(), data.data(), data.size_bytes());
 }
 
-void PageMut::DeleteSlot(slot_id_t slot_id)
+void MutPage::DeleteSlot(slot_id_t slot_id)
 {
     assert(slot_id < GetNumSlots());
     SetSlotDeleted(slot_id, true);
 }
 
-void PageMut::VacuumPage()
+void MutPage::VacuumPage()
 {
     struct SlotEntry {
         slot_id_t slot_id;
@@ -236,22 +251,27 @@ void PageMut::VacuumPage()
     SetEndFreeSpace(freespace_end);
 }
 
-void PageMut::SetNumSlots(uint16_t num_slots)
+void MutPage::SetNumSlots(uint16_t num_slots)
 {
     memcpy(page_data_m.data() + Header::Offsets::NUM_SLOTS, &num_slots, sizeof(num_slots));
 }
 
-void PageMut::SetStartFreeSpace(offset_t offset)
+void MutPage::SetStartFreeSpace(offset_t offset)
 {
     memcpy(page_data_m.data() + Header::Offsets::FREE_START, &offset, sizeof(offset));
 }
 
-void PageMut::SetEndFreeSpace(offset_t offset)
+void MutPage::SetEndFreeSpace(offset_t offset)
 {
     memcpy(page_data_m.data() + Header::Offsets::FREE_END, &offset, sizeof(offset));
 }
 
-void PageMut::SetSlotOffset(slot_id_t slot_id, offset_t offset)
+void MutPage::SetChecksum(uint64_t checksum)
+{
+    memcpy(page_data_m.data() + Header::Offsets::CHECKSUM, &checksum, sizeof(checksum));
+}
+
+void MutPage::SetSlotOffset(slot_id_t slot_id, offset_t offset)
 {
     assert(slot_id < GetNumSlots());
     offset_t slot_offset_offset = Header::SIZE
@@ -260,7 +280,7 @@ void PageMut::SetSlotOffset(slot_id_t slot_id, offset_t offset)
     memcpy(page_data_m.data() + slot_offset_offset, &offset, sizeof(offset));
 }
 
-void PageMut::SetSlotSize(slot_id_t slot_id, uint16_t size)
+void MutPage::SetSlotSize(slot_id_t slot_id, uint16_t size)
 {
     assert(slot_id < GetNumSlots());
     uint16_t slot_size_offset = Header::SIZE
@@ -269,7 +289,7 @@ void PageMut::SetSlotSize(slot_id_t slot_id, uint16_t size)
     memcpy(page_data_m.data() + slot_size_offset, &size, sizeof(size));
 }
 
-void PageMut::SetSlotDeleted(slot_id_t slot_id, bool deleted)
+void MutPage::SetSlotDeleted(slot_id_t slot_id, bool deleted)
 {
     uint8_t value = 1 ? deleted : 0;
     offset_t slot_deleted_offset = Header::SIZE

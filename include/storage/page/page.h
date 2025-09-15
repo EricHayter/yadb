@@ -83,6 +83,7 @@
 #include <optional>
 #include <shared_mutex>
 #include <span>
+#include <stdexcept>
 
 using page_id_t = uint32_t;
 
@@ -130,6 +131,20 @@ namespace Offsets {
 constexpr offset_t SIZE = Offsets::TUPLE_SIZE + sizeof(uint16_t);
 };
 
+class ChecksumValidationException : public std::runtime_error {
+private:
+    page_id_t page_id_;
+
+public:
+    ChecksumValidationException(page_id_t page_id, const std::string& msg)
+        : std::runtime_error(msg)
+        , page_id_(page_id)
+    {
+    }
+
+    page_id_t page_id() const noexcept { return page_id_; }
+};
+
 class PageBufferManager;
 
 /* Page definition with all the basic read-only operations on pages. Such as
@@ -138,7 +153,7 @@ class PageBufferManager;
  * of pages using the slotted page format e.g. B+ tree index nodes. */
 class Page {
 public:
-    Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::shared_lock<std::shared_mutex>&& lk);
+    Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::shared_lock<std::shared_mutex>&& lk, bool fresh_page);
     ~Page();
     page_id_t GetPageId() const { return page_id_m; }
 
@@ -162,7 +177,7 @@ public:
 
 protected:
     /* constructor for subclasses of page */
-    Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view);
+    Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool fresh_page);
 
     /* page header related functions */
     /* returns the value of the checksum field from the page header */
@@ -200,10 +215,10 @@ private:
 
 /* Page handle for write access. Has all of the same functionality but also
  * support for updating page headers, slot directory entries, and writing data. */
-class PageMut : public Page {
+class MutPage : public Page {
 public:
-    PageMut(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk);
-    ~PageMut();
+    MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk, bool fresh_page);
+    ~MutPage();
 
     /* initializes the fields inside of the page header. NOTE: This should only
      * be used when creating a page for the first time i.e. right after calling
@@ -235,6 +250,7 @@ private:
     void SetNumSlots(uint16_t num_slots);
     void SetStartFreeSpace(offset_t offset);
     void SetEndFreeSpace(offset_t offset);
+    void SetChecksum(uint64_t checksum);
 
     /* functions for updating slot directory entries */
     void SetSlotDeleted(slot_id_t slot_id, bool deleted);

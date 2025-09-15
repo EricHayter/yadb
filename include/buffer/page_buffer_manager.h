@@ -44,7 +44,7 @@
  */
 class PageBufferManager {
     friend Page;
-    friend PageMut;
+    friend MutPage;
 
 public:
     PageBufferManager();
@@ -98,7 +98,7 @@ public:
      *
      * @returns a writable page handle
      */
-    std::optional<PageMut> TryWritePage(page_id_t page_id);
+    std::optional<MutPage> TryWritePage(page_id_t page_id);
 
     /**
      * @brief Wait to acquire access to a writable page
@@ -107,7 +107,7 @@ public:
      *
      * @returns a writeable page handle
      */
-    std::optional<PageMut> WaitWritePage(page_id_t page_id);
+    std::optional<MutPage> WaitWritePage(page_id_t page_id);
 
 private:
     /**

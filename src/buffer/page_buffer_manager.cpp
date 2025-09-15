@@ -92,7 +92,7 @@ std::optional<Page> PageBufferManager::WaitReadPage(page_id_t page_id)
     return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-std::optional<PageMut> PageBufferManager::TryWritePage(page_id_t page_id)
+std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
@@ -106,10 +106,10 @@ std::optional<PageMut> PageBufferManager::TryWritePage(page_id_t page_id)
     }
     AddAccessor(frame->id, true);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<PageMut>(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-std::optional<PageMut> PageBufferManager::WaitWritePage(page_id_t page_id)
+std::optional<MutPage> PageBufferManager::WaitWritePage(page_id_t page_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     available_frame_m.wait(lk, [this, page_id]() {
@@ -128,7 +128,7 @@ std::optional<PageMut> PageBufferManager::WaitWritePage(page_id_t page_id)
 
     frame->mut.lock();
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<PageMut>(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
 PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
