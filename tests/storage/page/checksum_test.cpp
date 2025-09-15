@@ -2,8 +2,8 @@
 #include "storage/page/page.h"
 #include <cstdint>
 #include <gtest/gtest.h>
-#include <vector>
 #include <numeric>
+#include <vector>
 
 TEST(CRCTest, CheckComplement)
 {

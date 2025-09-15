@@ -28,7 +28,7 @@ protected:
 
 TEST_F(DiskSchedulerTest, TestConcurrentPageAllocation_UniquePageIds)
 {
-    DiskScheduler disk_scheduler{};
+    DiskScheduler disk_scheduler {};
     const int thread_count = 2048;
 
     std::vector<std::jthread> threads;
@@ -57,7 +57,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentPageAllocation_UniquePageIds)
 
 TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
 {
-    DiskScheduler disk_scheduler{};
+    DiskScheduler disk_scheduler {};
     std::vector<std::jthread> threads;
     int thread_count = 64;
 

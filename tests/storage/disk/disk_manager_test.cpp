@@ -22,11 +22,11 @@ protected:
 TEST_F(DiskManagerTest, TestCreateManagerTwice)
 {
     {
-        DiskManager disk_manager{};
+        DiskManager disk_manager {};
     }
 
     {
-        DiskManager disk_manager{};
+        DiskManager disk_manager {};
     }
 }
 
@@ -38,7 +38,7 @@ TEST_F(DiskManagerTest, TestSimpleWriteRead)
     std::array<char, PAGE_SIZE> page_data_write;
     page_data_write.fill('A');
 
-    DiskManager disk_manager{};
+    DiskManager disk_manager {};
 
     page_id_t page_id = disk_manager.AllocatePage();
 

@@ -2,7 +2,6 @@
 
 #include <cstring>
 
-
 /*
  * checksum64
  *      Calculates a 64-bit checksum
