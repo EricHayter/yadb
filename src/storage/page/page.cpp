@@ -16,7 +16,7 @@ Page::Page(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView pag
     , page_data_m { page_view }
     , data_lk_m { std::move(lk) }
 {
-    assert(lk_m.owns_lock());
+    assert(data_lk_m.owns_lock());
     buffer_manager_m->AddAccessor(page_id, false);
 
     if (!fresh_page && !ValidChecksum()) {
@@ -120,7 +120,7 @@ MutPage::MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageVi
     : Page { buffer_manager, page_id, page_view, fresh_page }
     , data_lk_m { std::move(lk) }
 {
-    assert(lk_m.owns_lock());
+    assert(data_lk_m.owns_lock());
 }
 
 MutPage::~MutPage()
