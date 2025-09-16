@@ -2,6 +2,8 @@ message(${CMAKE_SOURCE_DIR})
 add_library(yadb_storage
     disk/disk_manager.cpp
     disk/disk_scheduler.cpp
+    page/base_page.cpp
+    page/mut_page.cpp
     page/page.cpp
     page/checksum.cpp
 )

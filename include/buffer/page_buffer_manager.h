@@ -1,17 +1,19 @@
 #pragma once
 
-#include "buffer/frame_header.h"
-#include "buffer/lru_k_replacer.h"
-#include "config/config.h"
-#include "storage/disk/disk_scheduler.h"
-#include "storage/page/page.h"
-#include <spdlog/logger.h>
-#include <spdlog/sinks/basic_file_sink.h>
-
 #include <condition_variable>
 #include <memory>
 #include <optional>
 #include <unordered_map>
+
+#include <spdlog/logger.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
+#include "buffer/frame_header.h"
+#include "buffer/lru_k_replacer.h"
+#include "config/config.h"
+#include "storage/disk/disk_scheduler.h"
+#include "storage/page/mut_page.h"
+#include "storage/page/page.h"
 
 /**
  * @brief Page Buffer Manager
@@ -43,8 +45,7 @@
  * is handled by the disk scheduler.
  */
 class PageBufferManager {
-    friend Page;
-    friend MutPage;
+    friend BasePage;
 
 public:
     PageBufferManager();
