@@ -162,6 +162,17 @@ private:
      */
     void RemoveAccessor(page_id_t page_id);
 
+    /*
+     * GetFrameForPage
+     *      returns a pointer to the frame header for the frame containing the
+     *      page with id page_id
+     *
+     * NOTE: this function WILL throw a runtime exception if the page is
+     * not located inside of a frame. This function should be used to prevent
+     * accidentally creating entries in the page map.
+     */
+    FrameHeader* GetFrameForPage(page_id_t page_id) const;
+
 private:
     std::shared_ptr<spdlog::logger> logger_m;
 
