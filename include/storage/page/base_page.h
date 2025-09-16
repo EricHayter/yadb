@@ -181,6 +181,10 @@ public:
      */
     std::span<const char> ReadSlot(slot_id_t slot);
 
+    /* Print out contents of page and values for headers. Mainly to be used
+     * for debugging purposes */
+    void PrintPage() const;
+
 protected:
     /* constructor for subclasses of base page */
     BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool is_writer, bool fresh_page = false);

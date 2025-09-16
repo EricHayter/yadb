@@ -1,5 +1,7 @@
 #include "storage/page/base_page.h"
 
+#include <iostream>
+
 #include "buffer/page_buffer_manager.h"
 #include "storage/page/checksum.h"
 
@@ -65,6 +67,42 @@ uint64_t BasePage::GetChecksum() const
 std::span<const char> BasePage::ReadSlot(slot_id_t slot_id)
 {
     return page_data_m.subspan(GetOffset(slot_id), GetSlotSize(slot_id));
+}
+
+void BasePage::PrintPage() const
+{
+    std::cout << "Page type: " << static_cast<uint8_t>(GetPageType()) << '\n';
+    std::cout << "Number of slots: " << GetNumSlots() << '\n';
+    std::cout << "Free space start: " << GetStartFreeSpace() << '\n';
+    std::cout << "Free space end: " << GetEndFreeSpace() << '\n';
+    std::cout << "Checksum: " << GetChecksum() << "\n\n";
+
+    constexpr std::size_t bytes_per_line = 16;
+    for (std::size_t i = 0; i < page_data_m.size(); i += bytes_per_line) {
+        // Print offset
+        std::cout << std::setw(6) << std::setfill('0') << std::hex << i << "  ";
+
+        // Hex bytes
+        for (std::size_t j = 0; j < bytes_per_line; ++j) {
+            if (i + j < page_data_m.size()) {
+                unsigned byte = static_cast<unsigned char>(page_data_m[i + j]);
+                std::cout << std::setw(2) << byte << ' ';
+            } else {
+                std::cout << "   ";  // padding
+            }
+        }
+
+        // ASCII view
+        std::cout << " |";
+        for (std::size_t j = 0; j < bytes_per_line && i + j < page_data_m.size(); ++j) {
+            unsigned char c = static_cast<unsigned char>(page_data_m[i + j]);
+            std::cout << (std::isprint(c) ? static_cast<char>(c) : '.');
+        }
+        std::cout << "|\n";
+    }
+
+    // Reset stream flags
+    std::cout << std::dec << std::setfill(' ');
 }
 
 bool BasePage::IsSlotDeleted(slot_id_t slot_id) const
