@@ -69,7 +69,6 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id, bool valid
     if (not frame->mut.try_lock_shared()) {
         return std::nullopt;
     }
-    AddAccessor(frame->page_id, false);
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
@@ -87,11 +86,7 @@ std::optional<Page> PageBufferManager::WaitReadPage(page_id_t page_id, bool vali
         }
     }
     FrameHeader* frame = GetFrameForPage(page_id);
-    AddAccessor(frame->page_id, false);
-    lk.unlock();
-
-    frame->mut.lock_shared();
-    std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
+    std::shared_lock<std::shared_mutex> frame_lk(frame->mut);
     return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
 
@@ -107,7 +102,6 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id, bool v
     if (not frame->mut.try_lock()) {
         return std::nullopt;
     }
-    AddAccessor(frame->page_id, true);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
     return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
@@ -126,11 +120,7 @@ std::optional<MutPage> PageBufferManager::WaitWritePage(page_id_t page_id, bool 
     }
 
     FrameHeader* frame = GetFrameForPage(page_id);
-    AddAccessor(frame->page_id, true);
-    lk.unlock();
-
-    frame->mut.lock();
-    std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
+    std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
     return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
 
