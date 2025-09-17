@@ -167,7 +167,11 @@ public:
     bool ValidChecksum() const;
 
     PageType GetPageType() const;
+
+    /* returns the number of valid slots (i.e. not deleted) */
     uint16_t GetNumSlots() const;
+
+
     offset_t GetFreeSpaceSize() const;
 
     /* Get a read only span for ALL of the page's data. This should be used
@@ -197,6 +201,7 @@ protected:
     /* returns the value of the checksum field from the page header */
     uint64_t GetChecksum() const;
 
+
     /* returns offset to the start of the free space (inclusive) */
     offset_t GetStartFreeSpace() const;
 
@@ -204,6 +209,9 @@ protected:
     offset_t GetEndFreeSpace() const;
 
     /* slot directory access functions */
+    /* returns the number of slot directory entries (including deleted) */
+    uint16_t GetSlotDirectoryCapacity() const;
+
     /* check to see if tuple has been deleted from the page */
     bool IsSlotDeleted(slot_id_t slot_id) const;
 

@@ -67,8 +67,7 @@ uint64_t BasePage::GetChecksum() const
 
 std::span<const char> BasePage::ReadSlot(slot_id_t slot_id)
 {
-    if (IsSlotDeleted(slot_id))
-        throw std::runtime_error(std::format("Slot {} is deleted", slot_id));
+    assert(!IsSlotDeleted(slot_id) && std::format("Slot {} is deleted", slot_id).data());
     return page_data_m.subspan(GetOffset(slot_id), GetSlotSize(slot_id));
 }
 
@@ -108,26 +107,32 @@ void BasePage::PrintPage() const
     std::cout << std::dec << std::setfill(' ');
 }
 
+uint16_t BasePage::GetSlotDirectoryCapacity() const
+{
+    return (GetStartFreeSpace() - Header::SIZE) / SlotEntry::SIZE;
+}
+
 bool BasePage::IsSlotDeleted(slot_id_t slot_id) const
 {
+    assert(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity());
     uint8_t deleted;
     offset_t deleted_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::DELETED;
     memcpy(&deleted, page_data_m.data() + deleted_offset, sizeof(deleted));
     return deleted > 0;
 }
 
-offset_t BasePage::GetOffset(slot_id_t id) const
+offset_t BasePage::GetOffset(slot_id_t slot_id) const
 {
-    assert(id >= 0 && id < GetNumSlots());
+    assert(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity());
     offset_t offset;
-    offset_t slot_entry_offset = Header::SIZE + id * SlotEntry::SIZE + SlotEntry::Offsets::OFFSET;
+    offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::OFFSET;
     memcpy(&offset, page_data_m.data() + slot_entry_offset, sizeof(offset));
     return offset;
 }
 
 uint16_t BasePage::GetSlotSize(slot_id_t slot_id) const
 {
-    assert(slot_id >= 0 && slot_id < GetNumSlots());
+    assert(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity());
     uint16_t slot_size;
     offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::TUPLE_SIZE;
     memcpy(&slot_size, page_data_m.data() + slot_entry_offset, sizeof(slot_size));
