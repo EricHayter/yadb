@@ -52,7 +52,7 @@ page_id_t PageBufferManager::NewPage()
     page_id_t page_id = page_future.get();
 
     /* Create a page handle and initialize it's contents*/
-    WaitWritePage(page_id, false)->InitPage();
+    WritePage(page_id, false).InitPage();
 
     return page_id;
 }
@@ -73,7 +73,7 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id, bool valid
     return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
 
-std::optional<Page> PageBufferManager::WaitReadPage(page_id_t page_id, bool validate_checksum)
+Page PageBufferManager::ReadPage(page_id_t page_id, bool validate_checksum)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     available_frame_m.wait(lk, [this, page_id]() {
@@ -82,12 +82,12 @@ std::optional<Page> PageBufferManager::WaitReadPage(page_id_t page_id, bool vali
 
     if (not page_map_m.contains(page_id)) {
         if (LoadPage(page_id) != LoadPageStatus::Success) {
-            return std::nullopt;
+            throw std::runtime_error("Failed to load page");
         }
     }
     FrameHeader* frame = GetFrameForPage(page_id);
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut);
-    return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
+    return Page(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
 
 std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id, bool validate_checksum)
@@ -106,7 +106,7 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id, bool v
     return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
 
-std::optional<MutPage> PageBufferManager::WaitWritePage(page_id_t page_id, bool validate_checksum)
+MutPage PageBufferManager::WritePage(page_id_t page_id, bool validate_checksum)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     available_frame_m.wait(lk, [this, page_id]() {
@@ -115,13 +115,13 @@ std::optional<MutPage> PageBufferManager::WaitWritePage(page_id_t page_id, bool 
 
     if (not page_map_m.contains(page_id)) {
         if (LoadPage(page_id) != LoadPageStatus::Success) {
-            return std::nullopt;
+            throw std::runtime_error("Failed to load page");
         }
     }
 
     FrameHeader* frame = GetFrameForPage(page_id);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
-    return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
+    return MutPage(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
 }
 
 PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)

@@ -83,7 +83,7 @@ public:
      *
      * @returns a read-only page handle
      */
-    std::optional<Page> WaitReadPage(page_id_t page_id, bool validate_checksum = true);
+    Page ReadPage(page_id_t page_id, bool validate_checksum = true);
 
     /**
      * @brief Try to give access to a writable page
@@ -108,7 +108,7 @@ public:
      *
      * @returns a writeable page handle
      */
-    std::optional<MutPage> WaitWritePage(page_id_t page_id, bool validate_checksum = true);
+    MutPage WritePage(page_id_t page_id, bool validate_checksum = true);
 
 private:
     /**
