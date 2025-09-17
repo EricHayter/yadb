@@ -80,29 +80,22 @@ TEST(PageBufferManagerTest, TestDeleteSlot)
     slot_id_t slot_id;
     {
         auto page = page_buffer_man.WritePage(page_id);
-
-        std::span<char> write_span(data);
-
         ASSERT_EQ(page.GetNumSlots(), 0);
 
+        std::span<char> write_span(data);
         auto slot = page.AllocateSlot(write_span.size_bytes());
 
         ASSERT_EQ(page.GetNumSlots(), 1);
-
         ASSERT_GT(page.GetFreeSpaceSize(), 0);
         ASSERT_TRUE(slot.has_value());
+
         slot_id = *slot;
     }
 
     /* delete the slot */
-
-
-    /* write to page */
     {
-        auto page = page_buffer_man.WritePage(page_id);
-        page.WriteSlot(slot_id, data);
+        MutPage page = page_buffer_man.WritePage(page_id);
+        page.DeleteSlot(slot_id);
+        ASSERT_EQ(page.GetNumSlots(), 0);
     }
-
-    /* attempt to read deleted slot */
-
 }

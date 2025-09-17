@@ -100,6 +100,7 @@ void MutPage::DeleteSlot(slot_id_t slot_id)
 {
     assert(slot_id < GetNumSlots());
     SetSlotDeleted(slot_id, true);
+    SetNumSlots(GetNumSlots() - 1);
 }
 
 void MutPage::VacuumPage()
