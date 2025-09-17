@@ -1,6 +1,7 @@
 #include "storage/page/base_page.h"
 
 #include <iostream>
+#include <stdexcept>
 
 #include "buffer/page_buffer_manager.h"
 #include "storage/page/checksum.h"
@@ -66,6 +67,8 @@ uint64_t BasePage::GetChecksum() const
 
 std::span<const char> BasePage::ReadSlot(slot_id_t slot_id)
 {
+    if (IsSlotDeleted(slot_id))
+        throw std::runtime_error(std::format("Slot {} is deleted", slot_id));
     return page_data_m.subspan(GetOffset(slot_id), GetSlotSize(slot_id));
 }
 
