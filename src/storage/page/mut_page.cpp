@@ -98,7 +98,7 @@ void MutPage::WriteSlot(slot_id_t slot_id, std::span<const char> data)
 
 void MutPage::DeleteSlot(slot_id_t slot_id)
 {
-    assert(slot_id < GetNumSlots());
+    assert(slot_id < GetSlotDirectoryCapacity());
     SetSlotDeleted(slot_id, true);
     SetNumSlots(GetNumSlots() - 1);
 }
@@ -168,7 +168,7 @@ void MutPage::SetChecksum(uint64_t checksum)
 
 void MutPage::SetSlotOffset(slot_id_t slot_id, offset_t offset)
 {
-    assert(slot_id < GetNumSlots());
+    assert(slot_id < GetSlotDirectoryCapacity());
     offset_t slot_offset_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::OFFSET;
@@ -177,7 +177,7 @@ void MutPage::SetSlotOffset(slot_id_t slot_id, offset_t offset)
 
 void MutPage::SetSlotSize(slot_id_t slot_id, uint16_t size)
 {
-    assert(slot_id < GetNumSlots());
+    assert(slot_id < GetSlotDirectoryCapacity());
     uint16_t slot_size_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::TUPLE_SIZE;
