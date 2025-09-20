@@ -91,7 +91,7 @@ std::optional<slot_id_t> MutPage::AllocateSlot(uint16_t size)
 
 void MutPage::WriteSlot(slot_id_t slot_id, std::span<const char> data)
 {
-    assert(slot_id < GetNumSlots());
+    assert(!IsSlotDeleted(slot_id));
     assert(data.size_bytes() == GetSlotSize(slot_id));
     memcpy(page_data_m.data() + GetOffset(slot_id), data.data(), data.size_bytes());
 }
