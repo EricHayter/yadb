@@ -177,3 +177,103 @@ TEST(PageBufferManagerTest, TestWriteDeletedSlot)
     }
 }
 #endif
+
+TEST(PageBufferManagerTest, TestFlushPage)
+{
+    constexpr int number_frames = 1;
+    PageBufferManager page_buffer_man(number_frames);
+
+    page_id_t page_id = page_buffer_man.NewPage();
+
+    /* allocate slots in page */
+    auto page = page_buffer_man.WritePage(page_id);
+
+    constexpr int num_slots = 10;
+    constexpr int data_size = 4;
+    std::vector<slot_id_t> slots;
+    for (int i = 0; i < num_slots; i++) {
+        ASSERT_EQ(page.GetNumSlots(), i);
+
+        auto slot = page.AllocateSlot(data_size);
+        ASSERT_TRUE(slot.has_value());
+        slots.push_back(slot.value());
+    }
+
+    offset_t free_space_size = page.GetFreeSpaceSize();
+
+    /* delete the slots from the page */
+    for (slot_id_t slot_id: slots) {
+        page.DeleteSlot(slot_id);
+    }
+
+    page.VacuumPage();
+
+    /* Should regain all of the space made from the previous allocations of
+     * 10 slots of size 10. Note we NEVER reclaim slots. */
+    ASSERT_EQ(page.GetFreeSpaceSize() - num_slots * data_size, free_space_size);
+}
+
+TEST(PageBufferManagerTest, TestFlushPageNoReusableSpace)
+{
+    constexpr int number_frames = 1;
+    PageBufferManager page_buffer_man(number_frames);
+
+    page_id_t page_id = page_buffer_man.NewPage();
+
+    /* allocate slots in page */
+    auto page = page_buffer_man.WritePage(page_id);
+
+    std::vector<slot_id_t> slots;
+    for (int i = 0; i < 10; i++) {
+        ASSERT_EQ(page.GetNumSlots(), i);
+
+        auto slot = page.AllocateSlot(4);
+        ASSERT_TRUE(slot.has_value());
+        slots.push_back(slot.value());
+    }
+
+    offset_t free_space_size = page.GetFreeSpaceSize();
+
+    page.VacuumPage();
+
+    /* vacuuming shouldn't have any effect here since there's no deleted pages
+     * */
+    ASSERT_EQ(page.GetFreeSpaceSize(), free_space_size);
+}
+
+TEST(PageBufferManagerTest, TestFlushPageDeletedInnerSlot)
+{
+    constexpr int number_frames = 1;
+    PageBufferManager page_buffer_man(number_frames);
+
+    page_id_t page_id = page_buffer_man.NewPage();
+    auto page = page_buffer_man.WritePage(page_id);
+
+    /* allocate slots in page */
+    constexpr int num_slots = 10;
+    constexpr int data_size = 4;
+    std::vector<slot_id_t> slots;
+    for (int i = 0; i < num_slots; i++) {
+        ASSERT_EQ(page.GetNumSlots(), i);
+
+        auto slot = page.AllocateSlot(data_size);
+        ASSERT_TRUE(slot.has_value());
+
+        slots.push_back(slot.value());
+    }
+
+    offset_t free_space_size = page.GetFreeSpaceSize();
+
+    /* delete slots in the center */
+    constexpr int deleted_slots = 4;
+    for (int i = 0; i < deleted_slots; i++) {
+        page.DeleteSlot(slots[2 + i]);
+    }
+
+    ASSERT_EQ(page.GetNumSlots(), num_slots - deleted_slots);
+
+    page.VacuumPage();
+
+    std::size_t reclaimed_space = data_size * deleted_slots;
+    ASSERT_EQ(page.GetFreeSpaceSize(), free_space_size + reclaimed_space);
+}

@@ -114,13 +114,13 @@ void MutPage::VacuumPage()
     struct SlotEntryCompare {
         bool operator()(const SlotEntry& l, const SlotEntry& r)
         {
-            return l.offset > r.offset;
+            return l.offset < r.offset;
         }
     };
 
     std::priority_queue<SlotEntry, std::vector<SlotEntry>, SlotEntryCompare> pq;
 
-    for (slot_id_t id = 0; id < GetNumSlots(); id++) {
+    for (slot_id_t id = 0; id < GetSlotDirectoryCapacity(); id++) {
         SlotEntry slot_entry {
             .slot_id = id,
             .offset = GetOffset(id),
