@@ -1,6 +1,7 @@
 #include "buffer/page_buffer_manager.h"
 #include "buffer/frame_header.h"
 #include "config/config.h"
+#include "storage/page/base_page.h"
 #include <cassert>
 #include <future>
 #include <mutex>
@@ -84,7 +85,13 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
         return std::nullopt;
     }
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk));
+
+    Page page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    if (!page.ValidChecksum()) {
+        throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
+    }
+
+    return std::make_optional<Page>(page);
 }
 
 Page PageBufferManager::ReadPage(page_id_t page_id)
@@ -101,7 +108,13 @@ Page PageBufferManager::ReadPage(page_id_t page_id)
     }
     FrameHeader* frame = GetFrameForPage(page_id);
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut);
-    return Page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+
+    Page page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    if (!page.ValidChecksum()) {
+        throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
+    }
+
+    return page;
 }
 
 std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
@@ -117,7 +130,13 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
         return std::nullopt;
     }
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk));
+
+    MutPage page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    if (!page.ValidChecksum()) {
+        throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
+    }
+
+    return std::make_optional<MutPage>(page);
 }
 
 MutPage PageBufferManager::WritePage(page_id_t page_id)
@@ -135,7 +154,13 @@ MutPage PageBufferManager::WritePage(page_id_t page_id)
 
     FrameHeader* frame = GetFrameForPage(page_id);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
-    return MutPage(this, page_id, frame->GetMutData(), std::move(frame_lk));
+
+    MutPage page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    if (!page.ValidChecksum()) {
+        throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
+    }
+
+    return page;
 }
 
 PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
