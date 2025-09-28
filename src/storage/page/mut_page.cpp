@@ -33,60 +33,55 @@ void MutPage::UpdateChecksum()
     SetChecksum(new_checksum);
 }
 
-//// simplest implementation (wastes space by not reusing old slots). Implement other way soon
-// std::optional<slot_id_t> PageMut::AllocateSlot(uint16_t size)
-//{
-//     // need to have space for slot directory entry AND the tuple
-//     if (SlotEntry::SIZE + size > GetEndFreeSpace() - GetStartFreeSpace())
-//         return std::nullopt;
-//
-//     offset_t tuple_offset = GetEndFreeSpace() - size;
-//
-//     // Write header fields
-//     uint16_t old_slot_count = GetNumSlots();
-//     SetNumSlots(old_slot_count + 1);
-//     SetStartFreeSpace(GetStartFreeSpace() + SlotEntry::SIZE);
-//     SetEndFreeSpace(tuple_offset);
-//
-//     // Write slot directory entry
-//     SetSlotOffset(old_slot_count, tuple_offset);
-//     SetSlotSize(old_slot_count, size);
-//
-//     return old_slot_count;
-// }
-
-// TODO this isn't right. It's trying to reuse the actual slot entry IFF I can reuse the space in the freespace
-// I should be able to reuse the slot regardless...
-// Technically I guess it's not incorrect but I think it's misleading...
-// Space saving implementation
 std::optional<slot_id_t> MutPage::AllocateSlot(uint16_t size)
 {
-    // try and reuse a deleted entry first
-    for (slot_id_t slot_id = 0; slot_id < GetNumSlots(); slot_id++) {
-        if (IsSlotDeleted(slot_id) && GetSlotSize(slot_id) <= size) {
-            SetSlotSize(slot_id, size);
-            SetSlotDeleted(slot_id, false);
+    std::optional<slot_id_t> slot_id;
+    /* try and reuse a deleted entry first */
+    for (slot_id_t i = 0; i < GetSlotDirectoryCapacity(); i++) {
+        if (IsSlotDeleted(i)) {
+            slot_id = i;
         }
     }
 
-    // Can't reuse any deleted slots.
-    // need to have space for slot directory entry AND the tuple
-    if (SlotEntry::SIZE + size > GetEndFreeSpace() - GetStartFreeSpace())
-        return std::nullopt;
+    /* can't reuse anything just create a new entry */
+    if (!slot_id) {
+        /* not enough space for the entry */
+        if (GetFreeSpaceSize() < SlotEntry::SIZE + size) {
+            return std::nullopt;
+        }
 
-    offset_t tuple_offset = GetEndFreeSpace() - size;
+        uint16_t old_slot_count = GetNumSlots();
+        SetNumSlots(old_slot_count + 1);
+        SetStartFreeSpace(GetStartFreeSpace() + SlotEntry::SIZE);
 
-    // Write header fields
-    uint16_t old_slot_count = GetNumSlots();
-    SetNumSlots(old_slot_count + 1);
-    SetStartFreeSpace(GetStartFreeSpace() + SlotEntry::SIZE);
-    SetEndFreeSpace(tuple_offset);
+        offset_t tuple_offset = GetEndFreeSpace() - size;
+        SetEndFreeSpace(tuple_offset);
 
-    // Write slot directory entry
-    SetSlotOffset(old_slot_count, tuple_offset);
-    SetSlotSize(old_slot_count, size);
+        /* Write slot directory entry */
+        SetSlotOffset(old_slot_count, tuple_offset);
+        SetSlotSize(old_slot_count, size);
 
-    return old_slot_count;
+        return GetSlotDirectoryCapacity() - 1;
+    }
+
+    /* we reuse the slot */
+    if (size < GetSlotSize(*slot_id)) {
+        SetSlotSize(*slot_id, size);
+        SetSlotDeleted(*slot_id, false);
+    } else {
+        if (size > GetFreeSpaceSize()) {
+            return std::nullopt;
+        }
+
+        offset_t tuple_offset = GetEndFreeSpace() - size;
+        SetEndFreeSpace(tuple_offset);
+
+        /* Write slot directory entry */
+        SetSlotOffset(*slot_id, tuple_offset);
+        SetSlotSize(*slot_id, size);
+    }
+
+    return *slot_id;
 }
 
 void MutPage::WriteSlot(slot_id_t slot_id, std::span<const char> data)
