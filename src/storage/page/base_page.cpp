@@ -16,6 +16,9 @@ BasePage::BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPage
     , page_id_m { page_id }
     , page_data_m { page_view }
 {
+    /* Creating a page without an associated buffer manager (i.e. nullptr)
+     * allows for working with the page interface over a span. Particularly
+     * useful for when creating a new page and initialization is required */
     if (buffer_manager_m)
         buffer_manager_m->AddAccessor(page_id, is_writer);
 }
@@ -28,14 +31,14 @@ bool BasePage::ValidChecksum() const
 PageType BasePage::GetPageType() const
 {
     PageType page_type;
-    memcpy(&page_type, page_data_m.data() + Header::Offsets::PAGE_TYPE, sizeof(PageType));
+    memcpy(&page_type, page_data_m.data() + Header::Offsets::PAGE_TYPE, sizeof(page_type));
     return page_type;
 }
 
 uint16_t BasePage::GetNumSlots() const
 {
     uint16_t num_slots;
-    memcpy(&num_slots, page_data_m.data() + Header::Offsets::NUM_SLOTS, sizeof(uint16_t));
+    memcpy(&num_slots, page_data_m.data() + Header::Offsets::NUM_SLOTS, sizeof(num_slots));
     return num_slots;
 }
 
@@ -47,21 +50,21 @@ offset_t BasePage::GetFreeSpaceSize() const
 offset_t BasePage::GetStartFreeSpace() const
 {
     offset_t start_free_space;
-    memcpy(&start_free_space, page_data_m.data() + Header::Offsets::FREE_START, sizeof(offset_t));
+    memcpy(&start_free_space, page_data_m.data() + Header::Offsets::FREE_START, sizeof(start_free_space));
     return start_free_space;
 }
 
 offset_t BasePage::GetEndFreeSpace() const
 {
     offset_t end_free_space;
-    memcpy(&end_free_space, page_data_m.data() + Header::Offsets::FREE_END, sizeof(offset_t));
+    memcpy(&end_free_space, page_data_m.data() + Header::Offsets::FREE_END, sizeof(end_free_space));
     return end_free_space;
 }
 
 uint64_t BasePage::GetChecksum() const
 {
     uint64_t checksum;
-    memcpy(&checksum, page_data_m.data() + Header::Offsets::CHECKSUM, sizeof(uint64_t));
+    memcpy(&checksum, page_data_m.data() + Header::Offsets::CHECKSUM, sizeof(checksum));
     return checksum;
 }
 

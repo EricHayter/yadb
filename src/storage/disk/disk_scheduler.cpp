@@ -75,13 +75,13 @@ void DiskScheduler::WritePage(page_id_t page_id, PageView data, std::promise<boo
 
 void DiskScheduler::WorkerFunction(std::stop_token stop_token)
 {
-    while (not stop_token.stop_requested()) {
+    while (!stop_token.stop_requested()) {
         std::unique_lock<std::mutex> lk(mut_m);
         cv_m.wait(lk, [this, &stop_token]() {
-            return not tasks_m.empty() || stop_token.stop_requested();
+            return !tasks_m.empty() || stop_token.stop_requested();
         });
 
-        while (not tasks_m.empty()) {
+        while (!tasks_m.empty()) {
             IOTasks::Task task = std::move(tasks_m.front());
             tasks_m.pop();
             lk.unlock();

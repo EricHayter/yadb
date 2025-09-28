@@ -1,10 +1,15 @@
 #include "storage/disk/disk_manager.h"
-#include "config/config.h"
-#include "storage/page/page.h"
+
 #include <cassert>
+
 #include <filesystem>
+
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
+
+#include "config/config.h"
+#include "storage/page/base_page.h"
+
 
 DiskManager::DiskManager()
     : DiskManager(128)
@@ -39,12 +44,12 @@ DiskManager::~DiskManager()
 
 bool DiskManager::WritePage(page_id_t page_id, PageView page)
 {
-    assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
+    assert(page_id < page_capacity_m && !free_pages_m.contains(page_id));
     std::size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
 
     db_io_m.write(page.data(), page.size());
-    if (not db_io_m.good()) {
+    if (!db_io_m.good()) {
         logger_m->warn("Failed to write data to page id {}", page_id);
         return false;
     }
@@ -54,11 +59,11 @@ bool DiskManager::WritePage(page_id_t page_id, PageView page)
 // Read the contents of page data into page_data
 bool DiskManager::ReadPage(page_id_t page_id, MutPageView page)
 {
-    assert(page_id < page_capacity_m && not free_pages_m.contains(page_id));
+    assert(page_id < page_capacity_m && !free_pages_m.contains(page_id));
     size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
     db_io_m.read(page.data(), page.size());
-    if (not db_io_m.good()) {
+    if (!db_io_m.good()) {
         logger_m->warn("Failed to read data from page id {}", page_id);
         return false;
     }
@@ -73,7 +78,7 @@ void DiskManager::DeletePage(page_id_t page_id)
 page_id_t DiskManager::AllocatePage()
 {
     page_id_t page_id;
-    if (not free_pages_m.empty()) {
+    if (!free_pages_m.empty()) {
         auto iter = free_pages_m.begin();
         page_id = *iter;
         free_pages_m.erase(iter);
