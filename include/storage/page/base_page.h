@@ -126,7 +126,6 @@ namespace Offsets {
 constexpr offset_t SIZE = Offsets::CHECKSUM + sizeof(uint64_t);
 };
 
-
 /*-----------------------------------------------------------------------------
        _       _             _
    ___| | ___ | |_ ___ _ __ | |_ _ __ _   _

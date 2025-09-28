@@ -23,6 +23,25 @@ BasePage::BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPage
         buffer_manager_m->AddAccessor(page_id, is_writer);
 }
 
+BasePage::BasePage(BasePage&& other)
+    : page_data_m { std::move(other.page_data_m) }
+    , page_id_m { std::move(other.page_id_m) }
+    , buffer_manager_m { other.buffer_manager_m }
+{
+    other.buffer_manager_m = nullptr;
+}
+
+BasePage& BasePage::operator=(BasePage&& other)
+{
+    if (&other != this) {
+        page_data_m = std::move(other.page_data_m);
+        page_id_m = std::move(other.page_id_m);
+        buffer_manager_m = other.buffer_manager_m;
+        other.buffer_manager_m = nullptr;
+    }
+    return *this;
+}
+
 bool BasePage::ValidChecksum() const
 {
     return checksum64(page_data_m) == 0x00;
