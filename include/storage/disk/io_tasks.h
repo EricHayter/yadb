@@ -1,41 +1,37 @@
 #pragma once
 
-#include "storage/page/page.h"
 #include <future>
 #include <variant>
 
+#include "storage/page/base_page.h"
+
+/*
+ * Disk Scheduler Tasks
+ *
+ * For each of the different tasks supported by the disk scheduler a struct
+ * is created containing all of the required fields for representing the
+ * parameters and output of the request.
+ */
 namespace IOTasks {
 
-/**
- * @brief Struct to represent a task for creating a page
- */
 struct AllocatePageTask {
     std::promise<page_id_t> result;
 };
 
-/**
- * @brief Struct to represent a task for deleting a page
- */
 struct DeletePageTask {
     page_id_t page_id;
     std::promise<void> done;
 };
 
-/**
- * @brief Struct to represent a task for writing to a page
- */
 struct WritePageTask {
     page_id_t page_id;
-    PageView data; /// span containing data to write to page
+    PageView data;
     std::promise<bool> status;
 };
 
-/**
- * @brief Struct to represent a task for reading from a page
- */
 struct ReadPageTask {
     page_id_t page_id;
-    MutPageView data; /// span to write data from read into
+    MutPageView data;
     std::promise<bool> status;
 };
 

@@ -1,11 +1,14 @@
-#include "storage/page/base_page.h"
+#pragma once
 
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
 
+#include "storage/page/base_page.h"
+
 /* Page handle for write access. Has all of the same functionality but also
- * support for updating page headers, slot directory entries, and writing data. */
+ * support for updating page headers, slot directory entries, and writing data.
+ */
 class MutPage : public BasePage {
 public:
     MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk);

@@ -12,10 +12,9 @@
 
 #pragma once
 
-#include "storage/page/page.h"
+#include "storage/page/base_page.h"
 
 /*
- * checksum64
- *      Calculate 64-bit checksum of page
+ * Calculate 64-bit checksum of page
  */
 uint64_t checksum64(PageView page);

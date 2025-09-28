@@ -16,10 +16,10 @@
 #include "storage/page/page.h"
 
 /**
- * @brief Page Buffer Manager
+ * Page Buffer Manager
  *
  * This class provides the management of a large buffer meant to temporarily
- * store page data for fast reads and writes (whwen compared to disk I/O).
+ * store page data for fast reads and writes (when compared to disk I/O).
  * The page buffer manager consists of many "frames" that are small segments
  * of the buffer that act as slots to hold page data.
  *
@@ -54,119 +54,73 @@ public:
     ~PageBufferManager();
 
     /**
-     * @brief Creates a new page
-     *
-     * @returns the id of the newly created page
+     * Creates a new page by signalling to the disk manager
      */
     page_id_t AllocatePage();
 
     /**
-     * @brief Try to give access to a read-only page
+     * Attempt to get access to a read-only page handle
      *
-     * Attempts to create a thread-safe handle to a page for reading page data
-     * from the page buffer. The function may fail to acquire a page and return
-     * a std::nullopt in two cases:
-     * 1. A read failure from the disk scheduler doesn't allow the page data
-     *    to be read into the buffer.
-     * 2. Exclusive access to the page has already been given.
-     *
-     * @param page_id the page to create a read-only page handle for
-     *
-     * @returns a read-only page handle
+     * Attempts to acquire a handle to a page for reading page data from the
+     * page buffer. The function may fail to acquire access (and return
+     * std::nullopt) if exclusive access to the page has already been acquired
      */
     std::optional<Page> TryReadPage(page_id_t page_id);
 
     /**
-     * @brief Wait to acquire access to a read-only page
-     *
-     * @param page_id the page to create a read-only handle for
-     *
-     * @returns a read-only page handle
+     * Acquires access to a read-only page
+     * NOTE: this function will block indefinitely until the handle to the page
+     * is returned.
      */
     Page ReadPage(page_id_t page_id);
 
     /**
-     * @brief Try to give access to a writable page
+     * Attempt to get access to a writable page handle
      *
-     * Attempts to create a thread-safe handle to a page for writing page data
-     * from the page buffer. The function may fail to acquire access and return
-     * a std::nullopt in two cases:
-     * 1. A read failure from the disk scheduler doesn't allow the page data
-     *    to be read into the buffer.
-     * 2. Exclusive access to the page cannot be acquired immediately.
-     *
-     * @param page_id the page to create a writable page handle for
-     *
-     * @returns a writable page handle
+     * Attempts to acquire a handle to a page for writing page data from the
+     * page buffer. The function may fail to acquire access (and return
+     * std::nullopt) if exclusive access to the page cannot be acquired
+     * immediately.
      */
     std::optional<MutPage> TryWritePage(page_id_t page_id);
 
     /**
-     * @brief Wait to acquire access to a writable page
-     *
-     * @param page_id the page to create a writable handle for
-     *
-     * @returns a writeable page handle
+     * Acquires access to a writable page.
+     * NOTE: this function will block indefinitely until the handle to the page
+     * is returned.
      */
     MutPage WritePage(page_id_t page_id);
 
 private:
-    /**
-     * @brief Status codes for calls to LoadPage
-     */
     enum class LoadPageStatus {
         Success,
         IOError,
         NoFreeFrameError,
     };
 
-    /**
-     * @brief Attempts to load a page into the page buffer
-     *
-     * @param page_id the page id of the page to load
-     *
-     * @returns true if the page was successfully loaded and false otherwise
-     */
     LoadPageStatus LoadPage(page_id_t page_id);
 
-    /**
-     * @brief Status codes for calls to FlushPage
-     */
     enum class FlushPageStatus {
         Success,
         IOError,
     };
 
-    /**
-     * @brief Flushes a page from the page buffer
-     *
-     * Writes the page contents of a given frame to disk
-     *
-     * @param page_id the page to flush to disk
-     *
-     * @returns true if the flush was successful and false otherwise
-     */
     FlushPageStatus FlushPage(page_id_t page_id);
 
     /**
-     * @brief Notify the page buffer manager that a page has been accessed
-     * @param page_id the page that is being accessed
-     * @param is_writer was the access for writes
+     * Notify the page buffer manager that a page has been accessed
      */
     void AddAccessor(page_id_t page_id, bool is_writer);
 
     /**
-     * @brief Notify the page buffer manager that an accessor has been dropped
+     * Notify the page buffer manager that an accessor has been dropped
      * from a frame
-     *
-     * @param page_id the page that access has been given up
      */
     void RemoveAccessor(page_id_t page_id);
 
     /*
-     * GetFrameForPage
-     *      returns a pointer to the frame header for the frame containing the
-     *      page with id page_id
+     * returns a pointer to the frame header for the frame containing the
+     * page with id page_id
      *
      * NOTE: this function WILL throw a runtime exception if the page is
      * not located inside of a frame. This function should be used to prevent
@@ -178,11 +132,16 @@ private:
     std::shared_ptr<spdlog::logger> logger_m;
 
     LRUKReplacer replacer_m;
+
     DiskScheduler disk_scheduler_m;
 
-    char* buffer_m; /// data buffer
+    /* buffer for the entire page buffer pool */
+    char* buffer_m;
 
+    /* the map of page's to their corresponding frame containing their data */
     std::unordered_map<page_id_t, frame_id_t> page_map_m;
+
+    /* all frame metadata */
     std::vector<std::unique_ptr<FrameHeader>> frames_m;
 
     std::mutex mut_m;

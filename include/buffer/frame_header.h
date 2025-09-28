@@ -1,12 +1,13 @@
 #pragma once
 
-#include "storage/page/page.h"
+#include "storage/page/base_page.h"
+
 #include <shared_mutex>
 
 using frame_id_t = uint32_t;
 
 /**
- * @brief Class to manage state of frames inside of the page buffer manager
+ * A class to manage state of frames inside of the page buffer manager
  *
  * This class specifically tracks two important pieces of information for each
  * frame:
@@ -31,18 +32,18 @@ struct FrameHeader {
 
     frame_id_t id;
 
-    // A mutable view into the buffer provided by the page buffer manager.
-    MutPageView data;
-
-    /// The associated page that the frame is storing.
+    /* The associated page that the frame is storing. */
     page_id_t page_id;
 
-    /// Has this page been written to?
+    /* Has this page been written to? */
     bool is_dirty { false };
 
-    /// concurrent readers/writers
+    /* concurrent readers/writers */
     int pin_count { 0 };
 
-    /// for concurrent readers and single writers
+    /* Mutex on the underlying data for the frame */
     std::shared_mutex mut;
+
+    /* A mutable view into the buffer provided by the page buffer manager. */
+    MutPageView data;
 };

@@ -104,7 +104,15 @@ enum class PageType : uint8_t {
     BPTreeLeaf = 0x3,
 };
 
+/*-----------------------------------------------------------------------------
+   _                    _
+  | |__   ___  __ _  __| | ___ _ __
+  | '_ \ / _ \/ _` |/ _` |/ _ \ '__|
+  | | | |  __/ (_| | (_| |  __/ |
+  |_| |_|\___|\__,_|\__,_|\___|_|
+-----------------------------------------------------------------------------*/
 namespace Header {
+
 /* offset into the page header for fields */
 namespace Offsets {
     constexpr offset_t PAGE_TYPE = 0x00;
@@ -113,11 +121,22 @@ namespace Offsets {
     constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
     constexpr offset_t CHECKSUM = FREE_END + sizeof(offset_t);
 };
+
 /* size of the page header */
 constexpr offset_t SIZE = Offsets::CHECKSUM + sizeof(uint64_t);
 };
 
+
+/*-----------------------------------------------------------------------------
+       _       _             _
+   ___| | ___ | |_ ___ _ __ | |_ _ __ _   _
+  / __| |/ _ \| __/ _ \ '_ \| __| '__| | | |
+  \__ \ | (_) | ||  __/ | | | |_| |  | |_| |
+  |___/_|\___/ \__\___|_| |_|\__|_|   \__, |
+                                      |___/
+-----------------------------------------------------------------------------*/
 namespace SlotEntry {
+
 /* offset into the slot entry for fields */
 namespace Offsets {
     constexpr offset_t DELETED = 0x00;
@@ -172,11 +191,6 @@ public:
     uint16_t GetNumSlots() const;
 
     offset_t GetFreeSpaceSize() const;
-
-    /* Get a read only span for ALL of the page's data. This should be used
-     * sparingly if ever used at all
-     */
-    PageView ReadPage() { return page_data_m; }
 
     /* Returns a span to the given tuple in the slotted page. The size of the
      * span will be determined by the size indicated in the slot entry for

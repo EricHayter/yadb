@@ -1,17 +1,18 @@
 #pragma once
 
-#include "config/config.h"
-#include "storage/page/page.h"
+#include <spdlog/logger.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #include <filesystem>
 #include <fstream>
 #include <memory>
-#include <spdlog/logger.h>
-#include <spdlog/sinks/basic_file_sink.h>
 #include <unordered_set>
 
-/**
- * @brief Disk manager class to handle the database file
+#include "config/config.h"
+#include "storage/page/base_page.h"
+
+/*
+ * Disk manager class to handle the database file
  *
  * This class provides the functionality for the disk manager which handles
  * all associated I/O operations required loading, and writing to disk for the
@@ -25,56 +26,49 @@ public:
     DiskManager(const DatabaseConfig& config, std::size_t page_capacity);
     ~DiskManager();
 
-    /**
-     * @brief allocated a new page in the database file for writing to
+    /*
+     * Allocated a new page in the database file for writing to
      *
      * This function will either a) use a "free" page already existing in the
-     * database file or b) increase the capacity of the database file
-     *
-     * @returns the page id of the newly allocated page
+     * database file or b) increase the capacity of the database file.
      */
     page_id_t AllocatePage();
 
-    /**
-     * @brief Write page data to disk
+    /*
+     * Write page data to disk
      *
-     * @param page_id the page to write the data to
-     * @page_data the data to write to the page
-     *
-     * @returns true if the write was successful otherwise returns false
+     * return true on success false otherwise.
      */
     bool WritePage(page_id_t page_id, PageView page);
 
-    /**
-     * @brief Read data from disk
+    /*
+     * Read data from disk
      *
-     * @param page_id the page to read the data from
-     * @param page_data a span to write the page data to
-     *
-     * @returns true if the read was successful otherwise returns false
+     * return true on success false otherwise.
      */
     bool ReadPage(page_id_t page_id, MutPageView page);
 
-    /**
-     * @brief Deletes a page from the database file
+    /*
+     * Deletes a page from the database file
      *
      * NOTE: this only LOGICALLY deletes the page from the database file. The
      * data is in fact still there and there is no shrinkage of the database
      * file itself. The page may then reused when allocating new pages.
-     *
-     * @param the page to delete from the database file
      */
     void DeletePage(page_id_t page_id);
 
 private:
     std::size_t GetOffset(page_id_t page_id);
     std::size_t GetDatabaseFileSize();
-    std::size_t page_capacity_m;
 
-    /// list of pages that are considered free
+    /* list of pages that are considered free */
     std::unordered_set<page_id_t> free_pages_m;
 
+    std::size_t page_capacity_m;
+
+    /* iostream to write to database file */
     std::fstream db_io_m;
-    std::shared_ptr<spdlog::logger> logger_m;
     std::filesystem::path db_file_path_m;
+
+    std::shared_ptr<spdlog::logger> logger_m;
 };

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "storage/page/base_page.h"
-
 #include <shared_mutex>
+
+#include "storage/page/base_page.h"
 
 /* Page handle for write access. Has all of the same functionality but also
  * support for updating page headers, slot directory entries, and writing data. */

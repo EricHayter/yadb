@@ -1,10 +1,21 @@
 #pragma once
 
 #include "spdlog/logger.h"
+
 #include <filesystem>
 #include <memory>
 #include <string>
 
+/*
+ * The database config is a shared object to pass down the internal stack of
+ * components to share database configuration.
+ *
+ * In particular the main benefit of the database config is to allow for a
+ * dependency injection pattern for the loggers of each of the components.
+ *
+ * This class comes will some sensible default logging options but can be
+ * customized further if desired.
+ */
 struct DatabaseConfig {
     static inline const std::filesystem::path DEFAULT_DATABASE_FILE { "data.db" };
 
@@ -18,24 +29,18 @@ struct DatabaseConfig {
     std::shared_ptr<spdlog::logger> disk_scheduler_logger;
     std::shared_ptr<spdlog::logger> page_buffer_manager_logger;
 
-    /**
-     * \brief Create database config for writing logs to console
-     *
-     * \returns a database config for console logging
+    /*
+     * Create database config for writing logs to console
      */
     static DatabaseConfig CreateDefaultConsole();
 
-    /**
-     * \brief Create database config for writing logs to file
-     *
-     * \returns a database config for file logging
+    /*
+     * Create database config for writing logs to file
      */
     static DatabaseConfig CreateDefaultFile();
 
-    /**
-     * \brief Create database config that logs no output anywhere
-     *
-     * \returns a database config for no logging
+    /*
+     * Create database config that logs no output anywhere
      */
     static DatabaseConfig CreateNull();
 };
