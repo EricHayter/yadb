@@ -1,7 +1,6 @@
 #include "storage/page/base_page.h"
 
 #include <iostream>
-#include <stdexcept>
 
 #include "buffer/page_buffer_manager.h"
 #include "storage/page/checksum.h"
@@ -12,12 +11,13 @@ BasePage::~BasePage()
         buffer_manager_m->RemoveAccessor(page_id_m);
 }
 
-BasePage::BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool is_writer, bool fresh_page)
+BasePage::BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool is_writer)
     : buffer_manager_m { buffer_manager }
     , page_id_m { page_id }
     , page_data_m { page_view }
 {
-    buffer_manager_m->AddAccessor(page_id, is_writer);
+    if (buffer_manager_m)
+        buffer_manager_m->AddAccessor(page_id, is_writer);
 }
 
 bool BasePage::ValidChecksum() const
@@ -90,7 +90,7 @@ void BasePage::PrintPage() const
                 unsigned byte = static_cast<unsigned char>(page_data_m[i + j]);
                 std::cout << std::setw(2) << byte << ' ';
             } else {
-                std::cout << "   ";  // padding
+                std::cout << "   "; // padding
             }
         }
 

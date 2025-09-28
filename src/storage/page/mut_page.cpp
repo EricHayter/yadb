@@ -7,8 +7,8 @@
 
 #include "storage/page/checksum.h"
 
-MutPage::MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk, bool fresh_page = false)
-    : BasePage { buffer_manager, page_id, page_view, true, fresh_page }
+MutPage::MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk)
+    : BasePage { buffer_manager, page_id, page_view, true }
     , data_lk_m { std::move(lk) }
 {
     assert(data_lk_m.owns_lock());

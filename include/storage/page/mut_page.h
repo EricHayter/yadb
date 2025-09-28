@@ -8,7 +8,7 @@
  * support for updating page headers, slot directory entries, and writing data. */
 class MutPage : public BasePage {
 public:
-    MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk, bool fresh_page);
+    MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk);
 
     /* copy constructors will be disabled due to the data lock member */
     MutPage(const MutPage& other) = delete;

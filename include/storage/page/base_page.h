@@ -171,7 +171,6 @@ public:
     /* returns the number of valid slots (i.e. not deleted) */
     uint16_t GetNumSlots() const;
 
-
     offset_t GetFreeSpaceSize() const;
 
     /* Get a read only span for ALL of the page's data. This should be used
@@ -191,7 +190,7 @@ public:
 
 protected:
     /* constructor for subclasses of base page */
-    BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool is_writer, bool fresh_page = false);
+    BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool is_writer);
 
     /* Allow for transfer of ownership of pages */
     BasePage(BasePage&& other);
@@ -200,7 +199,6 @@ protected:
     /* page header related functions */
     /* returns the value of the checksum field from the page header */
     uint64_t GetChecksum() const;
-
 
     /* returns offset to the start of the free space (inclusive) */
     offset_t GetStartFreeSpace() const;
