@@ -80,7 +80,7 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
         return std::nullopt;
     }
     FrameHeader* frame = GetFrameForPage(page_id);
-    if (not frame->mut.try_lock_shared()) {
+    if (!frame->mut.try_lock_shared()) {
         return std::nullopt;
     }
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
@@ -94,7 +94,7 @@ Page PageBufferManager::ReadPage(page_id_t page_id)
         return page_map_m.contains(page_id) || replacer_m.GetEvictableCount() > 0;
     });
 
-    if (not page_map_m.contains(page_id)) {
+    if (!page_map_m.contains(page_id)) {
         if (LoadPage(page_id) != LoadPageStatus::Success) {
             throw std::runtime_error("Failed to load page");
         }
@@ -113,7 +113,7 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
         return std::nullopt;
     }
     FrameHeader* frame = GetFrameForPage(page_id);
-    if (not frame->mut.try_lock()) {
+    if (!frame->mut.try_lock()) {
         return std::nullopt;
     }
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
@@ -127,7 +127,7 @@ MutPage PageBufferManager::WritePage(page_id_t page_id)
         return page_map_m.contains(page_id) || replacer_m.GetEvictableCount() > 0;
     });
 
-    if (not page_map_m.contains(page_id)) {
+    if (!page_map_m.contains(page_id)) {
         if (LoadPage(page_id) != LoadPageStatus::Success) {
             throw std::runtime_error("Failed to load page");
         }
@@ -148,7 +148,7 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
     // Our page is not already in the page buffer
     // We must evict a frame to find a spot for our page
     std::optional<frame_id_t> frame_id_opt = replacer_m.EvictFrame();
-    if (not frame_id_opt.has_value()) {
+    if (!frame_id_opt.has_value()) {
         logger_m->info("Couldn't find a frame to evict for page {}", page_id);
         return LoadPageStatus::NoFreeFrameError;
     }
@@ -167,7 +167,7 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
     std::promise<bool> read_status_promise;
     std::future<bool> read_status_future = read_status_promise.get_future();
     disk_scheduler_m.ReadPage(page_id, frame->GetMutData(), std::move(read_status_promise));
-    if (not read_status_future.get()) {
+    if (!read_status_future.get()) {
         logger_m->warn("Failed to load page {} due to read failure", page_id);
         return LoadPageStatus::IOError;
     }
@@ -190,7 +190,7 @@ PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_i
     std::future<bool> write_status_future = write_status_promise.get_future();
     FrameHeader* frame = GetFrameForPage(page_id);
     disk_scheduler_m.WritePage(page_id, frame->GetData(), std::move(write_status_promise));
-    if (not write_status_future.get()) {
+    if (!write_status_future.get()) {
         logger_m->warn("Failed to flush page {}", page_id);
         return FlushPageStatus::IOError;
     }
@@ -199,8 +199,12 @@ PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_i
 
 void PageBufferManager::AddAccessor(page_id_t page_id, bool is_writer)
 {
-    replacer_m.RecordAccess(page_id);
+    /* Since this function is always called inside of the constructor of pages
+     * and since pages are always created from the scope of WritePage, ReadPage
+     * etc... We do not lock here since this function should always be called
+     * from a locked context. */
     FrameHeader* frame = GetFrameForPage(page_id);
+    replacer_m.RecordAccess(frame->id);
     frame->pin_count++;
     frame->is_dirty = frame->is_dirty || is_writer;
 }
