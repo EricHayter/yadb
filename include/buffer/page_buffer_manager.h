@@ -58,7 +58,7 @@ public:
      *
      * @returns the id of the newly created page
      */
-    page_id_t NewPage();
+    page_id_t AllocatePage();
 
     /**
      * @brief Try to give access to a read-only page
@@ -74,7 +74,7 @@ public:
      *
      * @returns a read-only page handle
      */
-    std::optional<Page> TryReadPage(page_id_t page_id, bool validate_checksum = true);
+    std::optional<Page> TryReadPage(page_id_t page_id);
 
     /**
      * @brief Wait to acquire access to a read-only page
@@ -83,7 +83,7 @@ public:
      *
      * @returns a read-only page handle
      */
-    Page ReadPage(page_id_t page_id, bool validate_checksum = true);
+    Page ReadPage(page_id_t page_id);
 
     /**
      * @brief Try to give access to a writable page
@@ -99,7 +99,7 @@ public:
      *
      * @returns a writable page handle
      */
-    std::optional<MutPage> TryWritePage(page_id_t page_id, bool validate_checksum = true);
+    std::optional<MutPage> TryWritePage(page_id_t page_id);
 
     /**
      * @brief Wait to acquire access to a writable page
@@ -108,7 +108,7 @@ public:
      *
      * @returns a writeable page handle
      */
-    MutPage WritePage(page_id_t page_id, bool validate_checksum = true);
+    MutPage WritePage(page_id_t page_id);
 
 private:
     /**

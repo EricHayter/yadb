@@ -43,7 +43,7 @@ PageBufferManager::~PageBufferManager()
     logger_m->info("Closed page buffer manager");
 }
 
-page_id_t PageBufferManager::NewPage()
+page_id_t PageBufferManager::AllocatePage()
 {
     /* request the disk scheduler to create a page */
     std::promise<page_id_t> page_promise;
@@ -51,13 +51,27 @@ page_id_t PageBufferManager::NewPage()
     disk_scheduler_m.AllocatePage(std::move(page_promise));
     page_id_t page_id = page_future.get();
 
-    /* Create a page handle and initialize it's contents*/
-    WritePage(page_id, false).InitPage();
+    /* we're gonna create the page manually without even creating a handle
+     * this bellow is a nightmare waiting to happen */
+    std::lock_guard<std::mutex> lk(mut_m);
+    if (LoadPage(page_id) != LoadPageStatus::Success) {
+        // TODO THIS IS A MASSIVE HACK I NEED TO REMOVE THE DISK SCHEDULER
+        return -1;
+    }
+
+    // TODO this isn't my favorite either tbh... It seems a bit hacky to
+    // not include a pointer to the page buffer manager JUST to init the page
+    // This almost certainly won't work when we start adding page types.
+    // Since this function will likely need to be templated
+    FrameHeader* frame = GetFrameForPage(page_id);
+    std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
+    MutPage page(nullptr, page_id, frame->data, std::move(frame_lk));
+    page.InitPage();
 
     return page_id;
 }
 
-std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id, bool validate_checksum)
+std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
@@ -70,10 +84,10 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id, bool valid
         return std::nullopt;
     }
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
+    return std::make_optional<Page>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-Page PageBufferManager::ReadPage(page_id_t page_id, bool validate_checksum)
+Page PageBufferManager::ReadPage(page_id_t page_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     available_frame_m.wait(lk, [this, page_id]() {
@@ -87,10 +101,10 @@ Page PageBufferManager::ReadPage(page_id_t page_id, bool validate_checksum)
     }
     FrameHeader* frame = GetFrameForPage(page_id);
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut);
-    return Page(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
+    return Page(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id, bool validate_checksum)
+std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
@@ -103,10 +117,10 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id, bool v
         return std::nullopt;
     }
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
-    return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
+    return std::make_optional<MutPage>(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
-MutPage PageBufferManager::WritePage(page_id_t page_id, bool validate_checksum)
+MutPage PageBufferManager::WritePage(page_id_t page_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     available_frame_m.wait(lk, [this, page_id]() {
@@ -121,7 +135,7 @@ MutPage PageBufferManager::WritePage(page_id_t page_id, bool validate_checksum)
 
     FrameHeader* frame = GetFrameForPage(page_id);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
-    return MutPage(this, page_id, frame->GetMutData(), std::move(frame_lk), validate_checksum);
+    return MutPage(this, page_id, frame->GetMutData(), std::move(frame_lk));
 }
 
 PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
