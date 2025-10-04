@@ -33,11 +33,11 @@
  *  1. Header:
  *  the page header will contain important metadata for each page. In specific
  *  it will contain the following fields:
+ *  - 64 bit checksum (8 bytes)
  *  - an enum indicating the type of page (1 byte)
  *  - the number of tuples in the page (2 bytes)
  *  - offset to the start of the free space (inclusive) (2 bytes)
  *  - offset to the end of the free space (exclusive) (2 bytes)
- *  - 64 bit checksum (8 bytes)
  *  total size:
  *  15 bytes
  *
@@ -115,15 +115,15 @@ namespace Header {
 
 /* offset into the page header for fields */
 namespace Offsets {
-    constexpr offset_t PAGE_TYPE = 0x00;
+    constexpr offset_t CHECKSUM = 0x00;
+    constexpr offset_t PAGE_TYPE = CHECKSUM + sizeof(uint64_t);
     constexpr offset_t NUM_SLOTS = PAGE_TYPE + sizeof(PageType);
     constexpr offset_t FREE_START = NUM_SLOTS + sizeof(slot_id_t);
     constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
-    constexpr offset_t CHECKSUM = FREE_END + sizeof(offset_t);
 };
 
 /* size of the page header */
-constexpr offset_t SIZE = Offsets::CHECKSUM + sizeof(uint64_t);
+constexpr offset_t SIZE = Offsets::FREE_END + sizeof(offset_t);
 };
 
 /*-----------------------------------------------------------------------------
