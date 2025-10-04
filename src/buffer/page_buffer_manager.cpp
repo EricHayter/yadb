@@ -77,7 +77,7 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
-    std::lock_guard<std::mutex> lk(mut_m);
+    std::unique_lock<std::mutex> lk(mut_m);
     if (LoadPage(page_id) != LoadPageStatus::Success) {
         return std::nullopt;
     }
@@ -88,6 +88,11 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
 
     Page page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+
+    /* need to unlock here early in case the validation for checksum fails and
+     * the page is deconstructed calling remove accessor (which requires locK)
+     * */
+    lk.unlock();
     if (!page.ValidChecksum()) {
         throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
     }
@@ -111,6 +116,11 @@ Page PageBufferManager::ReadPage(page_id_t page_id)
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut);
 
     Page page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+
+    /* need to unlock here early in case the validation for checksum fails and
+     * the page is deconstructed calling remove accessor (which requires locK)
+     * */
+    lk.unlock();
     if (!page.ValidChecksum()) {
         throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
     }
@@ -122,7 +132,7 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
 {
     // acquire a lock so that the page isn't flushed from the frame as
     // we are creating the page guard.
-    std::lock_guard<std::mutex> lk(mut_m);
+    std::unique_lock<std::mutex> lk(mut_m);
     if (LoadPage(page_id) != LoadPageStatus::Success) {
         return std::nullopt;
     }
@@ -133,6 +143,10 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut, std::adopt_lock);
 
     MutPage page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    /* need to unlock here early in case the validation for checksum fails and
+     * the page is deconstructed calling remove accessor (which requires locK)
+     * */
+    lk.unlock();
     if (!page.ValidChecksum()) {
         throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
     }
@@ -157,6 +171,10 @@ MutPage PageBufferManager::WritePage(page_id_t page_id)
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
 
     MutPage page(this, page_id, frame->GetMutData(), std::move(frame_lk));
+    /* need to unlock here early in case the validation for checksum fails and
+     * the page is deconstructed calling remove accessor (which requires locK)
+     * */
+    lk.unlock();
     if (!page.ValidChecksum()) {
         throw ChecksumValidationException(page_id, "Checksum is invalid! Check database file for corruption.");
     }
