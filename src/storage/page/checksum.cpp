@@ -15,6 +15,11 @@ uint64_t checksum64(PageView page)
     for (size_t i = 0; i < page.size_bytes(); i += 8) {
         uint64_t chunk;
         std::memcpy(&chunk, page.data() + i, sizeof(chunk));
+
+        #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        chunk = __builtin_bswap64(chunk);
+        #endif
+
         res ^= chunk;
     }
 
