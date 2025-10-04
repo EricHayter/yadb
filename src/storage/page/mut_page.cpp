@@ -14,6 +14,21 @@ MutPage::MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageVi
     assert(data_lk_m.owns_lock());
 }
 
+MutPage::MutPage(MutPage&& other)
+    : BasePage { std::move(other) }
+    , data_lk_m { std::move(other.data_lk_m) }
+{
+}
+
+MutPage& MutPage::operator=(MutPage&& other)
+{
+    if (&other != this) {
+        data_lk_m = std::move(other.data_lk_m);
+        BasePage::operator=(std::move(other));
+    }
+    return *this;
+}
+
 MutPage::~MutPage()
 {
     UpdateChecksum();

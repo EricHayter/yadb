@@ -10,7 +10,6 @@
 #include "config/config.h"
 #include "storage/page/base_page.h"
 
-
 DiskManager::DiskManager()
     : DiskManager(128)
 {

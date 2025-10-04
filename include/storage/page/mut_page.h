@@ -13,6 +13,9 @@ class MutPage : public BasePage {
 public:
     MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk);
 
+    MutPage(MutPage&& other);
+    MutPage& operator=(MutPage&& other);
+
     /* copy constructors will be disabled due to the data lock member */
     MutPage(const MutPage& other) = delete;
     MutPage& operator=(const MutPage& other) = delete;
