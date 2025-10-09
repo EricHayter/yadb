@@ -1,4 +1,4 @@
-#include "buffer/lru_k_replacer.h"
+#include "storage/bptree/buffer/lru_k_replacer.h"
 
 LRUKReplacer::LRUFrameHistory::LRUFrameHistory(frame_id_t frame_id)
     : frame_id(frame_id)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage/page/base_page.h"
+#include "storage/bptree/page/base_page.h"
 
 #include <shared_mutex>
 

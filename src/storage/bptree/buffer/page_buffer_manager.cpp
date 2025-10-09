@@ -1,15 +1,19 @@
-#include "buffer/page_buffer_manager.h"
-#include "buffer/frame_header.h"
-#include "config/config.h"
-#include "storage/page/base_page.h"
+#include "storage/bptree/buffer/page_buffer_manager.h"
+
 #include <cassert>
+
 #include <future>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
+#include <stdexcept>
+
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
-#include <stdexcept>
+
+#include "config/config.h"
+#include "storage/bptree/buffer/frame_header.h"
+#include "storage/bptree/page/base_page.h"
 
 PageBufferManager::PageBufferManager()
     : PageBufferManager(128)

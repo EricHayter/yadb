@@ -7,8 +7,8 @@
 #include <thread>
 
 #include "config/config.h"
-#include "storage/disk/disk_manager.h"
-#include "storage/disk/io_tasks.h"
+#include "storage/bptree/disk/disk_manager.h"
+#include "storage/bptree/disk/io_tasks.h"
 
 /*
  * Disk Scheduler

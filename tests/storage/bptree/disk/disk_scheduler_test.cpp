@@ -1,5 +1,5 @@
-#include "storage/disk/disk_scheduler.h"
-#include "storage/disk/io_tasks.h"
+#include "storage/bptree/disk/disk_scheduler.h"
+#include "storage/bptree/disk/io_tasks.h"
 #include <filesystem>
 #include <future>
 #include <gtest/gtest.h>

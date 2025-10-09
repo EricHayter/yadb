@@ -5,15 +5,12 @@
 #include <optional>
 #include <unordered_map>
 
-#include <spdlog/logger.h>
-#include <spdlog/sinks/basic_file_sink.h>
-
-#include "buffer/frame_header.h"
-#include "buffer/lru_k_replacer.h"
 #include "config/config.h"
-#include "storage/disk/disk_scheduler.h"
-#include "storage/page/mut_page.h"
-#include "storage/page/page.h"
+#include "storage/bptree/buffer/frame_header.h"
+#include "storage/bptree/buffer/lru_k_replacer.h"
+#include "storage/bptree/disk/disk_scheduler.h"
+#include "storage/bptree/page/mut_page.h"
+#include "storage/bptree/page/page.h"
 
 /**
  * Page Buffer Manager

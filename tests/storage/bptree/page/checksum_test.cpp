@@ -1,5 +1,5 @@
-#include "storage/page/checksum.h"
-#include "storage/page/page.h"
+#include "storage/bptree/page/checksum.h"
+#include "storage/bptree/page/page.h"
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <numeric>

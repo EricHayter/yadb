@@ -1,11 +1,11 @@
 #include <chrono>
 #include <numeric>
-
-#include "gtest/gtest.h"
 #include <thread>
 
-#include "buffer/page_buffer_manager.h"
-#include "storage/page/base_page.h"
+#include "gtest/gtest.h"
+
+#include "storage/bptree/buffer/page_buffer_manager.h"
+#include "storage/bptree/page/base_page.h"
 
 TEST(PageBufferManagerTest, TestPageInit)
 {
