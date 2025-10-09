@@ -10,7 +10,7 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  TEST_EXECUTABLE: yadb_test
+  TEST_EXECUTABLE: storage/bptree/bptree_test
 
 jobs:
   build:
