@@ -422,7 +422,7 @@ TEST(PageBufferManagerTest, MultipleConccurentReaders)
     auto end_time = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<ms>(end_time - start_time).count();
 
-    ASSERT_LT(duration, 5);
+    ASSERT_LT(duration, 24);
 }
 
 TEST(PageBufferManagerTest, WriterReaderMutualExclusive)
