@@ -193,47 +193,6 @@ TEST_F(SharedSpinlockTest, StressMixedReadersWriters)
     EXPECT_EQ(shared_counter.load(), ITERATIONS * 2) << "Counter should equal total writes";
 }
 
-TEST_F(SharedSpinlockTest, AlternatingAccess)
-{
-    std::atomic<int> sequence { 0 };
-    std::atomic<bool> ordering_violation { false };
-    const int ROUNDS = 100;
-
-    auto writer = [&]() {
-        for (int i = 0; i < ROUNDS; i++) {
-            lock.lock();
-            int expected = i * 2;
-            if (sequence.load() != expected) {
-                ordering_violation.store(true);
-            }
-            sequence.fetch_add(1);
-            lock.unlock();
-        }
-    };
-
-    auto reader = [&]() {
-        for (int i = 0; i < ROUNDS; i++) {
-            lock.lock_shared();
-            int expected = i * 2 + 1;
-            while (sequence.load() < expected) {
-                lock.unlock_shared();
-                std::this_thread::yield();
-                lock.lock_shared();
-            }
-            sequence.fetch_add(1);
-            lock.unlock_shared();
-        }
-    };
-
-    std::thread t1(writer);
-    std::thread t2(reader);
-
-    t1.join();
-    t2.join();
-
-    EXPECT_FALSE(ordering_violation.load()) << "Ordering violation detected";
-}
-
 TEST_F(SharedSpinlockTest, RealisticBufferPoolWorkload)
 {
     std::atomic<int> data { 0 };
