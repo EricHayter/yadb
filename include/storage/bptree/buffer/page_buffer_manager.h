@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "config/config.h"
-#include "storage/bptree/buffer/frame_header.h"
+#include "storage/bptree/buffer/frame.h"
 #include "storage/bptree/buffer/lru_k_replacer.h"
 #include "storage/bptree/disk/disk_scheduler.h"
 #include "storage/bptree/page/mut_page.h"
@@ -123,7 +123,7 @@ private:
      * not located inside of a frame. This function should be used to prevent
      * accidentally creating entries in the page map.
      */
-    FrameHeader* GetFrameForPage(page_id_t page_id) const;
+    Frame* GetFrameForPage(page_id_t page_id) const;
 
 private:
     std::shared_ptr<spdlog::logger> logger_m;
@@ -139,7 +139,7 @@ private:
     std::unordered_map<page_id_t, frame_id_t> page_map_m;
 
     /* all frame metadata */
-    std::vector<std::unique_ptr<FrameHeader>> frames_m;
+    std::vector<std::unique_ptr<Frame>> frames_m;
 
     std::mutex mut_m;
     std::condition_variable available_frame_m;

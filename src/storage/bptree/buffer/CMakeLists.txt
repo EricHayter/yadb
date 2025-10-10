@@ -1,6 +1,6 @@
 add_library(bptree_buffer_manager
     page_buffer_manager.cpp
-    frame_header.cpp
+    frame.cpp
     lru_k_replacer.cpp
 )
 

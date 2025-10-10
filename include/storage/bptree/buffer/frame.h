@@ -19,13 +19,13 @@ using frame_id_t = uint32_t;
  *    frame. Not only indicates when a frame is in use but also if a writable
  *    view can be created for the frame.
  */
-struct FrameHeader {
-    FrameHeader(frame_id_t id, MutPageView data_view);
+struct Frame {
+    Frame(frame_id_t id, MutPageView data_view);
 
-    FrameHeader(FrameHeader& other) = delete;
-    FrameHeader& operator=(FrameHeader& other) = delete;
-    FrameHeader(FrameHeader&& other) = delete;
-    FrameHeader& operator=(FrameHeader&& other) = delete;
+    Frame(Frame& other) = delete;
+    Frame& operator=(Frame& other) = delete;
+    Frame(Frame&& other) = delete;
+    Frame& operator=(Frame&& other) = delete;
 
     MutPageView GetMutData() { return data; };
     PageView GetData() { return data; };

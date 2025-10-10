@@ -11,7 +11,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 
-#include "buffer/frame_header.h"
+#include "buffer/frame.h"
 #include "config/config.h"
 #include "page/base_page.h"
 
@@ -34,7 +34,7 @@ PageBufferManager::PageBufferManager(const DatabaseConfig& config, std::size_t n
     assert(buffer_m != nullptr);
     for (frame_id_t id = 0; id < num_frames; id++) {
         MutPageView data_view(buffer_m + id * PAGE_SIZE, PAGE_SIZE);
-        frames_m.push_back(std::make_unique<FrameHeader>(id, data_view));
+        frames_m.push_back(std::make_unique<Frame>(id, data_view));
         replacer_m.RegisterFrame(id);
     }
 }
@@ -68,7 +68,7 @@ page_id_t PageBufferManager::AllocatePage()
     // not include a pointer to the page buffer manager JUST to init the page
     // This almost certainly won't work when we start adding page types.
     // Since this function will likely need to be templated
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
     MutPage page(nullptr, page_id, frame->data, std::move(frame_lk));
     page.InitPage();
@@ -85,7 +85,7 @@ std::optional<Page> PageBufferManager::TryReadPage(page_id_t page_id)
     if (LoadPage(page_id) != LoadPageStatus::Success) {
         return std::nullopt;
     }
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     if (!frame->mut.try_lock_shared()) {
         return std::nullopt;
     }
@@ -116,7 +116,7 @@ Page PageBufferManager::ReadPage(page_id_t page_id)
             throw std::runtime_error("Failed to load page");
         }
     }
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     std::shared_lock<std::shared_mutex> frame_lk(frame->mut);
 
     Page page(this, page_id, frame->GetMutData(), std::move(frame_lk));
@@ -140,7 +140,7 @@ std::optional<MutPage> PageBufferManager::TryWritePage(page_id_t page_id)
     if (LoadPage(page_id) != LoadPageStatus::Success) {
         return std::nullopt;
     }
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     if (!frame->mut.try_lock()) {
         return std::nullopt;
     }
@@ -171,7 +171,7 @@ MutPage PageBufferManager::WritePage(page_id_t page_id)
         }
     }
 
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     std::unique_lock<std::shared_mutex> frame_lk(frame->mut);
 
     MutPage page(this, page_id, frame->GetMutData(), std::move(frame_lk));
@@ -200,7 +200,7 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
         logger_m->info("Couldn't find a frame to evict for page {}", page_id);
         return LoadPageStatus::NoFreeFrameError;
     }
-    FrameHeader* frame = frames_m[*frame_id_opt].get();
+    Frame* frame = frames_m[*frame_id_opt].get();
 
     // if the current frame contains page data that was updated
     if (frame->is_dirty && FlushPage(frame->page_id) != FlushPageStatus::Success) {
@@ -236,7 +236,7 @@ PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_i
 {
     std::promise<bool> write_status_promise;
     std::future<bool> write_status_future = write_status_promise.get_future();
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     disk_scheduler_m.WritePage(page_id, frame->GetData(), std::move(write_status_promise));
     if (!write_status_future.get()) {
         logger_m->warn("Failed to flush page {}", page_id);
@@ -251,7 +251,7 @@ void PageBufferManager::AddAccessor(page_id_t page_id, bool is_writer)
      * and since pages are always created from the scope of WritePage, ReadPage
      * etc... We do not lock here since this function should always be called
      * from a locked context. */
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     replacer_m.RecordAccess(frame->id);
     frame->pin_count++;
     frame->is_dirty = frame->is_dirty || is_writer;
@@ -260,7 +260,7 @@ void PageBufferManager::AddAccessor(page_id_t page_id, bool is_writer)
 void PageBufferManager::RemoveAccessor(page_id_t page_id)
 {
     std::lock_guard<std::mutex> lk(mut_m);
-    FrameHeader* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(page_id);
     frame->pin_count--;
 
     // This frame is now ready for eviction if needed
@@ -270,7 +270,7 @@ void PageBufferManager::RemoveAccessor(page_id_t page_id)
     }
 }
 
-FrameHeader* PageBufferManager::GetFrameForPage(page_id_t page_id) const
+Frame* PageBufferManager::GetFrameForPage(page_id_t page_id) const
 {
     auto it = page_map_m.find(page_id);
     if (it == page_map_m.end()) {
