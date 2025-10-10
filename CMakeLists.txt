@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include(CTest)
+
 add_library(lib_compile_flags INTERFACE)
 
 option(ENABLE_COVERAGE "Enable compile options for code coverage with gcov" OFF)

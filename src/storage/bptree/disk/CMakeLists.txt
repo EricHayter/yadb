@@ -3,7 +3,7 @@ add_library(bptree_disk_manager
     disk_scheduler.cpp
 )
 
-target_include_directories(bptree_disk_manager PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(bptree_disk_manager PUBLIC ${CMAKE_SOURCE_DIR}/include/storage/bptree)
 
 target_link_libraries(bptree_disk_manager
     PUBLIC bptree_slotted_page

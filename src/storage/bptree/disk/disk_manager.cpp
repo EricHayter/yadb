@@ -1,4 +1,4 @@
-#include "storage/bptree/disk/disk_manager.h"
+#include "disk/disk_manager.h"
 
 #include <cassert>
 
@@ -8,7 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include "config/config.h"
-#include "storage/bptree/page/base_page.h"
+#include "page/base_page.h"
 
 DiskManager::DiskManager()
     : DiskManager(128)

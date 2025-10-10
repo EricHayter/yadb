@@ -1,4 +1,4 @@
-#include "storage/bptree/buffer/page_buffer_manager.h"
+#include "buffer/page_buffer_manager.h"
 
 #include <cassert>
 
@@ -11,9 +11,9 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 
+#include "buffer/frame_header.h"
 #include "config/config.h"
-#include "storage/bptree/buffer/frame_header.h"
-#include "storage/bptree/page/base_page.h"
+#include "page/base_page.h"
 
 PageBufferManager::PageBufferManager()
     : PageBufferManager(128)

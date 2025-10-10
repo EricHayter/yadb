@@ -1,4 +1,4 @@
-#include "storage/bptree/page/page.h"
+#include "page/page.h"
 
 #include <cassert>
 

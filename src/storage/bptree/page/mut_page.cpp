@@ -1,11 +1,11 @@
-#include "storage/bptree/page/mut_page.h"
+#include "page/mut_page.h"
 
 #include <cassert>
 #include <cstring>
 
 #include <queue>
 
-#include "storage/bptree/page/checksum.h"
+#include "page/checksum.h"
 
 MutPage::MutPage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, std::unique_lock<std::shared_mutex>&& lk)
     : BasePage { buffer_manager, page_id, page_view, true }

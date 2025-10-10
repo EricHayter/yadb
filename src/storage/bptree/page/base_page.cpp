@@ -1,9 +1,9 @@
-#include "storage/bptree/page/base_page.h"
+#include "page/base_page.h"
 
 #include <iostream>
 
-#include "storage/bptree/buffer/page_buffer_manager.h"
-#include "storage/bptree/page/checksum.h"
+#include "buffer/page_buffer_manager.h"
+#include "page/checksum.h"
 
 BasePage::~BasePage()
 {

@@ -14,3 +14,4 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(bptree_test)
+add_test(BPTreeTest bptree_test)
