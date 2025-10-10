@@ -307,9 +307,3 @@ TEST_F(SharedSpinlockTest, WriterEventuallyProceeds)
 
     EXPECT_TRUE(writer_completed.load()) << "Writer should eventually acquire lock";
 }
-
-int main(int argc, char** argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
