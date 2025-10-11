@@ -1,16 +1,10 @@
 /*-----------------------------------------------------------------------------
  *
- * page.h
- *      Slotted page interface over a page span
+ * page_layout.h
+ *      Slotted page format specification and constants
  *
- * This header specifies the interface for variants of pages which will support
- * the basic operations of inserting and deleting into pages using a slotted
- * page.
- *
- * As the page themselves act as a layer of abstraction over page views
- * additional members have been included into the class to support thread
- * safe reads and writes.
- *
+ * This header defines the low-level layout of pages in the database, including
+ * the structure of the page header, slot directory entries, and their offsets.
  *
  * The page format will approximately be:
  * -------------------
@@ -78,9 +72,9 @@
 #pragma once
 
 #include <cstdint>
-
 #include <span>
 #include <stdexcept>
+#include <string>
 
 using page_id_t = uint32_t;
 
@@ -158,87 +152,4 @@ public:
     }
 
     page_id_t page_id() const noexcept { return page_id_; }
-};
-
-class PageBufferManager;
-
-/* Page definition with all the basic read-only operations on pages. Such as
- * reading page header fields, reading the slot directory, and validating
- * checksum data. This class is intended to be built on top of for other types
- * of pages using the slotted page format e.g. B+ tree index nodes. */
-class BasePage {
-public:
-    /* This class is not meant to be directly instantiated */
-    BasePage() = delete;
-
-    /* due to the calling of the AddAccessor and RemoveAccessor there must only
-     * be a single owner to a given page i.e. no copies as this would result
-     * in duplicate notifications to the page buffer manager. */
-    BasePage(const BasePage& other) = delete;
-    BasePage& operator=(const BasePage& other) = delete;
-
-    ~BasePage();
-
-    page_id_t GetPageId() const { return page_id_m; }
-
-    /* validates the page checksum returns true if valid otherwise false */
-    bool ValidChecksum() const;
-
-    PageType GetPageType() const;
-
-    /* returns the number of valid slots (i.e. not deleted) */
-    uint16_t GetNumSlots() const;
-
-    offset_t GetFreeSpaceSize() const;
-
-    /* Returns a span to the given tuple in the slotted page. The size of the
-     * span will be determined by the size indicated in the slot entry for
-     * the tuple
-     */
-    std::span<const char> ReadSlot(slot_id_t slot);
-
-    /* Print out contents of page and values for headers. Mainly to be used
-     * for debugging purposes */
-    void PrintPage() const;
-
-protected:
-    /* constructor for subclasses of base page */
-    BasePage(PageBufferManager* buffer_manager, page_id_t page_id, MutPageView page_view, bool is_writer);
-
-    /* Allow for transfer of ownership of pages */
-    BasePage(BasePage&& other);
-    BasePage& operator=(BasePage&& other);
-
-    /* page header related functions */
-    /* returns the value of the checksum field from the page header */
-    uint64_t GetChecksum() const;
-
-    /* returns offset to the start of the free space (inclusive) */
-    offset_t GetStartFreeSpace() const;
-
-    /* returns the offset to the end of the free space (exclusive) */
-    offset_t GetEndFreeSpace() const;
-
-    /* slot directory access functions */
-    /* returns the number of slot directory entries (including deleted) */
-    uint16_t GetSlotDirectoryCapacity() const;
-
-    /* check to see if tuple has been deleted from the page */
-    bool IsSlotDeleted(slot_id_t slot_id) const;
-
-    /* find the offset to the start of a tuple (inclusive) in the page */
-    offset_t GetOffset(slot_id_t slot_id) const;
-
-    /* returns the length of a tuple */
-    uint16_t GetSlotSize(slot_id_t slot_id) const;
-
-protected:
-    MutPageView page_data_m;
-
-private:
-    page_id_t page_id_m;
-
-    /* pointer back to the page buffer manager so that it may be notified
-     * when a page is destructed */
-    PageBufferManager* buffer_manager_m;
 };
