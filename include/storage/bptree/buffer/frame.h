@@ -1,8 +1,10 @@
 #pragma once
 
-#include "storage/bptree/page/base_page.h"
+#include <atomic>
 
+// #include "core/shared_spinlock.h"
 #include <shared_mutex>
+#include "storage/bptree/page/page_layout.h"
 
 using frame_id_t = uint32_t;
 
@@ -27,22 +29,20 @@ struct Frame {
     Frame(Frame&& other) = delete;
     Frame& operator=(Frame&& other) = delete;
 
-    MutPageView GetMutData() { return data; };
-    PageView GetData() { return data; };
-
     frame_id_t id;
 
     /* The associated page that the frame is storing. */
     page_id_t page_id;
 
     /* Has this page been written to? */
-    bool is_dirty { false };
+    std::atomic<bool> is_dirty { false };
 
     /* concurrent readers/writers */
-    int pin_count { 0 };
+    std::atomic<int> pin_count { 0 };
 
     /* Mutex on the underlying data for the frame */
     std::shared_mutex mut;
+    // SharedSpinlock mut;
 
     /* A mutable view into the buffer provided by the page buffer manager. */
     MutPageView data;

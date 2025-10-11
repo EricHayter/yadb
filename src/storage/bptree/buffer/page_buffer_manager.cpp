@@ -13,7 +13,7 @@
 
 #include "buffer/frame.h"
 #include "config/config.h"
-#include "page/base_page.h"
+#include "page/page.h"
 
 PageBufferManager::PageBufferManager()
     : PageBufferManager(128)

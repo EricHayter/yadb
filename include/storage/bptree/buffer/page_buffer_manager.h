@@ -9,7 +9,6 @@
 #include "storage/bptree/buffer/frame.h"
 #include "storage/bptree/buffer/lru_k_replacer.h"
 #include "storage/bptree/disk/disk_scheduler.h"
-#include "storage/bptree/page/mut_page.h"
 #include "storage/bptree/page/page.h"
 
 /**
@@ -42,7 +41,7 @@
  * is handled by the disk scheduler.
  */
 class PageBufferManager {
-    friend BasePage;
+    friend Page;
 
 public:
     PageBufferManager();

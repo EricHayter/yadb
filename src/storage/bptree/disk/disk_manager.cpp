@@ -8,7 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include "config/config.h"
-#include "page/base_page.h"
+#include "page/page_layout.h"
 
 DiskManager::DiskManager()
     : DiskManager(128)

@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "storage/bptree/page/base_page.h"
+#include "storage/bptree/page/page_layout.h"
 
 /*
  * Calculate 64-bit checksum of page
