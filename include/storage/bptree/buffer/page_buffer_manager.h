@@ -2,7 +2,6 @@
 
 #include <condition_variable>
 #include <memory>
-#include <optional>
 #include <unordered_map>
 
 #include "config/config.h"
@@ -54,38 +53,7 @@ public:
      */
     page_id_t AllocatePage();
 
-    /**
-     * Attempt to get access to a read-only page handle
-     *
-     * Attempts to acquire a handle to a page for reading page data from the
-     * page buffer. The function may fail to acquire access (and return
-     * std::nullopt) if exclusive access to the page has already been acquired
-     */
-    std::optional<Page> TryReadPage(page_id_t page_id);
-
-    /**
-     * Acquires access to a read-only page
-     * NOTE: this function will block indefinitely until the handle to the page
-     * is returned.
-     */
-    Page ReadPage(page_id_t page_id);
-
-    /**
-     * Attempt to get access to a writable page handle
-     *
-     * Attempts to acquire a handle to a page for writing page data from the
-     * page buffer. The function may fail to acquire access (and return
-     * std::nullopt) if exclusive access to the page cannot be acquired
-     * immediately.
-     */
-    std::optional<MutPage> TryWritePage(page_id_t page_id);
-
-    /**
-     * Acquires access to a writable page.
-     * NOTE: this function will block indefinitely until the handle to the page
-     * is returned.
-     */
-    MutPage WritePage(page_id_t page_id);
+    Page GetPage(page_id_t page_id);
 
 private:
     enum class LoadPageStatus {
@@ -106,7 +74,7 @@ private:
     /**
      * Notify the page buffer manager that a page has been accessed
      */
-    void AddAccessor(page_id_t page_id, bool is_writer);
+    void AddAccessor(page_id_t page_id);
 
     /**
      * Notify the page buffer manager that an accessor has been dropped
