@@ -1,7 +1,7 @@
 #include <chrono>
 #include <numeric>
-#include <thread>
 #include <shared_mutex>
+#include <thread>
 
 #include "gtest/gtest.h"
 
@@ -11,11 +11,12 @@
 class PageBufferManagerTest : public ::testing::Test {
 protected:
     static constexpr int number_frames = 1;
-    PageBufferManager page_buffer_man{number_frames};
+    PageBufferManager page_buffer_man { number_frames };
     page_id_t page_id;
     std::optional<Page> page;
 
-    void SetUp() override {
+    void SetUp() override
+    {
         page_id = page_buffer_man.AllocatePage();
         page = page_buffer_man.GetPage(page_id);
         std::lock_guard<Page> lg(*page);

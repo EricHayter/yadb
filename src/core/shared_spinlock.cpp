@@ -76,6 +76,6 @@ SharedSpinlock::LockState SharedSpinlock::State() const
     default: {
         assert(lock_state > 0 && ("Invalid lock state: " + std::to_string(lock_state) + "\n").c_str());
         return LockState::SHARED;
-             }
+    }
     }
 }

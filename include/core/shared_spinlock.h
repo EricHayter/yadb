@@ -34,6 +34,7 @@ public:
     /* return the state of the lock; exclusively locked, shared locked, or
      * unlocked */
     LockState State() const;
+
 private:
     /*
      * Lock will be implemented using a 3-state atomic variable with the

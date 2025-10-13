@@ -18,8 +18,8 @@
 #include <optional>
 #include <span>
 
-#include "page/page_layout.h"
 #include "buffer/frame.h"
+#include "page/page_layout.h"
 
 class PageBufferManager;
 class Frame;

@@ -2,11 +2,11 @@
 
 #include <cassert>
 
-#include <format>
-#include <iostream>
-#include <iomanip>
-#include <queue>
 #include <cstring>
+#include <format>
+#include <iomanip>
+#include <iostream>
+#include <queue>
 
 #include "buffer/page_buffer_manager.h"
 #include "core/shared_spinlock.h"
@@ -19,7 +19,7 @@ Page::~Page()
 
 Page::Page(PageBufferManager* page_buffer_manager, Frame* frame)
     : frame_m { frame }
-    , page_buffer_manager_m{ page_buffer_manager }
+    , page_buffer_manager_m { page_buffer_manager }
 
 {
     page_buffer_manager_m->AddAccessor(frame->page_id);
@@ -27,7 +27,7 @@ Page::Page(PageBufferManager* page_buffer_manager, Frame* frame)
 
 Page::Page(Page&& other)
     : frame_m { std::move(other.frame_m) }
-    , page_buffer_manager_m{ std::move(other.page_buffer_manager_m) }
+    , page_buffer_manager_m { std::move(other.page_buffer_manager_m) }
 {
 }
 
@@ -69,7 +69,6 @@ void Page::unlock_shared()
 {
     frame_m->mut.unlock_shared();
 }
-
 
 bool Page::ValidChecksum() const
 {
