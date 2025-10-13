@@ -41,8 +41,7 @@ struct Frame {
     std::atomic<int> pin_count { 0 };
 
     /* Mutex on the underlying data for the frame */
-    std::shared_mutex mut;
-    // SharedSpinlock mut;
+    SharedSpinlock mut;
 
     /* A mutable view into the buffer provided by the page buffer manager. */
     MutPageView data;
