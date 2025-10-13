@@ -1,5 +1,9 @@
 #include "core/shared_spinlock.h"
+
+#include <cassert>
+
 #include <atomic>
+#include <string>
 
 bool SharedSpinlock::try_lock()
 {
@@ -59,4 +63,19 @@ void SharedSpinlock::lock_shared()
 void SharedSpinlock::unlock_shared()
 {
     state_m.fetch_sub(1, std::memory_order_release);
+}
+
+SharedSpinlock::LockState SharedSpinlock::State() const
+{
+    int lock_state = state_m.load(std::memory_order_acquire);
+    switch (lock_state) {
+    case -1:
+        return LockState::EXCLUSIVE;
+    case 0:
+        return LockState::UNLOCKED;
+    default: {
+        assert(lock_state > 0 && ("Invalid lock state: " + std::to_string(lock_state) + "\n").c_str());
+        return LockState::SHARED;
+             }
+    }
 }
