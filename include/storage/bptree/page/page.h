@@ -52,7 +52,7 @@ public:
     void unlock_shared();
 
     /* Page Metadata Operations */
-    page_id_t GetPageId() const;
+    page_id_t GetPageId() const { return frame_m->page_id; };
     PageType GetPageType() const;
     /* validates the page checksum returns true if valid otherwise false */
     bool ValidChecksum() const;
