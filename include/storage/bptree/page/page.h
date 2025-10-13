@@ -21,6 +21,7 @@
 #include "page/page_layout.h"
 #include "buffer/frame.h"
 
+class PageBufferManager;
 class Frame;
 
 /* Page definition with all the basic read-only operations on pages. Such as
@@ -31,7 +32,7 @@ class Page {
 public:
     /* Constructors and Assignment */
     /* constructor for subclasses of base page */
-    Page(Frame* frame);
+    Page(PageBufferManager* page_buffer_manager, Frame* frame);
     /* Allow for transfer of ownership of pages */
     Page(Page&& other);
     Page& operator=(Page&& other);
@@ -121,5 +122,6 @@ private:
     void SetSlotOffset(slot_id_t slot_id, offset_t offset);
     void SetSlotSize(slot_id_t slot_id, uint16_t size);
 
+    PageBufferManager* page_buffer_manager_m;
     Frame* frame_m;
 };
