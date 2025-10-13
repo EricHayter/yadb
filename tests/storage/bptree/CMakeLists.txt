@@ -5,8 +5,9 @@ add_executable(bptree_test
     page/checksum_test.cpp
 )
 
-target_link_libraries(
-    bptree_test
+target_link_libraries(bptree_test
+    PRIVATE bptree_slotted_page
+    PRIVATE bptree_buffer_manager
     PRIVATE bptree_storage_engine
     PRIVATE GTest::gtest_main
     INTERFACE lib_compile_flags
