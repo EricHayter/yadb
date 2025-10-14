@@ -93,9 +93,8 @@ using PageView = std::span<const char, PAGE_SIZE>;
 
 enum class PageType : uint8_t {
     Data = 0x0,
-    BPTreeRoot = 0x1,
-    BPTreeInner = 0x2,
-    BPTreeLeaf = 0x3,
+    BPTreeInner = 0x1,
+    BPTreeLeaf = 0x2,
 };
 
 /*-----------------------------------------------------------------------------
