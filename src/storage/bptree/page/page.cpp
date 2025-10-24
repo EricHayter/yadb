@@ -199,12 +199,13 @@ uint16_t Page::GetSlotSize(slot_id_t slot_id) const
     return slot_size;
 }
 
-void Page::InitPage()
+void Page::InitPage(PageType page_type)
 {
     assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
     SetNumSlots(0);
     SetStartFreeSpace(Header::SIZE);
     SetEndFreeSpace(PAGE_SIZE);
+    SetPageType(page_type);
 }
 
 void Page::UpdateChecksum()
@@ -316,15 +317,14 @@ void Page::VacuumPage()
     }
 
     offset_t freespace_end = PAGE_SIZE;
-    while (!pq.empty()) {
-        SlotEntry slot_entry = pq.top();
-        pq.pop();
+    SlotEntry slot_entry = pq.top();
+    pq.pop();
 
-        freespace_end -= slot_entry.size;
-        memmove(frame_m->data.data() + freespace_end, frame_m->data.data() + slot_entry.offset, slot_entry.size);
-        SetSlotOffset(slot_entry.slot_id, freespace_end);
-    }
-    SetEndFreeSpace(freespace_end);
+    freespace_end -= slot_entry.size;
+    memmove(frame_m->data.data() + freespace_end, frame_m->data.data() + slot_entry.offset, slot_entry.size);
+    SetSlotOffset(slot_entry.slot_id, freespace_end);
+}
+SetEndFreeSpace(freespace_end);
 }
 
 void Page::SetNumSlots(uint16_t num_slots)
@@ -349,6 +349,12 @@ void Page::SetChecksum(uint64_t checksum)
 {
     assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
     memcpy(frame_m->data.data() + Header::Offsets::CHECKSUM, &checksum, sizeof(checksum));
+}
+
+void Page::SetPageType(PageType page_type)
+{
+    assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
+    memcpy(frame_m->data.data() + Header::Offsets::PAGE_TYPE, &page_type, sizeof(page_type));
 }
 
 void Page::SetSlotOffset(slot_id_t slot_id, offset_t offset)

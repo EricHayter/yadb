@@ -68,7 +68,7 @@ public:
     /* initializes the fields inside of the page header. NOTE: This should only
      * be used when creating a page for the first time i.e. right after calling
      * NewPage with the page buffer manager. */
-    void InitPage();
+    void InitPage(PageType page_type);
 
     /* Slot Operations */
     /* returns the number of valid slots (i.e. not deleted) */
@@ -106,6 +106,7 @@ private:
     void SetStartFreeSpace(offset_t offset);
     void SetEndFreeSpace(offset_t offset);
     void SetChecksum(uint64_t checksum);
+    void SetPageType(PageType page_type);
 
     /* Slot Directory Accessors */
     /* returns the number of slot directory entries (including deleted) */
