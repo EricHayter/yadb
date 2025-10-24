@@ -3,10 +3,10 @@
                                             _,.,_ ,-'`           `'-.,_
                                           /)     (\                   '``-.
                                          ((      ) )                      `\
-Y88b   d88P    d88888888888b. 888888b.    \)    (_/                        )\ 
+Y88b   d88P    d88888888888b. 888888b.    \)    (_/                        )\
  Y88b d88P    d88888888  "Y88b888  "88b    |       /)           '    ,'    / \
   Y88o88P    d88P888888    888888  .88P    `\    ^'            '     (    /  ))
-   Y888P    d88P 888888    8888888888K.      |      _/\ ,     /    ,,`\   (  "` 
+   Y888P    d88P 888888    8888888888K.      |      _/\ ,     /    ,,`\   (  "`
     888    d88P  888888    888888  "Y88b      \Y,   |  \  \  | ````| / \_ \
     888   d88P   888888    888888    888        `)_/    \  \  )    ( >  ( >
     888  d8888888888888  .d88P888   d88P                 \( \(     |/   |/
@@ -69,8 +69,7 @@ However, tests can be built and run for the components implemented so far.
 
 ```
 # From the build/ directory
-cmake --build . --target yadb_test
-./tests/yadb_test
+cmake --build . --target test
 ```
 
 ---
