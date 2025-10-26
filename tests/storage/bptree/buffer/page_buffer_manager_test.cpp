@@ -20,7 +20,7 @@ protected:
         page_id = page_buffer_man.AllocatePage();
         page = page_buffer_man.GetPage(page_id);
         std::lock_guard<Page> lg(*page);
-        page->InitPage();
+        page->InitPage(PageType::Data);
     }
 };
 
