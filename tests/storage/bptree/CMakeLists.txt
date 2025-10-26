@@ -3,6 +3,8 @@ add_executable(bptree_test
     disk/disk_scheduler_test.cpp
     buffer/page_buffer_manager_test.cpp
     page/checksum_test.cpp
+    page/page_iterator_test.cpp
+    # tree/bptree_test.cpp  # Disabled - B+ tree implementation in progress
 )
 
 target_link_libraries(bptree_test
