@@ -268,6 +268,36 @@ std::optional<slot_id_t> Page::AllocateSlot(uint16_t size)
     return *slot_id;
 }
 
+std::optional<slot_id_t> Page::AppendSlot(uint16_t size)
+{
+    assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
+
+    /* Check if there's enough space for both slot directory entry and tuple data */
+    if (GetFreeSpaceSize() < SlotEntry::SIZE + size) {
+        return std::nullopt;
+    }
+
+    /* Get the current slot count - this will be the new slot's ID */
+    slot_id_t new_slot_id = GetSlotDirectoryCapacity();
+
+    /* Update slot count */
+    SetNumSlots(GetNumSlots() + 1);
+
+    /* Grow slot directory downward */
+    SetStartFreeSpace(GetStartFreeSpace() + SlotEntry::SIZE);
+
+    /* Allocate tuple space from the end, growing upward */
+    offset_t tuple_offset = GetEndFreeSpace() - size;
+    SetEndFreeSpace(tuple_offset);
+
+    /* Write slot directory entry */
+    SetSlotOffset(new_slot_id, tuple_offset);
+    SetSlotSize(new_slot_id, size);
+    SetSlotDeleted(new_slot_id, false);
+
+    return new_slot_id;
+}
+
 void Page::WriteSlot(slot_id_t slot_id, std::span<const char> data)
 {
     assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
@@ -323,8 +353,7 @@ void Page::VacuumPage()
     freespace_end -= slot_entry.size;
     memmove(frame_m->data.data() + freespace_end, frame_m->data.data() + slot_entry.offset, slot_entry.size);
     SetSlotOffset(slot_entry.slot_id, freespace_end);
-}
-SetEndFreeSpace(freespace_end);
+    SetEndFreeSpace(freespace_end);
 }
 
 void Page::SetNumSlots(uint16_t num_slots)
@@ -385,4 +414,14 @@ void Page::SetSlotDeleted(slot_id_t slot_id, bool deleted)
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::DELETED;
     memcpy(frame_m->data.data() + slot_deleted_offset, &value, sizeof(value));
+}
+
+PageIterator Page::begin() const
+{
+    return PageIterator(this, 0, false);
+}
+
+PageIterator Page::end() const
+{
+    return PageIterator(this, GetSlotDirectoryCapacity(), true);
 }

@@ -20,9 +20,11 @@
 
 #include "buffer/frame.h"
 #include "page/page_layout.h"
+#include "page/page_iterator.h"
 
 class PageBufferManager;
 class Frame;
+class PageIterator;
 
 /* Page definition with all the basic read-only operations on pages. Such as
  * reading page header fields, reading the slot directory, and validating
@@ -30,6 +32,7 @@ class Frame;
  * of pages using the slotted page format e.g. B+ tree index nodes. */
 class Page {
 public:
+    Page() = default;
     /* Constructors and Assignment */
     /* constructor for subclasses of base page */
     Page(PageBufferManager* page_buffer_manager, Frame* frame);
@@ -70,17 +73,32 @@ public:
      * NewPage with the page buffer manager. */
     void InitPage(PageType page_type);
 
+    /* Slot Directory Accessors */
     /* Slot Operations */
     /* returns the number of valid slots (i.e. not deleted) */
     uint16_t GetNumSlots() const;
+
     /* Returns a span to the given tuple in the slotted page. The size of the
      * span will be determined by the size indicated in the slot entry for
      * the tuple */
     std::span<const char> ReadSlot(slot_id_t slot);
+
+    /* returns the number of slot directory entries (including deleted) */
+    uint16_t GetSlotDirectoryCapacity() const;
+
+    /* check to see if tuple has been deleted from the page */
+    bool IsSlotDeleted(slot_id_t slot_id) const;
+
     /* returns the slot of a newly allocated tuple of size in the page. If no
      * space can be found for the tuple then returns std::nullopt. */
     std::optional<slot_id_t> AllocateSlot(uint16_t size);
+    /* Appends a new slot to the end of the slot directory without trying to
+     * reuse deleted entries. This is useful for ordered structures like B+ tree
+     * nodes where slot position matters. Returns the slot_id of the appended
+     * slot, or std::nullopt if there is insufficient space. */
+    std::optional<slot_id_t> AppendSlot(uint16_t size);
     void WriteSlot(slot_id_t slot_id, std::span<const char> data);
+
     /* logically deleted tuple from page. Note this does not immediately free
      * up any space in general. To fully get back space from deletes the
      * page must be vacuumed. */
@@ -91,6 +109,12 @@ public:
     /* Reacquires freed space from deleted tuples. This is a fairly expensive
      * operation use it sparingly. */
     void VacuumPage();
+
+    /* Iterator Support */
+    /* Returns an iterator to the first non-deleted slot */
+    PageIterator begin() const;
+    /* Returns an iterator to one past the last slot */
+    PageIterator end() const;
 
 private:
     /* Page Header Accessors */
@@ -109,10 +133,6 @@ private:
     void SetPageType(PageType page_type);
 
     /* Slot Directory Accessors */
-    /* returns the number of slot directory entries (including deleted) */
-    uint16_t GetSlotDirectoryCapacity() const;
-    /* check to see if tuple has been deleted from the page */
-    bool IsSlotDeleted(slot_id_t slot_id) const;
     /* find the offset to the start of a tuple (inclusive) in the page */
     offset_t GetOffset(slot_id_t slot_id) const;
     /* returns the length of a tuple */
