@@ -57,7 +57,7 @@ public:
      * \param slot_id Starting slot ID
      * \param is_end Whether this is an end iterator
      */
-    PageIterator(const Page* page, slot_id_t slot_id, bool is_end = false);
+    PageIterator(const Page* page, slot_id_t slot_id);
 
     /**
      * \brief Dereference operator

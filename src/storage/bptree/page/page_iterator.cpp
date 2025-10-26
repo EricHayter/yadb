@@ -9,10 +9,10 @@
 #include "page/page_iterator.h"
 #include "page/page.h"
 
-PageIterator::PageIterator(const Page* page, slot_id_t slot_id, bool is_end)
+PageIterator::PageIterator(const Page* page, slot_id_t slot_id)
     : page_m(page)
     , slot_id_m(slot_id)
-    , is_end_m(is_end)
+    , is_end_m(slot_id >= page_m->GetSlotDirectoryCapacity())
     , cached_value_m()
 {
     // If this is not an end iterator and we're starting at a deleted slot,
