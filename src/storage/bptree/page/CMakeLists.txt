@@ -1,6 +1,7 @@
 add_library(bptree_slotted_page
     page.cpp
     checksum.cpp
+    page_iterator.cpp
 )
 
 target_include_directories(bptree_slotted_page PUBLIC ${CMAKE_SOURCE_DIR}/include/storage/bptree)
