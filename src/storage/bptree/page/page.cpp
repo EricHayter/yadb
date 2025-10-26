@@ -14,28 +14,41 @@
 
 Page::~Page()
 {
-    page_buffer_manager_m->RemoveAccessor(frame_m->page_id);
+    if (page_buffer_manager_m)
+        page_buffer_manager_m->RemoveAccessor(frame_m->page_id);
 }
 
 Page::Page(PageBufferManager* page_buffer_manager, Frame* frame)
     : frame_m { frame }
     , page_buffer_manager_m { page_buffer_manager }
 
-{
-    page_buffer_manager_m->AddAccessor(frame->page_id);
+{   if (page_buffer_manager)
+        page_buffer_manager_m->AddAccessor(frame->page_id);
 }
 
 Page::Page(Page&& other)
     : frame_m { std::move(other.frame_m) }
     , page_buffer_manager_m { std::move(other.page_buffer_manager_m) }
 {
+    // Null out the moved-from object to prevent double RemoveAccessor call
+    other.frame_m = nullptr;
+    other.page_buffer_manager_m = nullptr;
 }
 
 Page& Page::operator=(Page&& other)
 {
     if (&other != this) {
+        // Call RemoveAccessor for the current object before replacing
+        if (page_buffer_manager_m) {
+            page_buffer_manager_m->RemoveAccessor(frame_m->page_id);
+        }
+
         frame_m = std::move(other.frame_m);
         page_buffer_manager_m = std::move(other.page_buffer_manager_m);
+
+        // Null out the moved-from object to prevent double RemoveAccessor call
+        other.frame_m = nullptr;
+        other.page_buffer_manager_m = nullptr;
     }
     return *this;
 }
@@ -298,6 +311,45 @@ std::optional<slot_id_t> Page::AppendSlot(uint16_t size)
     return new_slot_id;
 }
 
+bool Page::ShiftSlotsRight(slot_id_t start_index, uint16_t count)
+{
+    assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
+    assert(start_index <= GetSlotDirectoryCapacity());
+
+    /* Check if there's enough free space for additional slot directory entries */
+    size_t required_space = count * SlotEntry::SIZE;
+    if (GetFreeSpaceSize() < required_space) {
+        return false;
+    }
+
+    /* Grow the slot directory downward */
+    SetStartFreeSpace(GetStartFreeSpace() + required_space);
+
+    /* Get the current capacity before the shift */
+    slot_id_t old_capacity = GetSlotDirectoryCapacity() - count;
+
+    /* Copy slot entries from right to left to avoid overwriting
+     * Move entries at [start_index, old_capacity) to [start_index + count, old_capacity + count) */
+    for (slot_id_t i = old_capacity; i > start_index; --i) {
+        slot_id_t src_slot = i - 1;
+        slot_id_t dst_slot = src_slot + count;
+
+        /* Copy slot entry fields */
+        offset_t offset = GetOffset(src_slot);
+        uint16_t size = GetSlotSize(src_slot);
+        bool deleted = IsSlotDeleted(src_slot);
+
+        SetSlotOffset(dst_slot, offset);
+        SetSlotSize(dst_slot, size);
+        SetSlotDeleted(dst_slot, deleted);
+    }
+
+    /* Slots at [start_index, start_index + count) are now available for new data
+     * The caller is responsible for writing to these slots and updating num_slots */
+
+    return true;
+}
+
 void Page::WriteSlot(slot_id_t slot_id, std::span<const char> data)
 {
     assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
@@ -347,12 +399,14 @@ void Page::VacuumPage()
     }
 
     offset_t freespace_end = PAGE_SIZE;
-    SlotEntry slot_entry = pq.top();
-    pq.pop();
+    while (!pq.empty()) {
+        SlotEntry slot_entry = pq.top();
+        pq.pop();
 
-    freespace_end -= slot_entry.size;
-    memmove(frame_m->data.data() + freespace_end, frame_m->data.data() + slot_entry.offset, slot_entry.size);
-    SetSlotOffset(slot_entry.slot_id, freespace_end);
+        freespace_end -= slot_entry.size;
+        memmove(frame_m->data.data() + freespace_end, frame_m->data.data() + slot_entry.offset, slot_entry.size);
+        SetSlotOffset(slot_entry.slot_id, freespace_end);
+    }
     SetEndFreeSpace(freespace_end);
 }
 
@@ -418,10 +472,10 @@ void Page::SetSlotDeleted(slot_id_t slot_id, bool deleted)
 
 PageIterator Page::begin() const
 {
-    return PageIterator(this, 0, false);
+    return PageIterator(this, 0);
 }
 
 PageIterator Page::end() const
 {
-    return PageIterator(this, GetSlotDirectoryCapacity(), true);
+    return PageIterator(this, GetSlotDirectoryCapacity());
 }

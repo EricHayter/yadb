@@ -97,6 +97,13 @@ public:
      * nodes where slot position matters. Returns the slot_id of the appended
      * slot, or std::nullopt if there is insufficient space. */
     std::optional<slot_id_t> AppendSlot(uint16_t size);
+    /* Shifts slot directory entries to the right starting from start_index.
+     * This moves entries at positions [start_index, slot_count) to
+     * [start_index + count, slot_count + count), creating 'count' empty slots
+     * starting at start_index. Only the slot directory entries are moved, not
+     * the actual tuple data. Returns true if successful, false if there is
+     * insufficient space for the additional slot directory entries. */
+    bool ShiftSlotsRight(slot_id_t start_index, uint16_t count = 1);
     void WriteSlot(slot_id_t slot_id, std::span<const char> data);
 
     /* logically deleted tuple from page. Note this does not immediately free
