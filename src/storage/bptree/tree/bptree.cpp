@@ -26,7 +26,7 @@ BPTree::BPTree(PageBufferManager* page_buffer_manager, page_id_t root_page_id)
 }
 
 
-std::optional<std::vector<char>> BPTree::Search(std::span<const char> key)
+std::optional<record_id_t> BPTree::Search(std::span<const char> key)
 {
     page_id_t current_page_id = root_page_id_m;
 
@@ -57,19 +57,11 @@ std::optional<std::vector<char>> BPTree::Search(std::span<const char> key)
 
             // Extract record_id from the end of the record
             auto [_, record] = *it;
-            record_id_t rid;
-            std::memcpy(&rid,
+            record_id_t record_id;
+            std::memcpy(&record_id,
                        record.data() + record.size() - sizeof(record_id_t),
                        sizeof(record_id_t));
-
-            // Now fetch the actual data page
-            Page data_page = page_buffer_manager_m->GetPage(rid.page_id);
-            std::shared_lock<Page> data_lock(data_page);
-
-            // Release leaf lock, keep data page locked
-            current_lock.unlock();
-            auto page_span = data_page.ReadSlot(rid.slot_id);
-            return std::vector<char>(page_span.begin(), page_span.end());
+            return record_id;
         }
         else if (page_type == PageType::BPTreeInner) {
             // Inner node format: (key || child_page_id) pairs
@@ -117,14 +109,13 @@ std::optional<std::vector<char>> BPTree::Search(std::span<const char> key)
     }
 }
 
-void BPTree::Insert(std::span<const char> key, std::span<const char> value)
+void BPTree::Insert(std::span<const char> key, record_id_t record_id)
 {
-    if (!InsertOptimistic(key, value))
-        InsertPessimistic(key, value);
+    if (!InsertOptimistic(key, record_id))
+        InsertPessimistic(key, record_id);
 }
 
-bool BPTree::InsertOptimistic(std::span<const char> key, std::span<const char> value)
+bool BPTree::InsertOptimistic(std::span<const char> key, record_id_t record_id)
 {
-
     return false;
 }
