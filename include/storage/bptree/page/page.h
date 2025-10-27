@@ -106,6 +106,10 @@ public:
     bool ShiftSlotsRight(slot_id_t start_index, uint16_t count = 1);
     void WriteSlot(slot_id_t slot_id, std::span<const char> data);
 
+    /* Updates the size of the buffer of a given slot. WARNING: this function
+     * may invalidate the data contained in the buffer originally. */
+    bool ResizeSlot(slot_id_t slot_id, uint16_t size);
+
     /* logically deleted tuple from page. Note this does not immediately free
      * up any space in general. To fully get back space from deletes the
      * page must be vacuumed. */

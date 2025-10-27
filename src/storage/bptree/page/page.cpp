@@ -11,6 +11,7 @@
 #include "buffer/page_buffer_manager.h"
 #include "core/shared_spinlock.h"
 #include "page/checksum.h"
+#include "page/page_layout.h"
 
 Page::~Page()
 {
@@ -356,6 +357,30 @@ void Page::WriteSlot(slot_id_t slot_id, std::span<const char> data)
     assert(!IsSlotDeleted(slot_id));
     assert(data.size_bytes() == GetSlotSize(slot_id));
     memcpy(frame_m->data.data() + GetOffset(slot_id), data.data(), data.size_bytes());
+}
+
+bool Page::ResizeSlot(slot_id_t slot_id, uint16_t size)
+{
+    assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
+    assert(!IsSlotDeleted(slot_id));
+    auto old_slot_size = GetSlotSize(slot_id);
+
+    /* can reuse old buffer just update offset */
+    if (old_slot_size >= size) {
+        SetSlotSize(slot_id, size);
+        SetSlotOffset(slot_id, GetOffset(slot_id) + (old_slot_size - size));
+        return true;
+    }
+
+    /* allocate new buffer (if possible) */
+    if (GetFreeSpaceSize() < size)
+        return false;
+
+    SetSlotSize(slot_id, size);
+    offset_t new_freespace_end = GetEndFreeSpace() - size;
+    SetEndFreeSpace(new_freespace_end);
+    SetSlotOffset(slot_id, new_freespace_end);
+    return true;
 }
 
 void Page::DeleteSlot(slot_id_t slot_id)
