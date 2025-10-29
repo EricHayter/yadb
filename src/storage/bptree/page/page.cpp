@@ -343,6 +343,10 @@ bool Page::ShiftSlotsRight(slot_id_t start_index, uint16_t count)
         SetSlotOffset(dst_slot, offset);
         SetSlotSize(dst_slot, size);
         SetSlotDeleted(dst_slot, deleted);
+
+        /* update the size of the src slots to 0 so that there aren't two
+         * pointers to the same chunk in memory */
+        SetSlotSize(src_slot, 0x00);
     }
 
     /* Slots at [start_index, start_index + count) are now available for new data
