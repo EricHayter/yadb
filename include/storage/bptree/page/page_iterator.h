@@ -7,9 +7,7 @@
  * non-deleted slots in a slotted page. The iterator conforms to C++20
  * bidirectional_iterator requirements and can be used with standard algorithms.
  *
- * The iterator yields std::pair<slot_id_t, std::span<const char>> where:
- *  - first: the slot ID
- *  - second: a span to the slot's data
+ * The iterator yields slot_id_t. Use page.ReadSlot() to access slot data.
  *
  *-----------------------------------------------------------------------------
  */
@@ -32,8 +30,9 @@ class Page;
  * Usage example:
  * \code
  *   Page page = ...;
- *   for (auto [slot_id, data] : page) {
- *       // Process slot_id and data span
+ *   for (slot_id_t slot_id : page) {
+ *       auto data = page.ReadSlot(slot_id);
+ *       // Process slot_id and data
  *   }
  * \endcode
  */
@@ -41,10 +40,10 @@ class PageIterator {
 public:
     // Iterator traits (C++20 style)
     using iterator_category = std::bidirectional_iterator_tag;
-    using value_type = std::pair<slot_id_t, std::span<const char>>;
+    using value_type = slot_id_t;
     using difference_type = std::ptrdiff_t;
     using pointer = const value_type*;
-    using reference = const value_type&;
+    using reference = value_type;
 
     /**
      * \brief Default constructor (creates an end iterator)
@@ -61,15 +60,9 @@ public:
 
     /**
      * \brief Dereference operator
-     * \return A reference to the pair of (slot_id, data span)
+     * \return The current slot ID
      */
     reference operator*() const;
-
-    /**
-     * \brief Arrow operator
-     * \return A pointer to the current value
-     */
-    pointer operator->() const;
 
     /**
      * \brief Pre-increment: move to next non-deleted slot
@@ -117,14 +110,12 @@ private:
     void retreat_to_previous_valid();
 
     /**
-     * \brief Update the cached value to reflect current slot
+     * \brief Check if this iterator is at the end
      */
-    void update_value() const;
+    bool is_end() const;
 
     const Page* page_m = nullptr;
     slot_id_t slot_id_m = 0;
-    bool is_end_m = true;
-    mutable value_type cached_value_m {}; // Cached value for reference stability
 };
 
 // C++20 iterator concept verification (will be checked at compile time)
