@@ -54,36 +54,6 @@ Page& Page::operator=(Page&& other)
     return *this;
 }
 
-void Page::lock()
-{
-    frame_m->mut.lock();
-}
-
-bool Page::try_lock()
-{
-    return frame_m->mut.try_lock();
-}
-
-void Page::unlock()
-{
-    frame_m->mut.unlock();
-}
-
-void Page::lock_shared()
-{
-    frame_m->mut.lock_shared();
-}
-
-bool Page::try_lock_shared()
-{
-    return frame_m->mut.try_lock_shared();
-}
-
-void Page::unlock_shared()
-{
-    frame_m->mut.unlock_shared();
-}
-
 bool Page::ValidChecksum() const
 {
     return checksum64(frame_m->data) == 0x00;
@@ -108,6 +78,35 @@ uint16_t Page::GetNumSlots() const
 offset_t Page::GetFreeSpaceSize() const
 {
     return GetEndFreeSpace() - GetStartFreeSpace();
+}
+
+bool Page::CanInsert(uint16_t size, bool reuse_deleted) const
+{
+    assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE || frame_m->mut.State() == SharedSpinlock::LockState::SHARED);
+
+    /* Check if we can reuse a deleted slot */
+    if (reuse_deleted) {
+        std::optional<slot_id_t> slot_id;
+        for (slot_id_t i = 0; i < GetSlotDirectoryCapacity(); i++) {
+            if (IsSlotDeleted(i)) {
+                slot_id = i;
+                break;
+            }
+        }
+
+        /* If we found a deleted slot to reuse */
+        if (slot_id) {
+            /* If new size fits in the old slot's space, we can reuse it */
+            if (size < GetSlotSize(*slot_id)) {
+                return true;
+            }
+            /* Otherwise, check if we have enough free space for the new data */
+            return size <= GetFreeSpaceSize();
+        }
+    }
+
+    /* No deleted slots to reuse (or not allowed), need space for both slot entry and data */
+    return GetFreeSpaceSize() >= SlotEntry::SIZE + size;
 }
 
 offset_t Page::GetStartFreeSpace() const
@@ -312,22 +311,43 @@ std::optional<slot_id_t> Page::AppendSlot(uint16_t size)
     return new_slot_id;
 }
 
-bool Page::ShiftSlotsRight(slot_id_t start_index, uint16_t count)
+std::optional<slot_id_t> Page::ShiftSlotsRight(PageIterator position, uint16_t count)
 {
     assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
-    assert(start_index <= GetSlotDirectoryCapacity());
 
     /* Check if there's enough free space for additional slot directory entries */
     size_t required_space = count * SlotEntry::SIZE;
     if (GetFreeSpaceSize() < required_space) {
-        return false;
+        return std::nullopt;
     }
 
-    /* Grow the slot directory downward */
-    SetStartFreeSpace(GetStartFreeSpace() + required_space);
+    /* Handle the end() case - just append new slots at the end */
+    if (position == end()) {
+        slot_id_t first_new_slot = GetSlotDirectoryCapacity();
+
+        /* Grow the slot directory downward by count slots */
+        SetStartFreeSpace(GetStartFreeSpace() + count * SlotEntry::SIZE);
+
+        /* Initialize the new slots as empty (size 0, deleted) */
+        for (uint16_t i = 0; i < count; ++i) {
+            slot_id_t new_slot = first_new_slot + i;
+            SetSlotOffset(new_slot, 0);
+            SetSlotSize(new_slot, 0);
+            SetSlotDeleted(new_slot, true);
+        }
+
+        return first_new_slot;
+    }
+
+    /* Handle the normal case - shift existing slots right */
+    slot_id_t start_index = *position;
+    assert(start_index <= GetSlotDirectoryCapacity());
 
     /* Get the current capacity before the shift */
-    slot_id_t old_capacity = GetSlotDirectoryCapacity() - count;
+    slot_id_t old_capacity = GetSlotDirectoryCapacity();
+
+    /* Grow the slot directory downward */
+    SetStartFreeSpace(GetStartFreeSpace() + count * SlotEntry::SIZE);
 
     /* Copy slot entries from right to left to avoid overwriting
      * Move entries at [start_index, old_capacity) to [start_index + count, old_capacity + count) */
@@ -349,10 +369,16 @@ bool Page::ShiftSlotsRight(slot_id_t start_index, uint16_t count)
         SetSlotSize(src_slot, 0x00);
     }
 
-    /* Slots at [start_index, start_index + count) are now available for new data
-     * The caller is responsible for writing to these slots and updating num_slots */
+    /* Initialize the newly opened slots as empty */
+    for (uint16_t i = 0; i < count; ++i) {
+        slot_id_t new_slot = start_index + i;
+        SetSlotOffset(new_slot, 0);
+        SetSlotSize(new_slot, 0);
+        SetSlotDeleted(new_slot, true);
+    }
 
-    return true;
+    /* Return the first newly created slot */
+    return start_index;
 }
 
 void Page::WriteSlot(slot_id_t slot_id, std::span<const char> data)
@@ -366,8 +392,16 @@ void Page::WriteSlot(slot_id_t slot_id, std::span<const char> data)
 bool Page::ResizeSlot(slot_id_t slot_id, uint16_t size)
 {
     assert(frame_m->mut.State() == SharedSpinlock::LockState::EXCLUSIVE);
-    assert(!IsSlotDeleted(slot_id));
+
+    bool was_deleted = IsSlotDeleted(slot_id);
     auto old_slot_size = GetSlotSize(slot_id);
+
+    /* If slot is deleted, treat it as having no old data */
+    if (was_deleted) {
+        old_slot_size = 0;
+        SetSlotDeleted(slot_id, false);  // Mark as not deleted
+        SetNumSlots(GetNumSlots() + 1);  // Increment slot count
+    }
 
     /* can reuse old buffer just update offset */
     if (old_slot_size >= size) {

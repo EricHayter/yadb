@@ -46,13 +46,8 @@ public:
     Page& operator=(const Page& other) = delete;
     ~Page();
 
-    /* Locking and unlocking operations */
-    void lock();
-    bool try_lock();
-    void unlock();
-    void lock_shared();
-    bool try_lock_shared();
-    void unlock_shared();
+    /* Direct frame access for locking */
+    Frame* GetFrame() const { return frame_m; }
 
     /* Page Metadata Operations */
     page_id_t GetPageId() const { return frame_m->page_id; };
@@ -89,6 +84,9 @@ public:
     /* check to see if tuple has been deleted from the page */
     bool IsSlotDeleted(slot_id_t slot_id) const;
 
+    /* returns the length of a tuple */
+    uint16_t GetSlotSize(slot_id_t slot_id) const;
+
     /* returns the slot of a newly allocated tuple of size in the page. If no
      * space can be found for the tuple then returns std::nullopt. */
     std::optional<slot_id_t> AllocateSlot(uint16_t size);
@@ -97,17 +95,21 @@ public:
      * nodes where slot position matters. Returns the slot_id of the appended
      * slot, or std::nullopt if there is insufficient space. */
     std::optional<slot_id_t> AppendSlot(uint16_t size);
-    /* Shifts slot directory entries to the right starting from start_index.
-     * This moves entries at positions [start_index, slot_count) to
-     * [start_index + count, slot_count + count), creating 'count' empty slots
-     * starting at start_index. Only the slot directory entries are moved, not
-     * the actual tuple data. Returns true if successful, false if there is
-     * insufficient space for the additional slot directory entries. */
-    bool ShiftSlotsRight(slot_id_t start_index, uint16_t count = 1);
+    /* Shifts slot directory entries to the right starting from the position.
+     * If position is end(), appends 'count' new slots at the end.
+     * Otherwise, moves entries at positions [*position, slot_count) to
+     * [*position + count, slot_count + count), creating 'count' empty slots.
+     * Only the slot directory entries are moved, not the actual tuple data.
+     * Returns the slot_id of the first newly created slot, or std::nullopt if
+     * there is insufficient space for the additional slot directory entries. */
+    std::optional<slot_id_t> ShiftSlotsRight(PageIterator position, uint16_t count = 1);
     void WriteSlot(slot_id_t slot_id, std::span<const char> data);
 
-    /* Updates the size of the buffer of a given slot. WARNING: this function
-     * may invalidate the data contained in the buffer originally. */
+    /* Updates the size of the buffer of a given slot. If the slot is marked as
+     * deleted, this function will activate it (mark as not deleted and increment
+     * slot count). WARNING: this function may invalidate the data contained in
+     * the buffer originally. Returns true if successful, false if there is
+     * insufficient space. */
     bool ResizeSlot(slot_id_t slot_id, uint16_t size);
 
     /* logically deleted tuple from page. Note this does not immediately free
@@ -117,6 +119,11 @@ public:
 
     /* Free Space Management */
     offset_t GetFreeSpaceSize() const;
+    /* Checks if a record of the given size can be inserted into the page.
+     * Returns true if there is sufficient space, false otherwise.
+     * If reuse_deleted is true, considers reusing deleted slots; otherwise,
+     * only checks if space exists for a new slot directory entry and data. */
+    bool CanInsert(uint16_t size, bool reuse_deleted = false) const;
     /* Reacquires freed space from deleted tuples. This is a fairly expensive
      * operation use it sparingly. */
     void VacuumPage();
@@ -146,8 +153,6 @@ private:
     /* Slot Directory Accessors */
     /* find the offset to the start of a tuple (inclusive) in the page */
     offset_t GetOffset(slot_id_t slot_id) const;
-    /* returns the length of a tuple */
-    uint16_t GetSlotSize(slot_id_t slot_id) const;
 
     /* Slot Directory Mutators */
     void SetSlotDeleted(slot_id_t slot_id, bool deleted);

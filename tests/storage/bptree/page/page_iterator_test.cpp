@@ -21,7 +21,7 @@ protected:
     {
         page_id = page_buffer_man.AllocatePage();
         page = page_buffer_man.GetPage(page_id);
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         page->InitPage(PageType::Data);
     }
 
@@ -49,7 +49,7 @@ protected:
  */
 TEST_F(PageIteratorTest, TestEmptyPage)
 {
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto it = page->begin();
     auto end = page->end();
@@ -63,11 +63,11 @@ TEST_F(PageIteratorTest, TestEmptyPage)
 TEST_F(PageIteratorTest, TestSingleSlot)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     int count = 0;
     for (slot_id_t slot_id : *page) {
@@ -88,13 +88,13 @@ TEST_F(PageIteratorTest, TestMultipleSlots)
     std::vector<std::string> test_data = { "first", "second", "third", "fourth", "fifth" };
 
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         for (const auto& data : test_data) {
             InsertSlot(data);
         }
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     int count = 0;
     for (slot_id_t slot_id : *page) {
@@ -116,7 +116,7 @@ TEST_F(PageIteratorTest, TestSkipDeletedSlots)
     std::vector<std::string> expected_data = { "slot0", "slot2", "slot4" };
 
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         slots.push_back(InsertSlot("slot0"));
         slots.push_back(InsertSlot("slot1"));
         slots.push_back(InsertSlot("slot2"));
@@ -128,7 +128,7 @@ TEST_F(PageIteratorTest, TestSkipDeletedSlots)
         page->DeleteSlot(slots[3]);
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     std::vector<slot_id_t> expected_slots = { 0, 2, 4 };
     int count = 0;
@@ -148,13 +148,13 @@ TEST_F(PageIteratorTest, TestSkipDeletedSlots)
 TEST_F(PageIteratorTest, TestPreIncrement)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
         InsertSlot("data2");
         InsertSlot("data3");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto it = page->begin();
     slot_id_t slot_id1 = *it;
@@ -181,12 +181,12 @@ TEST_F(PageIteratorTest, TestPreIncrement)
 TEST_F(PageIteratorTest, TestPostIncrement)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
         InsertSlot("data2");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto it = page->begin();
     auto old_it = it++;
@@ -206,13 +206,13 @@ TEST_F(PageIteratorTest, TestPostIncrement)
 TEST_F(PageIteratorTest, TestPreDecrement)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
         InsertSlot("data2");
         InsertSlot("data3");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto it = page->end();
 
@@ -240,12 +240,12 @@ TEST_F(PageIteratorTest, TestPreDecrement)
 TEST_F(PageIteratorTest, TestPostDecrement)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
         InsertSlot("data2");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto it = page->end();
     --it; // Move to last element (slot 1)
@@ -266,13 +266,13 @@ TEST_F(PageIteratorTest, TestPostDecrement)
 TEST_F(PageIteratorTest, TestBidirectionalIteration)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
         InsertSlot("data2");
         InsertSlot("data3");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     // Forward iteration
     auto it = page->begin();
@@ -292,12 +292,12 @@ TEST_F(PageIteratorTest, TestBidirectionalIteration)
 TEST_F(PageIteratorTest, TestEqualityComparison)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
         InsertSlot("data2");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto it1 = page->begin();
     auto it2 = page->begin();
@@ -319,13 +319,13 @@ TEST_F(PageIteratorTest, TestEqualityComparison)
 TEST_F(PageIteratorTest, TestStdFindIf)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("apple");
         InsertSlot("banana");
         InsertSlot("cherry");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto it = std::find_if(page->begin(), page->end(),
         [this](slot_id_t slot_id) {
@@ -344,14 +344,14 @@ TEST_F(PageIteratorTest, TestStdFindIf)
 TEST_F(PageIteratorTest, TestStdCountIf)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("short");
         InsertSlot("verylongstring");
         InsertSlot("tiny");
         InsertSlot("anotherlongone");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     // Count slots with data length > 5
     auto count = std::count_if(page->begin(), page->end(),
@@ -368,14 +368,14 @@ TEST_F(PageIteratorTest, TestStdCountIf)
 TEST_F(PageIteratorTest, TestStdDistance)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data1");
         InsertSlot("data2");
         InsertSlot("data3");
         InsertSlot("data4");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     auto distance = std::distance(page->begin(), page->end());
     EXPECT_EQ(distance, 4);
@@ -387,13 +387,13 @@ TEST_F(PageIteratorTest, TestStdDistance)
 TEST_F(PageIteratorTest, TestStdForEach)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("a");
         InsertSlot("bb");
         InsertSlot("ccc");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     size_t total_size = 0;
     std::for_each(page->begin(), page->end(),
@@ -413,7 +413,7 @@ TEST_F(PageIteratorTest, TestSkipConsecutiveDeletedSlots)
     std::vector<std::string> expected_data = { "data0", "data1", "data7", "data8", "data9" };
 
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         for (int i = 0; i < 10; i++) {
             slots.push_back(InsertSlot("data" + std::to_string(i)));
         }
@@ -424,7 +424,7 @@ TEST_F(PageIteratorTest, TestSkipConsecutiveDeletedSlots)
         }
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     std::vector<slot_id_t> expected_slots = { 0, 1, 7, 8, 9 };
     int count = 0;
@@ -446,7 +446,7 @@ TEST_F(PageIteratorTest, TestDecrementPastDeletedSlots)
     std::vector<slot_id_t> slots;
 
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         slots.push_back(InsertSlot("slot0"));
         slots.push_back(InsertSlot("slot1"));
         slots.push_back(InsertSlot("slot2"));
@@ -457,7 +457,7 @@ TEST_F(PageIteratorTest, TestDecrementPastDeletedSlots)
         page->DeleteSlot(slots[2]);
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     // Start at end and decrement
     auto it = page->end();
@@ -493,7 +493,7 @@ TEST_F(PageIteratorTest, TestAllSlotsDeleted)
     std::vector<slot_id_t> slots;
 
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         slots.push_back(InsertSlot("slot0"));
         slots.push_back(InsertSlot("slot1"));
         slots.push_back(InsertSlot("slot2"));
@@ -504,7 +504,7 @@ TEST_F(PageIteratorTest, TestAllSlotsDeleted)
         }
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     // Iteration should be empty
     int count = 0;
@@ -523,13 +523,13 @@ TEST_F(PageIteratorTest, TestAllSlotsDeleted)
 TEST_F(PageIteratorTest, TestStdAnyOf)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("apple");
         InsertSlot("banana");
         InsertSlot("cherry");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     // Check if any slot contains "banana"
     bool has_banana = std::any_of(page->begin(), page->end(),
@@ -554,13 +554,13 @@ TEST_F(PageIteratorTest, TestStdAnyOf)
 TEST_F(PageIteratorTest, TestStdAllOf)
 {
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         InsertSlot("data");
         InsertSlot("info");
         InsertSlot("test");
     }
 
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     // Check if all slots have size <= 4
     bool all_small = std::all_of(page->begin(), page->end(),

@@ -19,14 +19,14 @@ protected:
     {
         page_id = page_buffer_man.AllocatePage();
         page = page_buffer_man.GetPage(page_id);
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         page->InitPage(PageType::Data);
     }
 };
 
 TEST_F(PageBufferManagerTest, TestPageInit)
 {
-    std::shared_lock<Page> sl(*page);
+    std::shared_lock<Frame> sl(*page->GetFrame());
 
     ASSERT_EQ(page->GetPageId(), page_id);
     ASSERT_EQ(page->GetNumSlots(), 0);
@@ -35,7 +35,7 @@ TEST_F(PageBufferManagerTest, TestPageInit)
 
 TEST_F(PageBufferManagerTest, TestAllocateSlot)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     EXPECT_EQ(page->GetPageId(), page_id);
     EXPECT_EQ(page->GetNumSlots(), 0);
@@ -56,7 +56,7 @@ TEST_F(PageBufferManagerTest, TestPageReadWrite)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         std::span<char> write_span(data);
 
         ASSERT_EQ(page->GetNumSlots(), 0);
@@ -73,7 +73,7 @@ TEST_F(PageBufferManagerTest, TestPageReadWrite)
 
     /* read data */
     {
-        std::shared_lock<Page> sl(*page);
+        std::shared_lock<Frame> sl(*page->GetFrame());
         ASSERT_EQ(page->GetNumSlots(), 1);
 
         std::span<const char> read_span = page->ReadSlot(slot_id);
@@ -90,7 +90,7 @@ TEST_F(PageBufferManagerTest, TestDeleteSlot)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         ASSERT_EQ(page->GetNumSlots(), 0);
 
         std::span<char> write_span(data);
@@ -105,7 +105,7 @@ TEST_F(PageBufferManagerTest, TestDeleteSlot)
 
     /* delete the slot */
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         page->DeleteSlot(slot_id);
         ASSERT_EQ(page->GetNumSlots(), 0);
     }
@@ -119,7 +119,7 @@ TEST_F(PageBufferManagerTest, TestReadDeletedSlot)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         ASSERT_EQ(page->GetNumSlots(), 0);
 
         auto slot = page->AllocateSlot(slot_size);
@@ -133,14 +133,14 @@ TEST_F(PageBufferManagerTest, TestReadDeletedSlot)
 
     /* delete the slot */
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         page->DeleteSlot(slot_id);
         ASSERT_EQ(page->GetNumSlots(), 0);
     }
 
     /* attempt to read deleted slot */
     {
-        std::shared_lock<Page> sl(*page);
+        std::shared_lock<Frame> sl(*page->GetFrame());
         ASSERT_DEATH(page->ReadSlot(slot_id), "");
     }
 }
@@ -154,7 +154,7 @@ TEST_F(PageBufferManagerTest, TestWriteDeletedSlot)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         ASSERT_EQ(page->GetNumSlots(), 0);
 
         auto slot = page->AllocateSlot(sizeof(data));
@@ -168,14 +168,14 @@ TEST_F(PageBufferManagerTest, TestWriteDeletedSlot)
 
     /* delete the slot */
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         page->DeleteSlot(slot_id);
         ASSERT_EQ(page->GetNumSlots(), 0);
     }
 
     /* attempt to write to deleted slot */
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         ASSERT_DEATH(page->WriteSlot(slot_id, { &data, sizeof(data) }), "");
     }
 }
@@ -188,7 +188,7 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
     constexpr int data_size = 4;
     std::vector<slot_id_t> slots;
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         for (int i = 0; i < num_slots; i++) {
             ASSERT_EQ(page->GetNumSlots(), i);
 
@@ -200,13 +200,13 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
 
     offset_t free_space_size;
     {
-        std::shared_lock<Page> sl(*page);
+        std::shared_lock<Frame> sl(*page->GetFrame());
         free_space_size = page->GetFreeSpaceSize();
     }
 
     /* delete the slots from the page */
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         for (slot_id_t slot_id : slots) {
             page->DeleteSlot(slot_id);
         }
@@ -217,14 +217,14 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
      * 10 slots of size 10. Note we NEVER reclaim slots. */
     constexpr int reclaimed_space = num_slots * data_size;
     {
-        std::shared_lock<Page> sl(*page);
+        std::shared_lock<Frame> sl(*page->GetFrame());
         ASSERT_EQ(page->GetFreeSpaceSize() - num_slots * data_size, free_space_size);
     }
 }
 
 TEST_F(PageBufferManagerTest, TestVacuumPageNoReusableSpace)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     /* allocate slots in page */
     std::vector<slot_id_t> slots;
@@ -252,7 +252,7 @@ TEST_F(PageBufferManagerTest, TestVacuumPageMiddleInnerSlot)
      * re-acquired. Specifically a slot not at the end or beginning in the
      * slot directory such that edge cases are roughly checked.
      */
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     /* allocate slots in page */
     constexpr int num_slots = 10;
@@ -289,7 +289,7 @@ TEST_F(PageBufferManagerTest, TestVacuumPageMiddleInnerSlotIntegrity)
      * the deleted slot will be shifted over to re-acquire the deleted slot's
      * space. This test insures that the data stays intact after being
      * shifted by the vacuum operation. */
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     /* allocate slots in page */
     constexpr int num_slots = 3;
@@ -343,7 +343,7 @@ TEST_F(PageBufferManagerTest, MultipleConccurentReaders)
 
     // write some data to the page
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         slot_id = *page->AllocateSlot(sizeof(data));
         page->WriteSlot(slot_id, { &data, 1 });
     }
@@ -359,7 +359,7 @@ TEST_F(PageBufferManagerTest, MultipleConccurentReaders)
         threads.push_back(std::thread([&]() {
             std::this_thread::sleep_for(ms(3));
             Page page = page_buffer_man.GetPage(page_id);
-            std::shared_lock<Page> sl(page);
+            std::shared_lock<Frame> sl(*page.GetFrame());
             EXPECT_EQ(*page.ReadSlot(slot_id).begin(), data);
         }));
     }
@@ -384,7 +384,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
     // write some data to the page
     {
         char starting_data = 'z';
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         slot_id = *page->AllocateSlot(sizeof(starting_data));
         page->WriteSlot(slot_id, { &starting_data, 1 });
     }
@@ -396,7 +396,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
     std::thread writer_thread([&]() {
         // acquire exclusive access to page
         Page page = page_buffer_man.GetPage(page_id);
-        std::lock_guard<Page> lg(page);
+        std::lock_guard<Frame> lg(*page.GetFrame());
 
         // wait for main thread to try and acquire read page
         std::this_thread::sleep_for(ms(3));
@@ -409,7 +409,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
     std::this_thread::sleep_for(ms(2));
 
     Page page_read = page_buffer_man.GetPage(page_id);
-    std::shared_lock<Page> sl(page_read);
+    std::shared_lock<Frame> sl(*page_read.GetFrame());
     EXPECT_EQ(*page_read.ReadSlot(slot_id).begin(), data);
 
     if (writer_thread.joinable())
@@ -423,7 +423,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
 // Test shrinking a slot (new_size < old_size)
 TEST_F(PageBufferManagerTest, ResizeSlotShrink)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     // Allocate a slot with initial data
     constexpr int initial_size = 64;
@@ -460,7 +460,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotShrink)
 // Test growing a slot (new_size > old_size) with sufficient space
 TEST_F(PageBufferManagerTest, ResizeSlotGrowWithSufficientSpace)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     // Allocate a small slot
     constexpr int initial_size = 32;
@@ -494,7 +494,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotGrowWithSufficientSpace)
 // Test growing a slot when there's insufficient space
 TEST_F(PageBufferManagerTest, ResizeSlotGrowInsufficientSpace)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     // Fill the page almost completely
     offset_t available_space = page->GetFreeSpaceSize();
@@ -526,7 +526,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotGrowInsufficientSpace)
 // Test resizing to the same size (should succeed trivially)
 TEST_F(PageBufferManagerTest, ResizeSlotSameSize)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     constexpr int size = 64;
     std::vector<char> data(size);
@@ -557,7 +557,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotSameSize)
 // Test shrinking to zero size
 TEST_F(PageBufferManagerTest, ResizeSlotShrinkToZero)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     constexpr int initial_size = 64;
     auto slot = page->AllocateSlot(initial_size);
@@ -576,7 +576,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotShrinkToZero)
 // Test growing from zero size
 TEST_F(PageBufferManagerTest, ResizeSlotGrowFromZero)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     // Allocate a zero-size slot
     auto slot = page->AllocateSlot(0);
@@ -596,7 +596,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotGrowFromZero)
 // Test multiple resizes on the same slot
 TEST_F(PageBufferManagerTest, ResizeSlotMultipleTimes)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     constexpr int initial_size = 64;
     std::vector<char> data(initial_size);
@@ -632,7 +632,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotMultipleTimes)
 // Test resizing with multiple slots on the page
 TEST_F(PageBufferManagerTest, ResizeSlotWithMultipleSlots)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     // Create three slots
     constexpr int slot_size = 64;
@@ -676,7 +676,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotDeleted)
     slot_id_t slot_id;
 
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         auto slot = page->AllocateSlot(size);
         ASSERT_TRUE(slot.has_value());
         slot_id = *slot;
@@ -685,7 +685,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotDeleted)
 
     // Attempt to resize deleted slot
     {
-        std::lock_guard<Page> lg(*page);
+        std::lock_guard<Frame> lg(*page->GetFrame());
         ASSERT_DEATH(page->ResizeSlot(slot_id, 32), "");
     }
 }
@@ -694,7 +694,7 @@ TEST_F(PageBufferManagerTest, ResizeSlotDeleted)
 // Test edge case: grow slot to exact remaining free space
 TEST_F(PageBufferManagerTest, ResizeSlotGrowToExactFreeSpace)
 {
-    std::lock_guard<Page> lg(*page);
+    std::lock_guard<Frame> lg(*page->GetFrame());
 
     // Allocate a small slot
     constexpr int initial_size = 32;
