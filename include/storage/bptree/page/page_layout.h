@@ -93,6 +93,15 @@ using offset_t = uint16_t;
 struct record_id_t {
     page_id_t page_id;
     slot_id_t slot_id;
+
+    // Equality comparison for testing
+    bool operator==(const record_id_t& other) const {
+        return page_id == other.page_id && slot_id == other.slot_id;
+    }
+
+    bool operator!=(const record_id_t& other) const {
+        return !(*this == other);
+    }
 } __attribute__((packed));
 
 /* Size of ALL pages in the database. Maximum allowable value of 65536 due
