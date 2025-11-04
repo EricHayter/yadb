@@ -44,4 +44,12 @@ struct Frame {
 
     /* A mutable view into the buffer provided by the page buffer manager. */
     MutPageView data;
+
+    /* Locking interface for std::unique_lock and std::shared_lock compatibility */
+    void lock() { mut.lock(); }
+    bool try_lock() { return mut.try_lock(); }
+    void unlock() { mut.unlock(); }
+    void lock_shared() { mut.lock_shared(); }
+    bool try_lock_shared() { return mut.try_lock_shared(); }
+    void unlock_shared() { mut.unlock_shared(); }
 };
