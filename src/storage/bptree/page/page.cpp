@@ -14,28 +14,31 @@
 
 Page::~Page()
 {
-    page_buffer_manager_m->RemoveAccessor(frame_m->page_id);
+    if (page_buffer_manager_m)
+        page_buffer_manager_m->RemoveAccessor(frame_m->page_id);
 }
 
 Page::Page(PageBufferManager* page_buffer_manager, Frame* frame)
     : frame_m { frame }
     , page_buffer_manager_m { page_buffer_manager }
-
 {
-    page_buffer_manager_m->AddAccessor(frame->page_id);
 }
 
 Page::Page(Page&& other)
-    : frame_m { std::move(other.frame_m) }
-    , page_buffer_manager_m { std::move(other.page_buffer_manager_m) }
+    : frame_m { other.frame_m }
+    , page_buffer_manager_m { other.page_buffer_manager_m }
 {
+    other.frame_m = nullptr;
+    other.page_buffer_manager_m = nullptr;
 }
 
 Page& Page::operator=(Page&& other)
 {
     if (&other != this) {
-        frame_m = std::move(other.frame_m);
-        page_buffer_manager_m = std::move(other.page_buffer_manager_m);
+        frame_m = other.frame_m;
+        other.frame_m = nullptr;
+        page_buffer_manager_m = other.page_buffer_manager_m;
+        other.page_buffer_manager_m = nullptr;
     }
     return *this;
 }

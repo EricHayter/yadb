@@ -79,6 +79,9 @@ Page PageBufferManager::GetPage(page_id_t page_id)
     }
 
     Frame* frame = GetFrameForPage(page_id);
+    frame->pin_count.fetch_add(1, std::memory_order_acq_rel);
+    replacer_m.RecordAccess(frame->id);
+    replacer_m.SetEvictable(frame->id, false);
     return Page(this, frame);
 }
 
@@ -139,18 +142,6 @@ PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_i
         return FlushPageStatus::IOError;
     }
     return FlushPageStatus::Success;
-}
-
-void PageBufferManager::AddAccessor(page_id_t page_id)
-{
-    /* Since this function is always called inside of the constructor of pages
-     * and since pages are always created from the scope of WritePage, ReadPage
-     * etc... We do not lock here since this function should always be called
-     * from a locked context. */
-    Frame* frame = GetFrameForPage(page_id);
-    frame->pin_count.fetch_add(1, std::memory_order_acq_rel);
-    replacer_m.RecordAccess(frame->id);
-    replacer_m.SetEvictable(frame->id, false);
 }
 
 void PageBufferManager::RemoveAccessor(page_id_t page_id)

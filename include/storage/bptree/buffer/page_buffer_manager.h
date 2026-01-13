@@ -72,11 +72,6 @@ private:
     FlushPageStatus FlushPage(page_id_t page_id);
 
     /**
-     * Notify the page buffer manager that a page has been accessed
-     */
-    void AddAccessor(page_id_t page_id);
-
-    /**
      * Notify the page buffer manager that an accessor has been dropped
      * from a frame
      */
