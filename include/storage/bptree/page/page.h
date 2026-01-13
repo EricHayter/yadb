@@ -33,15 +33,9 @@ class PageIterator;
 class Page {
 public:
     Page() = default;
-    /* Constructors and Assignment */
-    /* constructor for subclasses of base page */
     Page(PageBufferManager* page_buffer_manager, Frame* frame);
-    /* Allow for transfer of ownership of pages */
     Page(Page&& other);
     Page& operator=(Page&& other);
-    /* due to the calling of the AddAccessor and RemoveAccessor there must only
-     * be a single owner to a given page i.e. no copies as this would result
-     * in duplicate notifications to the page buffer manager. */
     Page(const Page& other) = delete;
     Page& operator=(const Page& other) = delete;
     ~Page();

@@ -1,10 +1,22 @@
+/*-----------------------------------------------------------------------------
+ *
+ * bptree.cpp
+ *      B+ Tree implementation - Core functionality
+ *
+ * This file contains the core B+ tree functionality including constructors
+ * and navigation methods. Search, insert, and delete operations are in
+ * separate files for better organization.
+ *
+ *-----------------------------------------------------------------------------
+ */
+
 #include "tree/bptree.h"
+#include "buffer/page_buffer_manager.h"
 #include "page/page_iterator.h"
 #include "page/page_layout.h"
 
 #include <cassert>
-
-#include <algorithm>
+#include <mutex>
 #include <shared_mutex>
 
 BPTree::BPTree(PageBufferManager* page_buffer_manager)
@@ -14,7 +26,7 @@ BPTree::BPTree(PageBufferManager* page_buffer_manager)
 
     root_page_id_m = page_buffer_manager_m->AllocatePage();
     Page page = page_buffer_manager_m->GetPage(root_page_id_m);
-    std::lock_guard<Page> lg(page);
+    std::lock_guard<Frame> lg(*page.GetFrame());
     page.InitPage(PageType::BPTreeLeaf);
 }
 
@@ -25,75 +37,32 @@ BPTree::BPTree(PageBufferManager* page_buffer_manager, page_id_t root_page_id)
     assert(page_buffer_manager_m);
 }
 
-
-std::optional<record_id_t> BPTree::Search(std::span<const char> key)
+// TODO fix this implementation to use shared lock all the way up to return value
+// also I think it should be called from a context where the lock is already held...
+template<typename LockType>
+LockedPage<LockType> BPTree::NavigateToLeafImpl(std::span<const char> key)
 {
     page_id_t current_page_id = root_page_id_m;
 
     // Start with root page
     Page current_page = page_buffer_manager_m->GetPage(current_page_id);
-    std::shared_lock<Page> current_lock(current_page);
+    LockType current_lock(*current_page.GetFrame());  // Lock the frame, not the page
 
     while (true) {
         PageType page_type = current_page.GetPageType();
 
         if (page_type == PageType::BPTreeLeaf) {
-            // We're at a leaf - search for the key
-            // Leaf format: (key || record_id) pairs, last slot is sibling pointer
-            auto it = std::find_if(
-                current_page.begin(),
-                std::prev(current_page.end()), // Skip sibling pointer
-                [&](const auto& slot_value) {
-                    auto [_, record] = slot_value;
-                    // Extract key portion (everything except record_id at end)
-                    auto current_key = record.subspan(0, record.size() - sizeof(record_id_t));
-                    return std::ranges::equal(current_key, key);
-                }
-            );
-
-            if (it == std::prev(current_page.end())) {
-                return std::nullopt; // Key not found
-            }
-
-            // Extract record_id from the end of the record
-            auto [_, record] = *it;
-            record_id_t record_id;
-            std::memcpy(&record_id,
-                       record.data() + record.size() - sizeof(record_id_t),
-                       sizeof(record_id_t));
-            return record_id;
+            return LockedPage<LockType>(std::move(current_page), std::move(current_lock));
         }
         else if (page_type == PageType::BPTreeInner) {
             // Inner node format: (key || child_page_id) pairs
-            // Find the appropriate child pointer
-
-            page_id_t next_page_id;
-
-            // Find first key > search key, then take that pointer
-            // or take the last pointer if all keys <= search key
-            auto it = std::find_if(
-                current_page.begin(),
-                current_page.end(),
-                [&](const auto& slot_value) {
-                    auto [_, record] = slot_value;
-                    auto current_key = record.subspan(0, record.size() - sizeof(page_id_t));
-                    // Return true if current_key > key (found the boundary)
-                    return std::lexicographical_compare(
-                        key.begin(), key.end(),
-                        current_key.begin(), current_key.end()
-                    );
-                }
-            );
-
-            // Extract child page_id from the record
-            auto [_, record] = (it != current_page.end()) ? *it : *std::prev(current_page.end());
-            std::memcpy(&next_page_id,
-                       record.data() + record.size() - sizeof(page_id_t),
-                       sizeof(page_id_t));
+            // Find the appropriate child pointer using FindPivotKey
+            slot_id_t target_slot = FindPivotKey(current_page, key);
+            page_id_t next_page_id = ReadInnerPageId(current_page, target_slot);
 
             // HAND-OVER-HAND: Get and lock child BEFORE releasing parent
             Page child_page = page_buffer_manager_m->GetPage(next_page_id);
-            std::shared_lock<Page> child_lock(child_page);
+            LockType child_lock(*child_page.GetFrame());  // Lock the frame, not the page
 
             // Now release parent lock
             current_lock.unlock();
@@ -109,13 +78,16 @@ std::optional<record_id_t> BPTree::Search(std::span<const char> key)
     }
 }
 
-void BPTree::Insert(std::span<const char> key, record_id_t record_id)
+SharedLockedPage BPTree::NavigateToLeafShared(std::span<const char> key)
 {
-    if (!InsertOptimistic(key, record_id))
-        InsertPessimistic(key, record_id);
+    return NavigateToLeafImpl<std::shared_lock<Frame>>(key);
 }
 
-bool BPTree::InsertOptimistic(std::span<const char> key, record_id_t record_id)
+ExclusiveLockedPage BPTree::NavigateToLeafExclusive(std::span<const char> key)
 {
-    return false;
+    return NavigateToLeafImpl<std::unique_lock<Frame>>(key);
 }
+
+// Explicit template instantiations
+template LockedPage<std::shared_lock<Frame>> BPTree::NavigateToLeafImpl<std::shared_lock<Frame>>(std::span<const char> key);
+template LockedPage<std::unique_lock<Frame>> BPTree::NavigateToLeafImpl<std::unique_lock<Frame>>(std::span<const char> key);

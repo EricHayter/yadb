@@ -9,6 +9,9 @@
 
 /**
  * \brief Test fixture for BPTree tests
+ *
+ * Note: B+ Tree now stores keys -> record_id_t (not arbitrary values).
+ * Tests use record_id_t values instead of string values.
  */
 class BPTreeTest : public ::testing::Test {
 protected:
@@ -20,15 +23,6 @@ protected:
     {
         return std::span<const char>(str.data(), str.size());
     }
-
-    // Helper function to compare spans with strings
-    bool span_equals(std::span<const char> span, const std::string& str)
-    {
-        if (span.size() != str.size()) {
-            return false;
-        }
-        return std::equal(span.begin(), span.end(), str.begin());
-    }
 };
 
 /**
@@ -39,13 +33,13 @@ TEST_F(BPTreeTest, TestCreateAndInsertSingle)
     BPTree tree(&page_buffer_man);
 
     std::string key = "key1";
-    std::string value = "value1";
+    record_id_t record_id = { 42, 7 };
 
-    tree.Insert(to_span(key), to_span(value));
+    tree.Insert(to_span(key), record_id);
 
     auto result = tree.Search(to_span(key));
     ASSERT_TRUE(result.has_value());
-    EXPECT_TRUE(span_equals(*result, value));
+    EXPECT_EQ(*result, record_id);
 }
 
 /**
@@ -70,19 +64,18 @@ TEST_F(BPTreeTest, TestMultipleInsertions)
     const int num_entries = 10;
     for (int i = 0; i < num_entries; i++) {
         std::string key = "key" + std::to_string(i);
-        std::string value = "value" + std::to_string(i);
-        tree.Insert(to_span(key), to_span(value));
+        record_id_t record_id = {100 + static_cast<uint32_t>(i), 0};
+        tree.Insert(to_span(key), record_id);
     }
 
     // Verify all entries can be found
     for (int i = 0; i < num_entries; i++) {
         std::string key = "key" + std::to_string(i);
-        std::string expected_value = "value" + std::to_string(i);
+        record_id_t expected_record_id = {100 + static_cast<uint32_t>(i), 0};
 
         auto result = tree.Search(to_span(key));
         ASSERT_TRUE(result.has_value()) << "Key not found: " << key;
-        EXPECT_TRUE(span_equals(*result, expected_value))
-            << "Value mismatch for key: " << key;
+        EXPECT_EQ(*result, expected_record_id) << "Value mismatch for key: " << key;
     }
 }
 
@@ -97,29 +90,25 @@ TEST_F(BPTreeTest, TestSequentialInsertions)
     for (int i = 0; i < num_entries; i++) {
         // Use zero-padded keys to ensure lexicographic order matches numeric order
         char key_buf[32];
-        char value_buf[32];
         std::snprintf(key_buf, sizeof(key_buf), "key%05d", i);
-        std::snprintf(value_buf, sizeof(value_buf), "value%05d", i);
 
         std::string key(key_buf);
-        std::string value(value_buf);
+        record_id_t record_id = {1000 + static_cast<uint32_t>(i), 0};
 
-        tree.Insert(to_span(key), to_span(value));
+        tree.Insert(to_span(key), record_id);
     }
 
     // Verify all entries
     for (int i = 0; i < num_entries; i++) {
         char key_buf[32];
-        char value_buf[32];
         std::snprintf(key_buf, sizeof(key_buf), "key%05d", i);
-        std::snprintf(value_buf, sizeof(value_buf), "value%05d", i);
 
         std::string key(key_buf);
-        std::string expected_value(value_buf);
+        record_id_t expected_record_id = {1000 + static_cast<uint32_t>(i), 0};
 
         auto result = tree.Search(to_span(key));
         ASSERT_TRUE(result.has_value()) << "Key not found: " << key;
-        EXPECT_TRUE(span_equals(*result, expected_value));
+        EXPECT_EQ(*result, expected_record_id);
     }
 }
 
@@ -142,29 +131,25 @@ TEST_F(BPTreeTest, TestRandomInsertions)
     // Insert in random order
     for (int idx : indices) {
         char key_buf[32];
-        char value_buf[32];
         std::snprintf(key_buf, sizeof(key_buf), "key%05d", idx);
-        std::snprintf(value_buf, sizeof(value_buf), "value%05d", idx);
 
         std::string key(key_buf);
-        std::string value(value_buf);
+        record_id_t record_id = {2000 + static_cast<uint32_t>(idx), 0};
 
-        tree.Insert(to_span(key), to_span(value));
+        tree.Insert(to_span(key), record_id);
     }
 
     // Verify all entries can be found
     for (int i = 0; i < num_entries; i++) {
         char key_buf[32];
-        char value_buf[32];
         std::snprintf(key_buf, sizeof(key_buf), "key%05d", i);
-        std::snprintf(value_buf, sizeof(value_buf), "value%05d", i);
 
         std::string key(key_buf);
-        std::string expected_value(value_buf);
+        record_id_t expected_record_id = {2000 + static_cast<uint32_t>(i), 0};
 
         auto result = tree.Search(to_span(key));
         ASSERT_TRUE(result.has_value()) << "Key not found: " << key;
-        EXPECT_TRUE(span_equals(*result, expected_value));
+        EXPECT_EQ(*result, expected_record_id);
     }
 }
 
@@ -176,22 +161,22 @@ TEST_F(BPTreeTest, TestUpdateValue)
     BPTree tree(&page_buffer_man);
 
     std::string key = "mykey";
-    std::string value1 = "value1";
-    std::string value2 = "value2_updated";
+    record_id_t record_id1 = {500, 0};
+    record_id_t record_id2 = {999, 0};
 
     // Insert initial value
-    tree.Insert(to_span(key), to_span(value1));
+    tree.Insert(to_span(key), record_id1);
 
     auto result1 = tree.Search(to_span(key));
     ASSERT_TRUE(result1.has_value());
-    EXPECT_TRUE(span_equals(*result1, value1));
+    EXPECT_EQ(*result1, record_id1);
 
     // Update with new value
-    tree.Insert(to_span(key), to_span(value2));
+    tree.Insert(to_span(key), record_id2);
 
     auto result2 = tree.Search(to_span(key));
     ASSERT_TRUE(result2.has_value());
-    EXPECT_TRUE(span_equals(*result2, value2));
+    EXPECT_EQ(*result2, record_id2);
 }
 
 /**
@@ -202,9 +187,9 @@ TEST_F(BPTreeTest, TestDeleteSingle)
     BPTree tree(&page_buffer_man);
 
     std::string key = "key1";
-    std::string value = "value1";
+    record_id_t record_id = {42, 0};
 
-    tree.Insert(to_span(key), to_span(value));
+    tree.Insert(to_span(key), record_id);
 
     // Verify it exists
     auto result1 = tree.Search(to_span(key));
@@ -213,7 +198,7 @@ TEST_F(BPTreeTest, TestDeleteSingle)
     // Delete it
     tree.Delete(to_span(key));
 
-    // Verify it's gone
+    // Verify it's gone (will fail until Delete is implemented)
     auto result2 = tree.Search(to_span(key));
     EXPECT_FALSE(result2.has_value());
 }
@@ -243,8 +228,8 @@ TEST_F(BPTreeTest, TestMultipleDeletions)
     // Insert entries
     for (int i = 0; i < num_entries; i++) {
         std::string key = "key" + std::to_string(i);
-        std::string value = "value" + std::to_string(i);
-        tree.Insert(to_span(key), to_span(value));
+        record_id_t record_id = {3000 + static_cast<uint32_t>(i), 0};
+        tree.Insert(to_span(key), record_id);
     }
 
     // Delete every other entry
@@ -253,7 +238,7 @@ TEST_F(BPTreeTest, TestMultipleDeletions)
         tree.Delete(to_span(key));
     }
 
-    // Verify deleted entries are gone
+    // Verify deleted entries are gone (will fail until Delete is implemented)
     for (int i = 0; i < num_entries; i += 2) {
         std::string key = "key" + std::to_string(i);
         auto result = tree.Search(to_span(key));
@@ -263,11 +248,11 @@ TEST_F(BPTreeTest, TestMultipleDeletions)
     // Verify remaining entries still exist
     for (int i = 1; i < num_entries; i += 2) {
         std::string key = "key" + std::to_string(i);
-        std::string expected_value = "value" + std::to_string(i);
+        record_id_t expected_record_id = {3000 + static_cast<uint32_t>(i), 0};
 
         auto result = tree.Search(to_span(key));
         ASSERT_TRUE(result.has_value()) << "Key should still exist: " << key;
-        EXPECT_TRUE(span_equals(*result, expected_value));
+        EXPECT_EQ(*result, expected_record_id);
     }
 }
 
@@ -288,8 +273,8 @@ TEST_F(BPTreeTest, DISABLED_TestReopenExistingTree)
 
         for (int i = 0; i < 10; i++) {
             std::string key = "key" + std::to_string(i);
-            std::string value = "value" + std::to_string(i);
-            tree.Insert(to_span(key), to_span(value));
+            record_id_t record_id = {4000 + static_cast<uint32_t>(i), 0};
+            tree.Insert(to_span(key), record_id);
         }
     }
 
@@ -300,30 +285,30 @@ TEST_F(BPTreeTest, DISABLED_TestReopenExistingTree)
         // Verify all entries still exist
         for (int i = 0; i < 10; i++) {
             std::string key = "key" + std::to_string(i);
-            std::string expected_value = "value" + std::to_string(i);
+            record_id_t expected_record_id = {4000 + static_cast<uint32_t>(i), 0};
 
             auto result = tree.Search(to_span(key));
             ASSERT_TRUE(result.has_value()) << "Key not found after reopening: " << key;
-            EXPECT_TRUE(span_equals(*result, expected_value));
+            EXPECT_EQ(*result, expected_record_id);
         }
     }
 }
 
 /**
- * \brief Test with large values
+ * \brief Test with long keys
  */
-TEST_F(BPTreeTest, TestLargeValues)
+TEST_F(BPTreeTest, TestLongKeys)
 {
     BPTree tree(&page_buffer_man);
 
-    std::string key = "large_value_key";
-    std::string large_value(1000, 'X'); // 1000 character value
+    std::string long_key(200, 'X'); // 200 character key
+    record_id_t record_id = {5000, 0};
 
-    tree.Insert(to_span(key), to_span(large_value));
+    tree.Insert(to_span(long_key), record_id);
 
-    auto result = tree.Search(to_span(key));
+    auto result = tree.Search(to_span(long_key));
     ASSERT_TRUE(result.has_value());
-    EXPECT_TRUE(span_equals(*result, large_value));
+    EXPECT_EQ(*result, record_id);
 }
 
 /**
@@ -334,30 +319,13 @@ TEST_F(BPTreeTest, TestEmptyKey)
     BPTree tree(&page_buffer_man);
 
     std::string empty_key = "";
-    std::string value = "value_for_empty_key";
+    record_id_t record_id = {6000, 0};
 
-    tree.Insert(to_span(empty_key), to_span(value));
+    tree.Insert(to_span(empty_key), record_id);
 
     auto result = tree.Search(to_span(empty_key));
     ASSERT_TRUE(result.has_value());
-    EXPECT_TRUE(span_equals(*result, value));
-}
-
-/**
- * \brief Test with empty value
- */
-TEST_F(BPTreeTest, TestEmptyValue)
-{
-    BPTree tree(&page_buffer_man);
-
-    std::string key = "key_with_empty_value";
-    std::string empty_value = "";
-
-    tree.Insert(to_span(key), to_span(empty_value));
-
-    auto result = tree.Search(to_span(key));
-    ASSERT_TRUE(result.has_value());
-    EXPECT_TRUE(span_equals(*result, empty_value));
+    EXPECT_EQ(*result, record_id);
 }
 
 /**
@@ -370,29 +338,25 @@ TEST_F(BPTreeTest, TestStressInsertions)
     const int num_entries = 1000;
     for (int i = 0; i < num_entries; i++) {
         char key_buf[32];
-        char value_buf[64];
         std::snprintf(key_buf, sizeof(key_buf), "stress_key_%06d", i);
-        std::snprintf(value_buf, sizeof(value_buf), "stress_value_%06d_data", i);
 
         std::string key(key_buf);
-        std::string value(value_buf);
+        record_id_t record_id = {10000 + static_cast<uint32_t>(i), 0};
 
-        tree.Insert(to_span(key), to_span(value));
+        tree.Insert(to_span(key), record_id);
     }
 
     // Sample verify (check every 10th entry to keep test fast)
     for (int i = 0; i < num_entries; i += 10) {
         char key_buf[32];
-        char value_buf[64];
         std::snprintf(key_buf, sizeof(key_buf), "stress_key_%06d", i);
-        std::snprintf(value_buf, sizeof(value_buf), "stress_value_%06d_data", i);
 
         std::string key(key_buf);
-        std::string expected_value(value_buf);
+        record_id_t expected_record_id = {10000 + static_cast<uint32_t>(i), 0};
 
         auto result = tree.Search(to_span(key));
         ASSERT_TRUE(result.has_value()) << "Key not found: " << key;
-        EXPECT_TRUE(span_equals(*result, expected_value));
+        EXPECT_EQ(*result, expected_record_id);
     }
 }
 
@@ -407,8 +371,8 @@ TEST_F(BPTreeTest, TestInsertDeleteInterleaved)
         // Insert 20 entries
         for (int i = 0; i < 20; i++) {
             std::string key = "key_" + std::to_string(round) + "_" + std::to_string(i);
-            std::string value = "value_" + std::to_string(round) + "_" + std::to_string(i);
-            tree.Insert(to_span(key), to_span(value));
+            record_id_t record_id = {20000 + static_cast<uint32_t>(round * 100 + i), 0};
+            tree.Insert(to_span(key), record_id);
         }
 
         // Delete 10 entries
@@ -420,11 +384,11 @@ TEST_F(BPTreeTest, TestInsertDeleteInterleaved)
         // Verify remaining 10 entries exist
         for (int i = 10; i < 20; i++) {
             std::string key = "key_" + std::to_string(round) + "_" + std::to_string(i);
-            std::string expected_value = "value_" + std::to_string(round) + "_" + std::to_string(i);
+            record_id_t expected_record_id = {20000 + static_cast<uint32_t>(round * 100 + i), 0};
 
             auto result = tree.Search(to_span(key));
             ASSERT_TRUE(result.has_value()) << "Key not found: " << key;
-            EXPECT_TRUE(span_equals(*result, expected_value));
+            EXPECT_EQ(*result, expected_record_id);
         }
     }
 }
