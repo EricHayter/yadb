@@ -1,2 +1,3 @@
 add_subdirectory(googletest EXCLUDE_FROM_ALL)
 add_subdirectory(spdlog)
+add_subdirectory(replxx)
