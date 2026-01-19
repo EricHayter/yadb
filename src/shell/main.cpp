@@ -1,10 +1,19 @@
 #include <iostream>
 #include <string>
+#include <istream>
+#include <sstream>
 
 #include "replxx.hxx"
 
+#include "Parser.h"
+
 using Replxx = replxx::Replxx;
 using namespace replxx::color;
+
+
+extern "C" {
+      int parse_sql_string(const char* input);
+}
 
 int main(int argc, char **argv) {
     std::string prompt = "\x1b[1;32myadb\x1b[0m> ";
@@ -36,6 +45,13 @@ int main(int argc, char **argv) {
 		if (input == "quit" || input == "exit") {
 			rx.history_add(input);
 			break;
+        }
+
+        rx.history_add(input);
+
+        int result = parse_sql_string(input.c_str());
+        if (result != 0) {
+            std::cerr << "Parse failed\n";
         }
     }
 }
