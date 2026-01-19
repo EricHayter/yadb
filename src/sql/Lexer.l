@@ -1,58 +1,63 @@
 %{
-#include <string.h>
-#include <stdlib.h>
+#include <string>
+#include <cstdlib>
 #include "Parser.h"
+
+// yylval will be passed as a parameter
+#define YY_DECL int yylex(yy::parser::semantic_type* yylval)
 %}
 
 %option noyywrap
 %option case-insensitive
+%option noinput
+%option nounput
 
 %%
 
 [ \t\n]+                { /* skip whitespace */ }
 
-"SELECT"                { return SELECT; }
-"FROM"                  { return FROM; }
-"WHERE"                 { return WHERE; }
-"INSERT"                { return INSERT; }
-"INTO"                  { return INTO; }
-"VALUES"                { return VALUES; }
-"CREATE"                { return CREATE; }
-"TABLE"                 { return TABLE; }
-"DROP"                  { return DROP; }
-"DELETE"                { return DELETE; }
-"UPDATE"                { return UPDATE; }
-"SET"                   { return SET; }
-"AND"                   { return AND; }
-"OR"                    { return OR; }
-"INTEGER"               { return INTEGER; }
-"TEXT"                  { return TEXT; }
+"SELECT"                { return yy::parser::token::SELECT; }
+"FROM"                  { return yy::parser::token::FROM; }
+"WHERE"                 { return yy::parser::token::WHERE; }
+"INSERT"                { return yy::parser::token::INSERT; }
+"INTO"                  { return yy::parser::token::INTO; }
+"VALUES"                { return yy::parser::token::VALUES; }
+"CREATE"                { return yy::parser::token::CREATE; }
+"TABLE"                 { return yy::parser::token::TABLE; }
+"DROP"                  { return yy::parser::token::DROP; }
+"DELETE"                { return yy::parser::token::DELETE; }
+"UPDATE"                { return yy::parser::token::UPDATE; }
+"SET"                   { return yy::parser::token::SET; }
+"AND"                   { return yy::parser::token::AND; }
+"OR"                    { return yy::parser::token::OR; }
+"INTEGER"               { return yy::parser::token::INTEGER; }
+"TEXT"                  { return yy::parser::token::TEXT; }
 
-"*"                     { return STAR; }
-"("                     { return LPAREN; }
-")"                     { return RPAREN; }
-","                     { return COMMA; }
-";"                     { return SEMICOLON; }
-"="                     { return EQ; }
-"!="                    { return NEQ; }
-"<"                     { return LT; }
-">"                     { return GT; }
-"<="                    { return LE; }
-">="                    { return GE; }
+"*"                     { return yy::parser::token::STAR; }
+"("                     { return yy::parser::token::LPAREN; }
+")"                     { return yy::parser::token::RPAREN; }
+","                     { return yy::parser::token::COMMA; }
+";"                     { return yy::parser::token::SEMICOLON; }
+"="                     { return yy::parser::token::EQ; }
+"!="                    { return yy::parser::token::NEQ; }
+"<"                     { return yy::parser::token::LT; }
+">"                     { return yy::parser::token::GT; }
+"<="                    { return yy::parser::token::LE; }
+">="                    { return yy::parser::token::GE; }
 
 [a-zA-Z_][a-zA-Z0-9_]*  {
-    yylval.sval = strdup(yytext);
-    return IDENTIFIER;
+    yylval->build<std::string>(yytext);
+    return yy::parser::token::IDENTIFIER;
 }
 [0-9]+                  {
-    yylval.ival = atoi(yytext);
-    return NUMBER;
+    yylval->build<int>(std::atoi(yytext));
+    return yy::parser::token::NUMBER;
 }
 '[^']*'                 {
-    yylval.sval = strdup(yytext);
-    return STRING;
+    yylval->build<std::string>(yytext);
+    return yy::parser::token::STRING;
 }
 
-.                       { fprintf(stderr, "Unexpected character: %s\n", yytext); }
+.                       { std::cerr << "Unexpected character: " << yytext << std::endl; }
 
 %%

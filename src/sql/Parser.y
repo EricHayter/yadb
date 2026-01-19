@@ -1,29 +1,31 @@
-%{
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+%require "3.2"
+%language "c++"
+%define api.value.type variant
 
-int yylex(void);
-void yyerror(const char *s);
-%}
+%code requires {
+    #include <string>
+}
 
-%union {
-    int ival;
-    char *sval;
+%code {
+    #include <iostream>
+    #include <memory>
+
+    int yylex(yy::parser::semantic_type* yylval);
+    void yyerror(const char *s);
 }
 
 %token SELECT FROM WHERE INSERT INTO VALUES CREATE TABLE DROP DELETE UPDATE SET
 %token AND OR INTEGER TEXT
 %token STAR LPAREN RPAREN COMMA SEMICOLON
 %token EQ NEQ LT GT LE GE
-%token <sval> IDENTIFIER STRING
-%token <ival> NUMBER
+%token <std::string> IDENTIFIER STRING
+%token <int> NUMBER
 
 %left OR
 %left AND
 %nonassoc EQ NEQ LT GT LE GE
 
-%type <sval> column_name table_name
+%type <std::string> column_name table_name
 
 %%
 
@@ -33,12 +35,12 @@ sql_stmt_list:
     ;
 
 sql_stmt:
-    select_stmt SEMICOLON       { printf("Parsed SELECT statement\n"); }
-    | insert_stmt SEMICOLON     { printf("Parsed INSERT statement\n"); }
-    | create_stmt SEMICOLON     { printf("Parsed CREATE TABLE statement\n"); }
-    | drop_stmt SEMICOLON       { printf("Parsed DROP TABLE statement\n"); }
-    | delete_stmt SEMICOLON     { printf("Parsed DELETE statement\n"); }
-    | update_stmt SEMICOLON     { printf("Parsed UPDATE statement\n"); }
+    select_stmt SEMICOLON       { std::cout << "Parsed SELECT statement\n"; }
+    | insert_stmt SEMICOLON     { std::cout << "Parsed INSERT statement\n"; }
+    | create_stmt SEMICOLON     { std::cout << "Parsed CREATE TABLE statement\n"; }
+    | drop_stmt SEMICOLON       { std::cout << "Parsed DROP TABLE statement\n"; }
+    | delete_stmt SEMICOLON     { std::cout << "Parsed DELETE statement\n"; }
+    | update_stmt SEMICOLON     { std::cout << "Parsed UPDATE statement\n"; }
     ;
 
 select_stmt:
@@ -122,22 +124,20 @@ value:
 
 column_name:
     IDENTIFIER      { $$ = $1; }
-    | TABLE         { $$ = strdup("TABLE"); }
-    | TEXT          { $$ = strdup("TEXT"); }
-    | INTEGER       { $$ = strdup("INTEGER"); }
     ;
 
 table_name:
     IDENTIFIER      { $$ = $1; }
-    | TABLE         { $$ = strdup("TABLE"); }
-    | TEXT          { $$ = strdup("TEXT"); }
-    | INTEGER       { $$ = strdup("INTEGER"); }
     ;
 
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "Parse error: %s\n", s);
+    std::cerr << "Parse error: " << s << std::endl;
+}
+
+void yy::parser::error(const std::string& msg) {
+    std::cerr << "Parse error: " << msg << std::endl;
 }
 
 // Forward declarations from flex
@@ -145,9 +145,10 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 extern YY_BUFFER_STATE yy_scan_string(const char *str);
 extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 
-int parse_sql_string(const char *str) {
+extern "C" int parse_sql_string(const char *str) {
     YY_BUFFER_STATE buffer = yy_scan_string(str);
-    int result = yyparse();
+    yy::parser parser;
+    int result = parser.parse();
     yy_delete_buffer(buffer);
     return result;
 }
