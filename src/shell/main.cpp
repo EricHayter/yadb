@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
-#include <istream>
-#include <sstream>
+#include <string_view>
+#include <format>
 
 #include "replxx.hxx"
 
@@ -10,10 +10,7 @@
 using Replxx = replxx::Replxx;
 using namespace replxx::color;
 
-
-extern "C" {
-      int parse_sql_string(const char* input);
-}
+std::optional<std::vector<SqlStmt>> parse_sql_string(std::string_view input);
 
 int main(int argc, char **argv) {
     std::string prompt = "\x1b[1;32myadb\x1b[0m> ";
@@ -49,9 +46,12 @@ int main(int argc, char **argv) {
 
         rx.history_add(input);
 
-        int result = parse_sql_string(input.c_str());
-        if (result != 0) {
-            std::cerr << "Parse failed\n";
+        auto result = parse_sql_string(input);
+        if (!result) {
+            std::cout << "Unknown command or invalid SQL\n";
+            continue;
         }
+
+        std::cout << std::format("Recieved {} queries\n", result->size());
     }
 }
