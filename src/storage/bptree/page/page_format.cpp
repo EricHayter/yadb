@@ -173,6 +173,27 @@ std::span<char> WriteRecord(const Page& page, slot_id_t slot_id)
     return page.GetMutView().subspan(GetOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
+std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size)
+{
+    if (SlotEntry::SIZE + size > GetFreeSpaceSize(page))
+        return {};
+
+    /* allocating space for the record */
+    offset_t record_offset = GetEndFreeSpace(page) - size;
+    SetEndFreeSpace(page, record_offset);
+
+    /* Creating the slot directory entry */
+    slot_id_t new_slot_id = (GetStartFreeSpace(page) - Header::SIZE) / SlotEntry::SIZE;
+    SetStartFreeSpace(page, GetStartFreeSpace(page) + SlotEntry::SIZE);
+    SetSlotDeleted(page, new_slot_id, false);
+    SetSlotOffset(page, new_slot_id, record_offset);
+    SetSlotSize(page, new_slot_id, size);
+
+    SetNumSlots(page, GetNumSlots(page) + 1);
+
+    return new_slot_id;
+}
+
 void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),

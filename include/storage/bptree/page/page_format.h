@@ -72,6 +72,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -187,13 +188,12 @@ uint16_t GetSlotSize(const Page& page, slot_id_t slot_id);
 
 std::span<const char> ReadRecord(const Page& page, slot_id_t slot);
 std::span<char> WriteRecord(const Page& page, slot_id_t slot_id);
+std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size);
 
 /* Slot Directory Mutators */
 void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted);
 void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset);
 void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size);
-
-// TODO look into functions for allocating slots
 
 /*-----------------------------------------------------------------------------
  _          _                    __                  _   _
