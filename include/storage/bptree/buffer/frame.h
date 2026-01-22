@@ -3,7 +3,7 @@
 #include <atomic>
 
 #include "core/shared_spinlock.h"
-#include "storage/bptree/page/page_layout.h"
+#include "storage/bptree/page/page.h"
 
 using frame_id_t = uint32_t;
 

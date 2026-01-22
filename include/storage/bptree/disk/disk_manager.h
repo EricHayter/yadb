@@ -9,7 +9,7 @@
 #include <unordered_set>
 
 #include "config/config.h"
-#include "storage/bptree/page/page_layout.h"
+#include "storage/bptree/page/page.h"
 
 /*
  * Disk manager class to handle the database file

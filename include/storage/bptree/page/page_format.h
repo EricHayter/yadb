@@ -1,6 +1,6 @@
 /*-----------------------------------------------------------------------------
  *
- * page_layout.h
+ * page_format.h
  *      Slotted page format specification and constants
  *
  * This header defines the low-level layout of pages in the database, including
@@ -48,11 +48,11 @@
  *
  *  Slot Entry:
  *  ------------------------------
- *  | Deleted: uint8_t (1 byte)   |
+ *  | Deleted: uint8_t (1 byte)  |
  *  |----------------------------|
  *  | Offset: uint16_t (2 bytes) |
  *  |----------------------------|
- *  | Size: uint16_t (2 bytes) |
+ *  | Size: uint16_t (2 bytes)   |
  *  ------------------------------
  *
  *  The slot directory will grow "downwards" in the page increasing in offset
@@ -76,7 +76,9 @@
 #include <stdexcept>
 #include <string>
 
-using page_id_t = uint32_t;
+#include "page.h"
+
+namespace page {
 
 /* index of a tuple in the slot directory */
 using slot_id_t = uint16_t;
@@ -84,18 +86,14 @@ using slot_id_t = uint16_t;
 /* offset into page */
 using offset_t = uint16_t;
 
-/* Size of ALL pages in the database. Maximum allowable value of 65536 due
- * to the constraints on definitions of offset and slot_id types */
-constexpr std::size_t PAGE_SIZE = 4096;
 
-using MutPageView = std::span<char, PAGE_SIZE>;
-using PageView = std::span<const char, PAGE_SIZE>;
 
 enum class PageType : uint8_t {
     Data = 0x0,
     BPTreeInner = 0x1,
     BPTreeLeaf = 0x2,
 };
+
 
 /*-----------------------------------------------------------------------------
    _                    _
@@ -118,6 +116,33 @@ namespace Offsets {
 /* size of the page header */
 constexpr offset_t SIZE = Offsets::FREE_END + sizeof(offset_t);
 };
+
+PageType GetPageType(const Page& page);
+uint16_t GetNumSlots(const Page& page);
+uint64_t GetChecksum(const Page& page);
+offset_t GetStartFreeSpace(const Page& page);
+offset_t GetEndFreeSpace(const Page& page);
+offset_t GetFreeSpaceSize(const Page& page);
+
+void SetPageType(const Page& page, PageType page_type);
+void SetNumSlots(const Page&, uint16_t num_slots);
+void SetChecksum(const Page&, uint64_t checksum);
+void SetStartFreeSpace(const Page&, offset_t offset);
+void SetEndFreeSpace(const Page&, offset_t offset);
+
+/* initializes the fields inside of the page header. NOTE: This should only
+* be used when creating a page for the first time i.e. right after calling
+* NewPage with the page buffer manager. */
+void InitPage(const Page& page, PageType page_type);
+
+/* Check if the checksum for a page is valid */
+bool ValidChecksum(const Page& page);
+
+/* Updates the checksum field in the page header. This MUST be called
+* before flushing pages as the checksum will be validated on page
+* load */
+void UpdateChecksum(const Page& page);
+
 
 /*-----------------------------------------------------------------------------
        _       _             _
@@ -152,3 +177,40 @@ public:
 
     page_id_t page_id() const noexcept { return page_id_; }
 };
+
+/* Slot Directory Accessors */
+/* returns the number of slot directory entries (including deleted) */
+uint16_t GetSlotDirectoryCapacity(const Page& page);
+bool IsSlotDeleted(const Page& page, slot_id_t slot_id);
+offset_t GetOffset(const Page& page, slot_id_t slot_id);
+uint16_t GetSlotSize(const Page& page, slot_id_t slot_id);
+
+std::span<const char> ReadRecord(const Page& page, slot_id_t slot);
+std::span<char> WriteRecord(const Page& page, slot_id_t slot_id);
+
+/* Slot Directory Mutators */
+void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted);
+void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset);
+void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size);
+
+// TODO look into functions for allocating slots
+
+/*-----------------------------------------------------------------------------
+ _          _                    __                  _   _
+| |__   ___| |_ __   ___ _ __   / _|_   _ _ __   ___| |_(_) ___  _ __  ___
+| '_ \ / _ \ | '_ \ / _ \ '__| | |_| | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+| | | |  __/ | |_) |  __/ |    |  _| |_| | | | | (__| |_| | (_) | | | \__ \
+|_| |_|\___|_| .__/ \___|_|    |_|  \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
+             |_|
+-----------------------------------------------------------------------------*/
+
+/* Print out contents of page and values for headers. Mainly to be used
+ * for debugging purposes */
+void PrintPage(const Page& page);
+
+
+/* Reacquires freed space from deleted tuples. This is a fairly expensive
+ * operation use it sparingly. */
+void VacuumPage(const Page& page);
+
+}
