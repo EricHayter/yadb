@@ -30,7 +30,13 @@ if (ENABLE_TSAN)
     endif()
 endif()
 
+
+# Disable IWYU on thirdparty (if using)
+set(SAVED_IWYU ${CMAKE_CXX_INCLUDE_WHAT_YOU_USE})
+set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE "")
 add_subdirectory(thirdparty)
+set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${SAVED_IWYU})
+
 add_subdirectory(src)
 add_subdirectory(tests)
 
