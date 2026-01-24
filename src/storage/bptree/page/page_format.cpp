@@ -26,11 +26,11 @@ PageType GetPageType(const Page& page)
     return page_type;
 }
 
-uint16_t GetNumSlots(const Page& page)
+uint16_t GetNumTuples(const Page& page)
 {
-    uint16_t num_slots;
-    memcpy(&num_slots, page.GetView().data() + Header::Offsets::NUM_SLOTS, sizeof(num_slots));
-    return num_slots;
+    uint16_t num_tuples;
+    memcpy(&num_tuples, page.GetView().data() + Header::Offsets::NUM_TUPLES, sizeof(num_tuples));
+    return num_tuples;
 }
 
 uint64_t GetChecksum(const Page& page)
@@ -64,9 +64,9 @@ void SetPageType(const Page& page, PageType page_type)
     memcpy(page.GetMutView().data() + Header::Offsets::PAGE_TYPE, &page_type, sizeof(page_type));
 }
 
-void SetNumSlots(const Page& page, uint16_t num_slots)
+void SetNumTuples(const Page& page, uint16_t num_tuples)
 {
-    memcpy(page.GetMutView().data() + Header::Offsets::NUM_SLOTS, &num_slots, sizeof(num_slots));
+    memcpy(page.GetMutView().data() + Header::Offsets::NUM_TUPLES, &num_tuples, sizeof(num_tuples));
 }
 
 void SetChecksum(const Page& page, uint64_t checksum)
@@ -87,7 +87,7 @@ void SetEndFreeSpace(const Page& page, offset_t offset)
 void InitPage(const Page& page, PageType page_type)
 {
     SetPageType(page, page_type);
-    SetNumSlots(page, 0);
+    SetNumTuples(page, 0);
     SetStartFreeSpace(page, Header::SIZE);
     SetEndFreeSpace(page, PAGE_SIZE);
 }
@@ -189,9 +189,49 @@ std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size)
     SetSlotOffset(page, new_slot_id, record_offset);
     SetSlotSize(page, new_slot_id, size);
 
-    SetNumSlots(page, GetNumSlots(page) + 1);
+    /* update number of tuples in page */
+    SetNumTuples(page, GetNumTuples(page) + 1);
 
     return new_slot_id;
+}
+
+/* This function will attempt to reuse a deleted slot. If the deleted slot
+ * has a previously allocated record that was <= to the size of the newly
+ * desired slot the old record allocation will be reused otherwise freespace
+ * will be used to allocate new space for the record */
+std::optional<slot_id_t> AllocateSlotOrReuseSlot(const Page& page, size_t size)
+{
+    for (slot_id_t slot = 0; slot < GetSlotDirectoryCapacity(page); slot++) {
+        if (!IsSlotDeleted(page, slot))
+            continue;
+
+        /* Old record allocation wasn't big enough so we make a new one */
+        if (size > GetSlotSize(page, slot)) {
+            /* need to have enough free space to allocate the new slot */
+            if (size > GetFreeSpaceSize(page))
+                continue;
+            offset_t record_offset = GetEndFreeSpace(page) - size;
+            SetEndFreeSpace(page, record_offset);
+            SetSlotOffset(page, slot, record_offset);
+        }
+
+        SetSlotDeleted(page, slot, false);
+        SetSlotSize(page, slot, size);
+
+        /* update number of tuples in page */
+        SetNumTuples(page, GetNumTuples(page) + 1);
+
+        return slot;
+    }
+
+    /* if we can't reuse anything just allocate a new slot */
+    return AllocateSlot(page, size);
+}
+
+void DeleteSlot(const Page& page, slot_id_t slot_id)
+{
+    SetNumTuples(page, GetNumTuples(page) - 1);
+    SetSlotDeleted(page, slot_id, true);
 }
 
 void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted)
@@ -199,6 +239,7 @@ void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted)
     YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
             );
+
     uint8_t value = deleted ? 1 : 0;
     offset_t slot_deleted_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
@@ -239,7 +280,7 @@ void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size)
 void PrintPage(const Page& page)
 {
     std::cout << "Page type: " << static_cast<uint8_t>(GetPageType(page)) << '\n';
-    std::cout << "Number of slots: " << GetNumSlots(page) << '\n';
+    std::cout << "Number of slots: " << GetNumTuples(page) << '\n';
     std::cout << "Free space start: " << GetStartFreeSpace(page) << '\n';
     std::cout << "Free space end: " << GetEndFreeSpace(page) << '\n';
     std::cout << "Checksum: " << GetChecksum(page) << "\n\n";

@@ -109,8 +109,8 @@ namespace Header {
 namespace Offsets {
     constexpr offset_t CHECKSUM = 0x00;
     constexpr offset_t PAGE_TYPE = CHECKSUM + sizeof(uint64_t);
-    constexpr offset_t NUM_SLOTS = PAGE_TYPE + sizeof(PageType);
-    constexpr offset_t FREE_START = NUM_SLOTS + sizeof(slot_id_t);
+    constexpr offset_t NUM_TUPLES = PAGE_TYPE + sizeof(PageType);
+    constexpr offset_t FREE_START = NUM_TUPLES + sizeof(slot_id_t);
     constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
 };
 
@@ -119,14 +119,14 @@ constexpr offset_t SIZE = Offsets::FREE_END + sizeof(offset_t);
 };
 
 PageType GetPageType(const Page& page);
-uint16_t GetNumSlots(const Page& page);
+uint16_t GetNumTuples(const Page& page);
 uint64_t GetChecksum(const Page& page);
 offset_t GetStartFreeSpace(const Page& page);
 offset_t GetEndFreeSpace(const Page& page);
 offset_t GetFreeSpaceSize(const Page& page);
 
 void SetPageType(const Page& page, PageType page_type);
-void SetNumSlots(const Page&, uint16_t num_slots);
+void SetNumTuples(const Page&, uint16_t num_tuples);
 void SetChecksum(const Page&, uint64_t checksum);
 void SetStartFreeSpace(const Page&, offset_t offset);
 void SetEndFreeSpace(const Page&, offset_t offset);
@@ -189,8 +189,12 @@ uint16_t GetSlotSize(const Page& page, slot_id_t slot_id);
 std::span<const char> ReadRecord(const Page& page, slot_id_t slot);
 std::span<char> WriteRecord(const Page& page, slot_id_t slot_id);
 std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size);
+std::optional<slot_id_t> AllocateSlotOrReuseSlot(const Page& page, size_t size);
+void DeleteSlot(const Page& page, slot_id_t slot_id);
 
 /* Slot Directory Mutators */
+/* This function just sets the deleted field in the slot entry it DOES NOT
+ * update the tuple count in the page header */
 void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted);
 void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset);
 void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size);
