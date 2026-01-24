@@ -1,5 +1,6 @@
 add_library(bptree_slotted_page
     page.cpp
+    page_format.cpp
     checksum.cpp
 )
 
