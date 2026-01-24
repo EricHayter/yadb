@@ -3,7 +3,7 @@
 #include <future>
 #include <variant>
 
-#include "storage/bptree/page/page_layout.h"
+#include "storage/bptree/page/page.h"
 
 /*
  * Disk Scheduler Tasks
