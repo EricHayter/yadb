@@ -78,16 +78,9 @@
 #include <string>
 
 #include "page.h"
+#include "common/definitions.h"
 
 namespace page {
-
-/* index of a tuple in the slot directory */
-using slot_id_t = uint16_t;
-
-/* offset into page */
-using offset_t = uint16_t;
-
-
 
 enum class PageType : uint8_t {
     Data = 0x0,
@@ -186,8 +179,8 @@ bool IsSlotDeleted(const Page& page, slot_id_t slot_id);
 offset_t GetOffset(const Page& page, slot_id_t slot_id);
 uint16_t GetSlotSize(const Page& page, slot_id_t slot_id);
 
-std::span<const char> ReadRecord(const Page& page, slot_id_t slot);
-std::span<char> WriteRecord(const Page& page, slot_id_t slot_id);
+PageSlice ReadRecord(const Page& page, slot_id_t slot);
+MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id);
 std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size);
 std::optional<slot_id_t> AllocateSlotOrReuseSlot(const Page& page, size_t size);
 void DeleteSlot(const Page& page, slot_id_t slot_id);

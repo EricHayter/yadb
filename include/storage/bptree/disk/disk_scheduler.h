@@ -47,7 +47,7 @@ public:
      * 2. A mutable span to write the page data into
      * 3. A void promise to be used as a callback to indicate completion
      */
-    void ReadPage(page_id_t page_id, MutPageView data, std::promise<bool>&& status);
+    void ReadPage(page_id_t page_id, MutFullPage data, std::promise<bool>&& status);
 
     /*
      * Request to write to a page
@@ -58,7 +58,7 @@ public:
      * 3. A bool promise to be used as a callback to indicate the success
      *    status of the request
      */
-    void WritePage(page_id_t page_id, PageView data, std::promise<bool>&& status);
+    void WritePage(page_id_t page_id, FullPage data, std::promise<bool>&& status);
 
 private:
     /*

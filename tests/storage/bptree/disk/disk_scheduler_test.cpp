@@ -1,5 +1,6 @@
 #include "storage/bptree/disk/disk_scheduler.h"
 #include "storage/bptree/disk/io_tasks.h"
+#include "common/definitions.h"
 #include <filesystem>
 #include <future>
 #include <gtest/gtest.h>
@@ -69,16 +70,16 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
         page_id_t page_id = page_id_future.get();
 
         // perform the write
-        std::vector<char> write_buffer(PAGE_SIZE, i);
-        MutPageView write_data_view(write_buffer.begin(), PAGE_SIZE);
+        std::vector<PageData> write_buffer(PAGE_SIZE, PageData{static_cast<unsigned char>(i)});
+        MutFullPage write_data_view(write_buffer.begin(), PAGE_SIZE);
         std::promise<bool> write_promise;
         std::future<bool> write_future = write_promise.get_future();
         disk_scheduler.WritePage(page_id, write_data_view, std::move(write_promise));
         EXPECT_TRUE(write_future.get());
 
         // perform the read
-        std::vector<char> read_buffer(PAGE_SIZE, 0);
-        MutPageView read_data_view(read_buffer.begin(), PAGE_SIZE);
+        std::vector<PageData> read_buffer(PAGE_SIZE, PageData{0});
+        MutFullPage read_data_view(read_buffer.begin(), PAGE_SIZE);
         std::promise<bool> read_promise;
         std::future<bool> read_future = read_promise.get_future();
         disk_scheduler.ReadPage(page_id, read_data_view, std::move(read_promise));

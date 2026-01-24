@@ -1,4 +1,5 @@
 #include "storage/bptree/disk/disk_manager.h"
+#include "common/definitions.h"
 #include <filesystem>
 #include <gtest/gtest.h>
 
@@ -35,8 +36,8 @@ TEST_F(DiskManagerTest, TestCreateManagerTwice)
  */
 TEST_F(DiskManagerTest, TestSimpleWriteRead)
 {
-    std::array<char, PAGE_SIZE> page_data_write;
-    page_data_write.fill('A');
+    std::array<PageData, PAGE_SIZE> page_data_write;
+    page_data_write.fill(PageData{'A'});
 
     DiskManager disk_manager {};
 
@@ -44,7 +45,7 @@ TEST_F(DiskManagerTest, TestSimpleWriteRead)
 
     disk_manager.WritePage(page_id, page_data_write);
 
-    std::array<char, PAGE_SIZE> page_data_read;
+    std::array<PageData, PAGE_SIZE> page_data_read;
     disk_manager.ReadPage(page_id, page_data_read);
 
     EXPECT_EQ(page_data_read, page_data_write);
@@ -55,8 +56,8 @@ TEST_F(DiskManagerTest, TestSimpleWriteRead)
  */
 TEST_F(DiskManagerTest, TestFreePage)
 {
-    std::array<char, PAGE_SIZE> page_data_write;
-    page_data_write.fill('A');
+    std::array<PageData, PAGE_SIZE> page_data_write;
+    page_data_write.fill(PageData{'A'});
 
     DiskManager disk_manager(1);
     page_id_t page_id = disk_manager.AllocatePage();
@@ -75,8 +76,8 @@ TEST_F(DiskManagerTest, TestFreePage)
  */
 TEST_F(DiskManagerTest, TestResizePage)
 {
-    std::array<char, PAGE_SIZE> page_data_write;
-    page_data_write.fill('A');
+    std::array<PageData, PAGE_SIZE> page_data_write;
+    page_data_write.fill(PageData{'A'});
     DiskManager disk_manager(1);
 
     for (int i = 0; i < 8; i++) {

@@ -41,13 +41,13 @@ DiskManager::~DiskManager()
     db_io_m.close();
 }
 
-bool DiskManager::WritePage(page_id_t page_id, PageView page)
+bool DiskManager::WritePage(page_id_t page_id, FullPage page)
 {
     assert(page_id < page_capacity_m && !free_pages_m.contains(page_id));
     std::size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
 
-    db_io_m.write(page.data(), page.size());
+    db_io_m.write(reinterpret_cast<const char*>(page.data()), page.size());
     if (!db_io_m.good()) {
         logger_m->warn("Failed to write data to page id {}", page_id);
         return false;
@@ -56,12 +56,12 @@ bool DiskManager::WritePage(page_id_t page_id, PageView page)
 }
 
 // Read the contents of page data into page_data
-bool DiskManager::ReadPage(page_id_t page_id, MutPageView page)
+bool DiskManager::ReadPage(page_id_t page_id, MutFullPage page)
 {
     assert(page_id < page_capacity_m && !free_pages_m.contains(page_id));
     size_t offset = GetOffset(page_id);
     db_io_m.seekg(offset);
-    db_io_m.read(page.data(), page.size());
+    db_io_m.read(reinterpret_cast<char*>(page.data()), page.size());
     if (!db_io_m.good()) {
         logger_m->warn("Failed to read data from page id {}", page_id);
         return false;

@@ -8,7 +8,6 @@
 
 #include "core/assert.h"
 #include "page/checksum.h"
-#include "page/page.h"
 
 namespace page {
 
@@ -151,7 +150,7 @@ uint16_t GetSlotSize(const Page& page, slot_id_t slot_id)
     return slot_size;
 }
 
-std::span<const char> ReadRecord(const Page& page, slot_id_t slot_id)
+PageSlice ReadRecord(const Page& page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
@@ -162,7 +161,7 @@ std::span<const char> ReadRecord(const Page& page, slot_id_t slot_id)
     return page.GetView().subspan(GetOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
-std::span<char> WriteRecord(const Page& page, slot_id_t slot_id)
+MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()

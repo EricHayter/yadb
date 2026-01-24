@@ -39,14 +39,14 @@ public:
      *
      * return true on success false otherwise.
      */
-    bool WritePage(page_id_t page_id, PageView page);
+    bool WritePage(page_id_t page_id, FullPage page);
 
     /*
      * Read data from disk
      *
      * return true on success false otherwise.
      */
-    bool ReadPage(page_id_t page_id, MutPageView page);
+    bool ReadPage(page_id_t page_id, MutFullPage page);
 
     /*
      * Deletes a page from the database file

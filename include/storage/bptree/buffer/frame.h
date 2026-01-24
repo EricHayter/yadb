@@ -21,7 +21,7 @@ using frame_id_t = uint32_t;
  *    view can be created for the frame.
  */
 struct Frame {
-    Frame(frame_id_t id, MutPageView data_view);
+    Frame(frame_id_t id, MutFullPage data_view);
 
     Frame(Frame& other) = delete;
     Frame& operator=(Frame& other) = delete;
@@ -43,5 +43,5 @@ struct Frame {
     SharedSpinlock mut;
 
     /* A mutable view into the buffer provided by the page buffer manager. */
-    MutPageView data;
+    MutFullPage data;
 };

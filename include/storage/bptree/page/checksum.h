@@ -17,4 +17,4 @@
 /*
  * Calculate 64-bit checksum of page
  */
-uint64_t checksum64(PageView page);
+uint64_t checksum64(FullPage page);

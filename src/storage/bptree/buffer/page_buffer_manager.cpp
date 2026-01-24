@@ -34,7 +34,7 @@ PageBufferManager::PageBufferManager(const DatabaseConfig& config, std::size_t n
 {
     assert(buffer_m != nullptr);
     for (frame_id_t id = 0; id < num_frames; id++) {
-        MutPageView data_view(buffer_m + id * PAGE_SIZE, PAGE_SIZE);
+        MutFullPage data_view(reinterpret_cast<std::byte*>(buffer_m + id * PAGE_SIZE), PAGE_SIZE);
         frames_m.push_back(std::make_unique<Frame>(id, data_view));
         replacer_m.RegisterFrame(id);
     }

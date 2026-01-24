@@ -68,12 +68,12 @@ void Page::unlock_shared()
     frame_m->mut.unlock_shared();
 }
 
-MutPageView Page::GetMutView() const
+MutFullPage Page::GetMutView() const
 {
     return frame_m->data;
 }
 
-PageView Page::GetView() const
+FullPage Page::GetView() const
 {
     return frame_m->data;
 }

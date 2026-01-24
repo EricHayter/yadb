@@ -25,13 +25,13 @@ struct DeletePageTask {
 
 struct WritePageTask {
     page_id_t page_id;
-    PageView data;
+    FullPage data;
     std::promise<bool> status;
 };
 
 struct ReadPageTask {
     page_id_t page_id;
-    MutPageView data;
+    MutFullPage data;
     std::promise<bool> status;
 };
 

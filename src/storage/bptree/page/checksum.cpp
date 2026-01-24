@@ -8,7 +8,7 @@
  *
  * Uses a simple 64-bit parity check to generate the checksum for simplicity
  */
-uint64_t checksum64(PageView page)
+uint64_t checksum64(FullPage page)
 {
     static_assert(page.size_bytes() % 8 == 0);
 

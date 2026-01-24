@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <numeric>
@@ -6,8 +7,8 @@
 
 #include "gtest/gtest.h"
 
+#include "common/definitions.h"
 #include "storage/bptree/buffer/page_buffer_manager.h"
-#include "storage/bptree/page/page.h"
 #include "storage/bptree/page/page_format.h"
 
 using namespace page;
@@ -55,8 +56,8 @@ TEST_F(PageBufferManagerTest, TestAllocateSlot)
 TEST_F(PageBufferManagerTest, TestPageReadWrite)
 {
     /* prepare some mock data */
-    std::vector<char> data(64);
-    std::iota(data.begin(), data.end(), 'a');
+    std::vector<PageData> data(64);
+    std::generate(data.begin(), data.end(), [n = 'a']() mutable { return PageData{static_cast<unsigned char>(n++)}; });
 
     /* allocate slot in page */
     slot_id_t slot_id;
@@ -83,7 +84,7 @@ TEST_F(PageBufferManagerTest, TestPageReadWrite)
         std::shared_lock<Page> sl(page);
         ASSERT_EQ(GetNumTuples(page), 1);
 
-        std::span<const char> read_span = ReadRecord(page,slot_id);
+        PageSlice read_span = ReadRecord(page,slot_id);
         ASSERT_TRUE(std::equal(read_span.begin(), read_span.end(), data.begin(), data.end()));
     }
 }
@@ -91,8 +92,8 @@ TEST_F(PageBufferManagerTest, TestPageReadWrite)
 TEST_F(PageBufferManagerTest, TestDeleteSlot)
 {
     /* prepare some mock data */
-    std::vector<char> data(64);
-    std::iota(data.begin(), data.end(), 'a');
+    std::vector<PageData> data(64);
+    std::generate(data.begin(), data.end(), [n = 'a']() mutable { return PageData{static_cast<unsigned char>(n++)}; });
 
     /* allocate slot in page */
     slot_id_t slot_id;
@@ -315,8 +316,8 @@ TEST_F(PageBufferManagerTest, TestVacuumPageMiddleInnerSlotIntegrity)
     /* allocate slots in page */
     constexpr int num_slots = 3;
     constexpr int data_size = 4;
-    const std::vector<char> slot1_data(data_size, 'a');
-    const std::vector<char> slot3_data(data_size, 'b');
+    const std::vector<PageData> slot1_data(data_size, PageData{'a'});
+    const std::vector<PageData> slot3_data(data_size, PageData{'b'});
 
     auto slot1 = AllocateSlot(page,data_size);
     ASSERT_TRUE(slot1.has_value());
@@ -385,7 +386,7 @@ TEST_F(PageBufferManagerTest, MultipleConccurentReaders)
             std::this_thread::sleep_for(ms(3));
             Page page = page_buffer_man.GetPage(page_id);
             std::shared_lock<Page> sl(page);
-            EXPECT_EQ(*ReadRecord(page,slot_id).begin(), data);
+            EXPECT_EQ(*ReadRecord(page,slot_id).begin(), PageData{static_cast<unsigned char>(data)});
         }));
     }
 
@@ -438,7 +439,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
 
     Page page_read = page_buffer_man.GetPage(page_id);
     std::shared_lock<Page> sl(page_read);
-    EXPECT_EQ(*ReadRecord(page_read,slot_id).begin(), data);
+    EXPECT_EQ(*ReadRecord(page_read,slot_id).begin(), PageData{static_cast<unsigned char>(data)});
 
     if (writer_thread.joinable())
         writer_thread.join();

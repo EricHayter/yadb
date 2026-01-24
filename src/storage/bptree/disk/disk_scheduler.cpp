@@ -49,7 +49,7 @@ void DiskScheduler::DeletePage(page_id_t page_id, std::promise<void>&& done)
     cv_m.notify_one();
 }
 
-void DiskScheduler::ReadPage(page_id_t page_id, MutPageView data, std::promise<bool>&& status)
+void DiskScheduler::ReadPage(page_id_t page_id, MutFullPage data, std::promise<bool>&& status)
 {
     IOTasks::ReadPageTask task {
         page_id,
@@ -62,7 +62,7 @@ void DiskScheduler::ReadPage(page_id_t page_id, MutPageView data, std::promise<b
     cv_m.notify_one();
 }
 
-void DiskScheduler::WritePage(page_id_t page_id, PageView data, std::promise<bool>&& status)
+void DiskScheduler::WritePage(page_id_t page_id, FullPage data, std::promise<bool>&& status)
 {
     IOTasks::WritePageTask task {
         page_id,
