@@ -1,7 +1,9 @@
 #include "storage/bptree/disk/disk_manager.h"
-#include "common/definitions.h"
-#include <filesystem>
 #include <gtest/gtest.h>
+#include <array>
+#include <filesystem>
+#include <string>
+#include "common/definitions.h"
 
 /**
  * \brief RAII class for creating a temporary directory for creating files in

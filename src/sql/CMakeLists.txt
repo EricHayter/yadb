@@ -20,6 +20,11 @@ add_library(sql_parser
     ${FLEX_Lexer_OUTPUTS}
 )
 
+# Disable IWYU for generated parser files
+set_target_properties(sql_parser PROPERTIES
+    CXX_INCLUDE_WHAT_YOU_USE ""
+)
+
 target_include_directories(sql_parser PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}

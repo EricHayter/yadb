@@ -1,6 +1,4 @@
 #include "page/checksum.h"
-
-#include <cstdint>
 #include <cstring>
 
 /*

@@ -2,13 +2,16 @@
 
 #include <condition_variable>
 #include <future>
+#include <memory>
+#include <mutex>
 #include <queue>
 #include <stop_token>
 #include <thread>
-
-#include "config/config.h"
+#include "common/definitions.h"
 #include "storage/bptree/disk/disk_manager.h"
 #include "storage/bptree/disk/io_tasks.h"
+namespace spdlog { class logger; }
+struct DatabaseConfig;
 
 /*
  * Disk Scheduler

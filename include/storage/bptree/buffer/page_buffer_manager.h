@@ -1,14 +1,18 @@
 #pragma once
 
 #include <condition_variable>
+#include <cstddef>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
-
-#include "config/config.h"
+#include <vector>
+#include "common/definitions.h"
 #include "storage/bptree/buffer/frame.h"
 #include "storage/bptree/buffer/lru_k_replacer.h"
 #include "storage/bptree/disk/disk_scheduler.h"
 #include "storage/bptree/page/page.h"
+namespace spdlog { class logger; }
+struct DatabaseConfig;
 
 /**
  * Page Buffer Manager

@@ -1,4 +1,5 @@
 #include "buffer/lru_k_replacer.h"
+#include "buffer/frame.h"
 
 LRUKReplacer::LRUFrameHistory::LRUFrameHistory(frame_id_t frame_id)
     : frame_id(frame_id)

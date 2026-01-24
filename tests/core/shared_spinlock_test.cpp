@@ -1,7 +1,8 @@
 #include "core/shared_spinlock.h"
+#include <gtest/gtest.h>
 #include <atomic>
 #include <chrono>
-#include <gtest/gtest.h>
+#include <string>
 #include <thread>
 #include <vector>
 

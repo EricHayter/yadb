@@ -1,21 +1,22 @@
 #include "buffer/page_buffer_manager.h"
-
+#include <stdlib.h>
 #include <atomic>
 #include <cassert>
-
 #include <future>
 #include <mutex>
 #include <optional>
-#include <shared_mutex>
 #include <stdexcept>
-
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/spdlog.h>
-
+#include <string>
+#include <utility>
 #include "buffer/frame.h"
+#include "buffer/lru_k_replacer.h"
 #include "config/config.h"
+#include "disk/disk_scheduler.h"
 #include "page/page.h"
-
+#include "spdlog/fmt/bundled/base.h"
+#include "spdlog/fmt/bundled/format.h"
+#include "spdlog/logger.h"
+                                        //
 PageBufferManager::PageBufferManager()
     : PageBufferManager(128)
 {

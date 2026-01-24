@@ -71,14 +71,13 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <cstdint>
 #include <optional>
-#include <span>
 #include <stdexcept>
 #include <string>
-
-#include "page.h"
 #include "common/definitions.h"
+class Page;
 
 namespace page {
 

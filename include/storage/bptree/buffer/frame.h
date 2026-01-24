@@ -1,9 +1,9 @@
 #pragma once
 
+#include <stdint.h>
 #include <atomic>
-
+#include "common/definitions.h"
 #include "core/shared_spinlock.h"
-#include "storage/bptree/page/page.h"
 
 using frame_id_t = uint32_t;
 

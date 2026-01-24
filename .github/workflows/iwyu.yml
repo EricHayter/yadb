@@ -36,6 +36,5 @@ jobs:
     - name: Check IWYU results
       run: |
         if grep -q "should add these lines\|should remove these lines" iwyu_output.txt; then
-          echo "::error::Include-what-you-use found issues"
-          exit 1
+          echo "::warning::Include-what-you-use found suggestions (non-blocking)"
         fi

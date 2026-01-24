@@ -1,8 +1,7 @@
 #include "core/shared_spinlock.h"
-
-#include <cassert>
-
+#include <stdint.h>
 #include <atomic>
+#include <cassert>
 #include <string>
 
 bool SharedSpinlock::try_lock()

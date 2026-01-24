@@ -12,7 +12,8 @@
 
 #pragma once
 
-#include "storage/bptree/page/page.h"
+#include <cstdint>
+#include "common/definitions.h"
 
 /*
  * Calculate 64-bit checksum of page

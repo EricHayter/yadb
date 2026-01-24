@@ -1,14 +1,10 @@
 #include "disk/disk_manager.h"
-
 #include <cassert>
-
 #include <filesystem>
-
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/spdlog.h>
-
 #include "config/config.h"
-#include "page/page.h"
+#include "spdlog/fmt/bundled/base.h"
+#include "spdlog/fmt/bundled/format.h"
+#include "spdlog/logger.h"
 
 DiskManager::DiskManager()
     : DiskManager(128)

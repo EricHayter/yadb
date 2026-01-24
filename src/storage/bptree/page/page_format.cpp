@@ -1,13 +1,15 @@
 #include "page/page_format.h"
-
+#include <cctype>
 #include <cstring>
-#include <format>
 #include <iomanip>
 #include <iostream>
+#include <format>
 #include <queue>
-
+#include <span>
+#include <vector>
 #include "core/assert.h"
 #include "page/checksum.h"
+#include "page/page.h"
 
 namespace page {
 

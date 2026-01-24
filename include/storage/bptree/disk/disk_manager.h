@@ -1,15 +1,13 @@
 #pragma once
 
-#include <spdlog/logger.h>
-#include <spdlog/sinks/basic_file_sink.h>
-
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <unordered_set>
-
-#include "config/config.h"
-#include "storage/bptree/page/page.h"
+#include "common/definitions.h"
+namespace spdlog { class logger; }
+struct DatabaseConfig;
 
 /*
  * Disk manager class to handle the database file

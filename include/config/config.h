@@ -1,10 +1,9 @@
 #pragma once
 
-#include <spdlog/logger.h>
-
 #include <filesystem>
 #include <memory>
 #include <string>
+namespace spdlog { class logger; }
 
 /*
  * The database config is a shared object to pass down the internal stack of

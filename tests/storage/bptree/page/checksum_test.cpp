@@ -1,10 +1,12 @@
 #include "storage/bptree/page/checksum.h"
-#include "storage/bptree/page/page.h"
-#include "common/definitions.h"
+#include <gtest/gtest.h>
+#include <string.h>
 #include <algorithm>
 #include <cstdint>
-#include <gtest/gtest.h>
+#include <span>
+#include <string>
 #include <vector>
+#include "common/definitions.h"
 
 TEST(CRCTest, CheckComplement)
 {

@@ -22,7 +22,7 @@ jobs:
         submodules: 'true'
 
     - name: Install Dependencies
-      run: sudo apt update && sudo apt install -y cmake g++ ${{ github.ref == 'refs/heads/main' && 'gcovr' || '' }}
+      run: sudo apt update && sudo apt install -y cmake g++ bison flex ${{ github.ref == 'refs/heads/main' && 'gcovr' || '' }}
 
     - name: Configure CMake
       run: |
