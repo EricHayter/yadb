@@ -56,14 +56,7 @@ page_id_t PageBufferManager::AllocatePage()
     std::promise<page_id_t> page_promise;
     std::future<page_id_t> page_future = page_promise.get_future();
     disk_scheduler_m.AllocatePage(std::move(page_promise));
-    page_id_t page_id = page_future.get();
-
-    std::lock_guard<std::mutex> lk(mut_m);
-    if (LoadPage(page_id) != LoadPageStatus::Success) {
-        return -1;
-    }
-
-    return page_id;
+    return page_future.get();
 }
 
 Page PageBufferManager::GetPage(page_id_t page_id)
