@@ -59,6 +59,12 @@ public:
 
     Page GetPage(page_id_t page_id);
 
+    /* Retrieves a page if a buffer frame is immediately available.
+     * Returns std::nullopt if the page is not cached and no frames can be evicted.
+     * Will block on disk I/O if the page needs to be loaded from disk.
+     * Will block briefly to acquire the buffer pool lock. */
+    std::optional<Page> GetPageIfFrameAvailable(page_id_t page_id);
+
 private:
     enum class LoadPageStatus {
         Success,
@@ -90,6 +96,13 @@ private:
      * accidentally creating entries in the page map.
      */
     Frame* GetFrameForPage(page_id_t page_id) const;
+
+    /*
+     * Pins a page that is already loaded in the buffer pool and returns
+     * a Page handle to it. Increments the pin count, records access for
+     * the LRU-K replacer, and marks the frame as non-evictable.
+     */
+    Page PinAndReturnPage(page_id_t page_id);
 
 private:
     std::shared_ptr<spdlog::logger> logger_m;

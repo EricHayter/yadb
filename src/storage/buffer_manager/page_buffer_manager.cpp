@@ -79,11 +79,25 @@ Page PageBufferManager::GetPage(page_id_t page_id)
         }
     }
 
-    Frame* frame = GetFrameForPage(page_id);
-    frame->pin_count.fetch_add(1, std::memory_order_acq_rel);
-    replacer_m.RecordAccess(frame->id);
-    replacer_m.SetEvictable(frame->id, false);
-    return Page(this, frame);
+    return PinAndReturnPage(page_id);
+}
+
+std::optional<Page> PageBufferManager::GetPageIfFrameAvailable(page_id_t page_id)
+{
+    std::unique_lock<std::mutex> lk(mut_m);
+
+    /* If there is no way to "immediately" (i.e. no free slots we can replace
+     * and not in cache) get the page without waiting then return early */
+    if (!page_map_m.contains(page_id) && replacer_m.GetEvictableCount() == 0)
+        return {};
+
+    if (!page_map_m.contains(page_id)) {
+        if (LoadPage(page_id) != LoadPageStatus::Success) {
+            return {};
+        }
+    }
+
+    return PinAndReturnPage(page_id);
 }
 
 PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
@@ -167,4 +181,13 @@ Frame* PageBufferManager::GetFrameForPage(page_id_t page_id) const
         throw std::runtime_error("Failed to get frame for page " + std::to_string(page_id) + " - page not in buffer pool");
     }
     return frames_m[it->second].get();
+}
+
+Page PageBufferManager::PinAndReturnPage(page_id_t page_id)
+{
+    Frame* frame = GetFrameForPage(page_id);
+    frame->pin_count.fetch_add(1, std::memory_order_acq_rel);
+    replacer_m.RecordAccess(frame->id);
+    replacer_m.SetEvictable(frame->id, false);
+    return Page(this, frame);
 }
