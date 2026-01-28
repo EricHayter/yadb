@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include <vector>
 #include "common/definitions.h"
-#include "storage/bptree/buffer/frame.h"
-#include "storage/bptree/buffer/lru_k_replacer.h"
-#include "storage/bptree/disk/disk_scheduler.h"
-#include "storage/bptree/page/page.h"
+#include "storage/buffer_manager/frame.h"
+#include "storage/buffer_manager/lru_k_replacer.h"
+#include "storage/disk/disk_scheduler.h"
+#include "storage/buffer_manager/page.h"
 namespace spdlog { class logger; }
 struct DatabaseConfig;
 

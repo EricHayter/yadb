@@ -1,6 +1,6 @@
-#include "page/page.h"
-#include "buffer/frame.h"
-#include "buffer/page_buffer_manager.h"
+#include "storage/buffer_manager/page.h"
+#include "storage/buffer_manager/frame.h"
+#include "storage/buffer_manager/page_buffer_manager.h"
 #include "core/shared_spinlock.h"
 
 Page::~Page()
