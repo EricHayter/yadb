@@ -80,7 +80,12 @@ cmake --build . --target test
 - [x] Implement disk manager
 - [x] Implement disk scheduler
 - [x] Implement page buffer
-- [ ] Implement slotted page interface
+- [X] Implement slotted page interface
+- [X] Implement lexer and parser for SQL subset
+- [X] Implement shell interface 
+- [ ] Implement optimizer
+  - [ ] Implement external sorting
+  - [ ] Implement algorithms for relation algebra operators
+  - [ ] TBD
 - [ ] Implement B+ trees
-- [ ] TBD
 
