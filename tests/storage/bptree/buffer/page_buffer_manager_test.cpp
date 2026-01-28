@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include "storage/buffer_manager/page.h"
 #include "storage/buffer_manager/page_buffer_manager.h"
-#include "storage/page/page_format.h"
+#include "storage/slotted_page/page_format.h"
 
 using namespace page;
 

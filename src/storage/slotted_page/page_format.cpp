@@ -1,4 +1,4 @@
-#include "storage/page/page_format.h"
+#include "storage/slotted_page/page_format.h"
 #include <cctype>
 #include <cstring>
 #include <iomanip>
@@ -8,7 +8,7 @@
 #include <span>
 #include <vector>
 #include "core/assert.h"
-#include "storage/page/checksum.h"
+#include "storage/slotted_page/checksum.h"
 #include "storage/buffer_manager/page.h"
 
 namespace page {

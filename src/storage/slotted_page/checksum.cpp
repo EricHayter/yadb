@@ -1,4 +1,4 @@
-#include "storage/page/checksum.h"
+#include "storage/slotted_page/checksum.h"
 #include <cstring>
 
 /*
