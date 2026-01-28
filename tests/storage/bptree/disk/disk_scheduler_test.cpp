@@ -1,4 +1,4 @@
-#include "storage/bptree/disk/disk_scheduler.h"
+#include "storage/disk/disk_scheduler.h"
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <future>

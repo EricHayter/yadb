@@ -6,9 +6,8 @@ add_executable(bptree_test
 )
 
 target_link_libraries(bptree_test
-    PRIVATE bptree_slotted_page
-    PRIVATE bptree_buffer_manager
-    PRIVATE bptree_storage_engine
+    PRIVATE yadb_slotted_page
+    PRIVATE yadb_buffer_manager
     PRIVATE GTest::gtest_main
     INTERFACE lib_compile_flags
 )

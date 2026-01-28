@@ -1,4 +1,4 @@
-#include "buffer/page_buffer_manager.h"
+#include "storage/buffer_manager/page_buffer_manager.h"
 #include <stdlib.h>
 #include <atomic>
 #include <cassert>
@@ -8,11 +8,11 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include "buffer/frame.h"
-#include "buffer/lru_k_replacer.h"
+#include "storage/buffer_manager/frame.h"
+#include "storage/buffer_manager/lru_k_replacer.h"
 #include "config/config.h"
-#include "disk/disk_scheduler.h"
-#include "page/page.h"
+#include "storage/disk/disk_scheduler.h"
+#include "storage/buffer_manager/page.h"
 #include "spdlog/fmt/bundled/base.h"
 #include "spdlog/fmt/bundled/format.h"
 #include "spdlog/logger.h"

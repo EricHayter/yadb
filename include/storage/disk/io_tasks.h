@@ -2,8 +2,7 @@
 
 #include <future>
 #include <variant>
-
-#include "storage/bptree/page/page.h"
+#include "common/definitions.h"
 
 /*
  * Disk Scheduler Tasks
