@@ -173,9 +173,9 @@ public:
 
 /* Slot Directory Accessors */
 /* returns the number of slot directory entries (including deleted) */
-uint16_t GetSlotDirectoryCapacity(const Page& page);
+uint16_t GetPageCapacity(const Page& page);
 bool IsSlotDeleted(const Page& page, slot_id_t slot_id);
-offset_t GetOffset(const Page& page, slot_id_t slot_id);
+offset_t GetSlotOffset(const Page& page, slot_id_t slot_id);
 uint16_t GetSlotSize(const Page& page, slot_id_t slot_id);
 
 PageSlice ReadRecord(const Page& page, slot_id_t slot);

@@ -114,7 +114,7 @@ void UpdateChecksum(const Page& page)
   |___/_|\___/ \__\___|_| |_|\__|_|   \__, |
                                       |___/
 -----------------------------------------------------------------------------*/
-uint16_t GetSlotDirectoryCapacity(const Page& page)
+uint16_t GetPageCapacity(const Page& page)
 {
     return (GetStartFreeSpace(page) - Header::SIZE) / SlotEntry::SIZE;
 }
@@ -130,7 +130,7 @@ bool IsSlotDeleted(const Page& page, slot_id_t slot_id)
     return deleted > 0;
 }
 
-offset_t GetOffset(const Page& page, slot_id_t slot_id)
+offset_t GetSlotOffset(const Page& page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
@@ -160,7 +160,7 @@ PageSlice ReadRecord(const Page& page, slot_id_t slot_id)
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
             std::format("Slot {} is deleted", slot_id).c_str()
             );
-    return page.GetView().subspan(GetOffset(page, slot_id), GetSlotSize(page, slot_id));
+    return page.GetView().subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
 MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id)
@@ -171,7 +171,7 @@ MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id)
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
             std::format("Slot {} is deleted", slot_id).c_str()
             );
-    return page.GetMutView().subspan(GetOffset(page, slot_id), GetSlotSize(page, slot_id));
+    return page.GetMutView().subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
 std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size)
@@ -202,7 +202,7 @@ std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size)
  * will be used to allocate new space for the record */
 std::optional<slot_id_t> AllocateSlotOrReuseSlot(const Page& page, size_t size)
 {
-    for (slot_id_t slot = 0; slot < GetSlotDirectoryCapacity(page); slot++) {
+    for (slot_id_t slot = 0; slot < GetPageCapacity(page); slot++) {
         if (!IsSlotDeleted(page, slot))
             continue;
 
@@ -332,10 +332,10 @@ void VacuumPage(const Page& page)
 
     std::priority_queue<SlotEntry, std::vector<SlotEntry>, SlotEntryCompare> pq;
 
-    for (slot_id_t id = 0; id < GetSlotDirectoryCapacity(page); id++) {
+    for (slot_id_t id = 0; id < GetPageCapacity(page); id++) {
         SlotEntry slot_entry {
             .slot_id = id,
-            .offset = GetOffset(page, id),
+            .offset = GetSlotOffset(page, id),
             .size = GetSlotSize(page, id),
         };
 
