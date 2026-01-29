@@ -121,8 +121,8 @@ uint16_t GetPageCapacity(const Page& page)
 
 bool IsSlotDeleted(const Page& page, slot_id_t slot_id)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     uint8_t deleted;
     offset_t deleted_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::DELETED;
@@ -132,8 +132,8 @@ bool IsSlotDeleted(const Page& page, slot_id_t slot_id)
 
 offset_t GetSlotOffset(const Page& page, slot_id_t slot_id)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     offset_t offset;
     offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::OFFSET;
@@ -143,8 +143,8 @@ offset_t GetSlotOffset(const Page& page, slot_id_t slot_id)
 
 uint16_t GetSlotSize(const Page& page, slot_id_t slot_id)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     uint16_t slot_size;
     offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::TUPLE_SIZE;
@@ -154,8 +154,8 @@ uint16_t GetSlotSize(const Page& page, slot_id_t slot_id)
 
 PageSlice ReadRecord(const Page& page, slot_id_t slot_id)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
             std::format("Slot {} is deleted", slot_id).c_str()
@@ -165,8 +165,8 @@ PageSlice ReadRecord(const Page& page, slot_id_t slot_id)
 
 MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
             std::format("Slot {} is deleted", slot_id).c_str()
@@ -237,8 +237,8 @@ void DeleteSlot(const Page& page, slot_id_t slot_id)
 
 void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
 
     uint8_t value = deleted ? 1 : 0;
@@ -250,8 +250,8 @@ void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted)
 
 void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     offset_t slot_offset_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
@@ -261,8 +261,8 @@ void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset)
 
 void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size)
 {
-    YADB_ASSERT(slot_id >= 0 && slot_id < GetSlotDirectoryCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetSlotDirectoryCapacity(page)).c_str()
+    YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
+            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     uint16_t slot_size_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
