@@ -1,12 +1,13 @@
 #include "optimizer/external_sort.h"
 #include "common/definitions.h"
-#include "storage/bptree/buffer/page_buffer_manager.h"
-#include "storage/bptree/page/page.h"
-#include "storage/bptree/page/page_format.h"
+#include "storage/buffer_manager/page_buffer_manager.h"
+#include "storage/buffer_manager//page.h"
+#include "storage/slotted_page/page_format.h"
 #include <algorithm>
 #include <cstring>
 #include <gtest/gtest.h>
 #include <vector>
+#include <iostream>
 
 using namespace page;
 
@@ -352,6 +353,11 @@ TEST_F(ExternalSortTest, SortThreeElements)
     };
 
     for (const auto& perm : permutations) {
+        std::cout << "Sorting: [ ";
+        for (auto num: perm) {
+            std::cout << num << " ";
+        }
+        std::cout << "]\n";
         Page page = CreatePageWithIntegers(perm);
         std::lock_guard<Page> lg(page);
 

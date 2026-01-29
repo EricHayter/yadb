@@ -1,6 +1,6 @@
 #include "optimizer/external_sort.h"
 #include "common/definitions.h"
-#include "storage/bptree/page/page_format.h"
+#include "storage/slotted_page/page_format.h"
 #include <algorithm>
 #include <shared_mutex>
 
@@ -66,9 +66,15 @@ void SortPageInPlace(Page& page, RecordComparisonFunction& comp, slot_id_t left_
                 lt_ptr++;
         }
 
-        SwapSlots(page, lt_ptr, gt_ptr);
-        gt_ptr++;
+        if (lt_ptr < partition_ptr) {
+            SwapSlots(page, lt_ptr, gt_ptr);
+            gt_ptr++;
+            lt_ptr++;
+        }
     }
+
+    /* Move the pivot to its final position */
+    SwapSlots(page, gt_ptr, partition_ptr);
 
     SortPageInPlace(page, comp, left_bound, gt_ptr);
     SortPageInPlace(page, comp, gt_ptr + 1, right_bound);
