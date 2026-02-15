@@ -37,7 +37,7 @@
 void SortPageInPlace(Page& page, RecordComparisonFunction& func)
 {
     ShiftSlotsLeft(page);
-    SortPageInPlace(page, func, 0, page::GetNumTuples(page));
+    SortPageInPlace(page, func, 0, page::GetNumTuples(page.GetView()));
 }
 
 void SortPageInPlace(Page& page, RecordComparisonFunction& comp, slot_id_t left_bound, slot_id_t right_bound)
@@ -52,7 +52,7 @@ void SortPageInPlace(Page& page, RecordComparisonFunction& comp, slot_id_t left_
 
     /* find the first element that is after than the partition (based on the
      * ordering defined by comp. */
-    while (gt_ptr < partition_ptr && comp(ReadRecord(page, gt_ptr), ReadRecord(page, partition_ptr))) {
+    while (gt_ptr < partition_ptr && comp(ReadRecord(page.GetView(), gt_ptr), ReadRecord(page.GetView(), partition_ptr))) {
         gt_ptr++;
         lt_ptr++;
     }
@@ -62,7 +62,7 @@ void SortPageInPlace(Page& page, RecordComparisonFunction& comp, slot_id_t left_
     while (lt_ptr < partition_ptr) {
         /* move the lt_ptr to find an element that is before partition in
          * comp's ordering. */
-        while (lt_ptr < partition_ptr && !comp(ReadRecord(page, lt_ptr), ReadRecord(page, partition_ptr))) {
+        while (lt_ptr < partition_ptr && !comp(ReadRecord(page.GetView(), lt_ptr), ReadRecord(page.GetView(), partition_ptr))) {
                 lt_ptr++;
         }
 
@@ -83,17 +83,17 @@ void SortPageInPlace(Page& page, RecordComparisonFunction& comp, slot_id_t left_
 void SwapSlots(Page& page, slot_id_t slot1, slot_id_t slot2)
 {
     using namespace page;
-    offset_t temp_offset = GetSlotOffset(page, slot1);
-    size_t temp_size = GetSlotSize(page, slot1);
-    bool temp_is_deleted = IsSlotDeleted(page, slot1);
+    offset_t temp_offset = GetSlotOffset(page.GetView(), slot1);
+    size_t temp_size = GetSlotSize(page.GetView(), slot1);
+    bool temp_is_deleted = IsSlotDeleted(page.GetView(), slot1);
 
-    SetSlotOffset(page, slot1, GetSlotOffset(page, slot2));
-    SetSlotSize(page, slot1, GetSlotSize(page, slot2));
-    SetSlotDeleted(page, slot1, IsSlotDeleted(page, slot2));
+    SetSlotOffset(page.GetMutView(), slot1, GetSlotOffset(page.GetView(), slot2));
+    SetSlotSize(page.GetMutView(), slot1, GetSlotSize(page.GetView(), slot2));
+    SetSlotDeleted(page.GetMutView(), slot1, IsSlotDeleted(page.GetView(), slot2));
 
-    SetSlotOffset(page, slot2, temp_offset);
-    SetSlotSize(page, slot2, temp_size);
-    SetSlotDeleted(page, slot2, temp_is_deleted);
+    SetSlotOffset(page.GetMutView(), slot2, temp_offset);
+    SetSlotSize(page.GetMutView(), slot2, temp_size);
+    SetSlotDeleted(page.GetMutView(), slot2, temp_is_deleted);
 }
 
 void ShiftSlotsLeft(Page& page)
@@ -101,26 +101,24 @@ void ShiftSlotsLeft(Page& page)
     slot_id_t deleted_ptr = 0;
     slot_id_t ptr = 0;
 
-    while (ptr < page::GetPageCapacity(page) && !page::IsSlotDeleted(page, ptr)) {
+    while (ptr < page::GetPageCapacity(page.GetView()) && !page::IsSlotDeleted(page.GetView(), ptr)) {
         deleted_ptr++;
         ptr++;
     }
 
-    while (deleted_ptr < page::GetNumTuples(page)) {
-        while (page::IsSlotDeleted(page, ptr))
+    while (deleted_ptr < page::GetNumTuples(page.GetView())) {
+        while (page::IsSlotDeleted(page.GetView(), ptr))
             ptr++;
 
         /* copy over the slot entry data into the deleted slot on the left */
-        page::SetSlotDeleted(page, deleted_ptr, false);
-        page::SetSlotOffset(page, deleted_ptr, page::GetSlotOffset(page, ptr));
-        page::SetSlotSize(page, deleted_ptr, page::GetSlotSize(page, ptr));
-        page::SetSlotDeleted(page, ptr, true);
-        page::SetSlotOffset(page, ptr, 0);
-        page::SetSlotSize(page, ptr, 0);
+        page::SetSlotDeleted(page.GetMutView(), deleted_ptr, false);
+        page::SetSlotOffset(page.GetMutView(), deleted_ptr, page::GetSlotOffset(page.GetView(), ptr));
+        page::SetSlotSize(page.GetMutView(), deleted_ptr, page::GetSlotSize(page.GetView(), ptr));
+        page::SetSlotDeleted(page.GetMutView(), ptr, true);
+        page::SetSlotOffset(page.GetMutView(), ptr, 0);
+        page::SetSlotSize(page.GetMutView(), ptr, 0);
 
         deleted_ptr++;
         ptr++;
     }
 }
-
-void SwapSlotEntries(PageSlotPair left, PageSlotPair right);

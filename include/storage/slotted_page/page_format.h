@@ -110,31 +110,31 @@ namespace Offsets {
 constexpr offset_t SIZE = Offsets::FREE_END + sizeof(offset_t);
 };
 
-PageType GetPageType(const Page& page);
-uint16_t GetNumTuples(const Page& page);
-uint64_t GetChecksum(const Page& page);
-offset_t GetStartFreeSpace(const Page& page);
-offset_t GetEndFreeSpace(const Page& page);
-offset_t GetFreeSpaceSize(const Page& page);
+PageType GetPageType(FullPage page);
+uint16_t GetNumTuples(FullPage page);
+uint64_t GetChecksum(FullPage page);
+offset_t GetStartFreeSpace(FullPage page);
+offset_t GetEndFreeSpace(FullPage page);
+offset_t GetFreeSpaceSize(FullPage page);
 
-void SetPageType(const Page& page, PageType page_type);
-void SetNumTuples(const Page&, uint16_t num_tuples);
-void SetChecksum(const Page&, uint64_t checksum);
-void SetStartFreeSpace(const Page&, offset_t offset);
-void SetEndFreeSpace(const Page&, offset_t offset);
+void SetPageType(MutFullPage page, PageType page_type);
+void SetNumTuples(MutFullPage page, uint16_t num_tuples);
+void SetChecksum(MutFullPage page, uint64_t checksum);
+void SetStartFreeSpace(MutFullPage page, offset_t offset);
+void SetEndFreeSpace(MutFullPage page, offset_t offset);
 
 /* initializes the fields inside of the page header. NOTE: This should only
 * be used when creating a page for the first time i.e. right after calling
 * NewPage with the page buffer manager. */
-void InitPage(const Page& page, PageType page_type);
+void InitPage(MutFullPage page, PageType page_type);
 
 /* Check if the checksum for a page is valid */
-bool ValidChecksum(const Page& page);
+bool ValidChecksum(FullPage page);
 
 /* Updates the checksum field in the page header. This MUST be called
 * before flushing pages as the checksum will be validated on page
 * load */
-void UpdateChecksum(const Page& page);
+void UpdateChecksum(MutFullPage page);
 
 
 /*-----------------------------------------------------------------------------
@@ -173,23 +173,23 @@ public:
 
 /* Slot Directory Accessors */
 /* returns the number of slot directory entries (including deleted) */
-uint16_t GetPageCapacity(const Page& page);
-bool IsSlotDeleted(const Page& page, slot_id_t slot_id);
-offset_t GetSlotOffset(const Page& page, slot_id_t slot_id);
-uint16_t GetSlotSize(const Page& page, slot_id_t slot_id);
+uint16_t GetPageCapacity(FullPage page);
+bool IsSlotDeleted(FullPage page, slot_id_t slot_id);
+offset_t GetSlotOffset(FullPage page, slot_id_t slot_id);
+uint16_t GetSlotSize(FullPage page, slot_id_t slot_id);
 
-PageSlice ReadRecord(const Page& page, slot_id_t slot);
-MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id);
-std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size);
-std::optional<slot_id_t> AllocateSlotOrReuseSlot(const Page& page, size_t size);
-void DeleteSlot(const Page& page, slot_id_t slot_id);
+PageSlice ReadRecord(FullPage page, slot_id_t slot);
+MutPageSlice WriteRecord(MutFullPage page, slot_id_t slot_id);
+std::optional<slot_id_t> AllocateSlot(MutFullPage page, size_t size);
+std::optional<slot_id_t> AllocateSlotOrReuseSlot(MutFullPage page, size_t size);
+void DeleteSlot(MutFullPage page, slot_id_t slot_id);
 
 /* Slot Directory Mutators */
 /* This function just sets the deleted field in the slot entry it DOES NOT
  * update the tuple count in the page header */
-void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted);
-void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset);
-void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size);
+void SetSlotDeleted(MutFullPage page, slot_id_t slot_id, bool deleted);
+void SetSlotOffset(MutFullPage page, slot_id_t slot_id, offset_t offset);
+void SetSlotSize(MutFullPage page, slot_id_t slot_id, uint16_t size);
 
 /*-----------------------------------------------------------------------------
  _          _                    __                  _   _
@@ -202,11 +202,11 @@ void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size);
 
 /* Print out contents of page and values for headers. Mainly to be used
  * for debugging purposes */
-void PrintPage(const Page& page);
+void PrintPage(FullPage page);
 
 
 /* Reacquires freed space from deleted tuples. This is a fairly expensive
  * operation use it sparingly. */
-void VacuumPage(const Page& page);
+void VacuumPage(MutFullPage page);
 
 }

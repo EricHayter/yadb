@@ -20,72 +20,72 @@ namespace page {
   | | | |  __/ (_| | (_| |  __/ |
   |_| |_|\___|\__,_|\__,_|\___|_|
 -----------------------------------------------------------------------------*/
-PageType GetPageType(const Page& page)
+PageType GetPageType(FullPage page)
 {
     PageType page_type;
-    memcpy(&page_type, page.GetView().data() + Header::Offsets::PAGE_TYPE, sizeof(page_type));
+    memcpy(&page_type, page.data() + Header::Offsets::PAGE_TYPE, sizeof(page_type));
     return page_type;
 }
 
-uint16_t GetNumTuples(const Page& page)
+uint16_t GetNumTuples(FullPage page)
 {
     uint16_t num_tuples;
-    memcpy(&num_tuples, page.GetView().data() + Header::Offsets::NUM_TUPLES, sizeof(num_tuples));
+    memcpy(&num_tuples, page.data() + Header::Offsets::NUM_TUPLES, sizeof(num_tuples));
     return num_tuples;
 }
 
-uint64_t GetChecksum(const Page& page)
+uint64_t GetChecksum(FullPage page)
 {
     uint64_t checksum;
-    memcpy(&checksum, page.GetView().data() + Header::Offsets::CHECKSUM, sizeof(checksum));
+    memcpy(&checksum, page.data() + Header::Offsets::CHECKSUM, sizeof(checksum));
     return checksum;
 }
 
-offset_t GetStartFreeSpace(const Page& page)
+offset_t GetStartFreeSpace(FullPage page)
 {
     offset_t start_free_space;
-    memcpy(&start_free_space, page.GetView().data() + Header::Offsets::FREE_START, sizeof(start_free_space));
+    memcpy(&start_free_space, page.data() + Header::Offsets::FREE_START, sizeof(start_free_space));
     return start_free_space;
 }
 
-offset_t GetEndFreeSpace(const Page& page)
+offset_t GetEndFreeSpace(FullPage page)
 {
     offset_t end_free_space;
-    memcpy(&end_free_space, page.GetView().data() + Header::Offsets::FREE_END, sizeof(end_free_space));
+    memcpy(&end_free_space, page.data() + Header::Offsets::FREE_END, sizeof(end_free_space));
     return end_free_space;
 }
 
-offset_t GetFreeSpaceSize(const Page& page)
+offset_t GetFreeSpaceSize(FullPage page)
 {
     return GetEndFreeSpace(page) - GetStartFreeSpace(page);
 }
 
-void SetPageType(const Page& page, PageType page_type)
+void SetPageType(MutFullPage page, PageType page_type)
 {
-    memcpy(page.GetMutView().data() + Header::Offsets::PAGE_TYPE, &page_type, sizeof(page_type));
+    memcpy(page.data() + Header::Offsets::PAGE_TYPE, &page_type, sizeof(page_type));
 }
 
-void SetNumTuples(const Page& page, uint16_t num_tuples)
+void SetNumTuples(MutFullPage page, uint16_t num_tuples)
 {
-    memcpy(page.GetMutView().data() + Header::Offsets::NUM_TUPLES, &num_tuples, sizeof(num_tuples));
+    memcpy(page.data() + Header::Offsets::NUM_TUPLES, &num_tuples, sizeof(num_tuples));
 }
 
-void SetChecksum(const Page& page, uint64_t checksum)
+void SetChecksum(MutFullPage page, uint64_t checksum)
 {
-    memcpy(page.GetMutView().data() + Header::Offsets::CHECKSUM, &checksum, sizeof(checksum));
+    memcpy(page.data() + Header::Offsets::CHECKSUM, &checksum, sizeof(checksum));
 }
 
-void SetStartFreeSpace(const Page& page, offset_t offset)
+void SetStartFreeSpace(MutFullPage page, offset_t offset)
 {
-    memcpy(page.GetMutView().data() + Header::Offsets::FREE_START, &offset, sizeof(offset));
+    memcpy(page.data() + Header::Offsets::FREE_START, &offset, sizeof(offset));
 }
 
-void SetEndFreeSpace(const Page& page, offset_t offset)
+void SetEndFreeSpace(MutFullPage page, offset_t offset)
 {
-    memcpy(page.GetMutView().data() + Header::Offsets::FREE_END, &offset, sizeof(offset));
+    memcpy(page.data() + Header::Offsets::FREE_END, &offset, sizeof(offset));
 }
 
-void InitPage(const Page& page, PageType page_type)
+void InitPage(MutFullPage page, PageType page_type)
 {
     SetPageType(page, page_type);
     SetNumTuples(page, 0);
@@ -93,15 +93,15 @@ void InitPage(const Page& page, PageType page_type)
     SetEndFreeSpace(page, PAGE_SIZE);
 }
 
-bool ValidChecksum(const Page& page)
+bool ValidChecksum(FullPage page)
 {
-    return checksum64(page.GetView()) == 0x00;
+    return checksum64(page) == 0x00;
 }
 
-void UpdateChecksum(const Page& page)
+void UpdateChecksum(MutFullPage page)
 {
     SetChecksum(page, 0x00);
-    uint64_t new_checksum = checksum64(page.GetView());
+    uint64_t new_checksum = checksum64(page);
     SetChecksum(page, new_checksum);
 }
 
@@ -114,45 +114,45 @@ void UpdateChecksum(const Page& page)
   |___/_|\___/ \__\___|_| |_|\__|_|   \__, |
                                       |___/
 -----------------------------------------------------------------------------*/
-uint16_t GetPageCapacity(const Page& page)
+uint16_t GetPageCapacity(FullPage page)
 {
     return (GetStartFreeSpace(page) - Header::SIZE) / SlotEntry::SIZE;
 }
 
-bool IsSlotDeleted(const Page& page, slot_id_t slot_id)
+bool IsSlotDeleted(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     uint8_t deleted;
     offset_t deleted_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::DELETED;
-    memcpy(&deleted, page.GetView().data() + deleted_offset, sizeof(deleted));
+    memcpy(&deleted, page.data() + deleted_offset, sizeof(deleted));
     return deleted > 0;
 }
 
-offset_t GetSlotOffset(const Page& page, slot_id_t slot_id)
+offset_t GetSlotOffset(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     offset_t offset;
     offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::OFFSET;
-    memcpy(&offset, page.GetView().data() + slot_entry_offset, sizeof(offset));
+    memcpy(&offset, page.data() + slot_entry_offset, sizeof(offset));
     return offset;
 }
 
-uint16_t GetSlotSize(const Page& page, slot_id_t slot_id)
+uint16_t GetSlotSize(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
             );
     uint16_t slot_size;
     offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::TUPLE_SIZE;
-    memcpy(&slot_size, page.GetView().data() + slot_entry_offset, sizeof(slot_size));
+    memcpy(&slot_size, page.data() + slot_entry_offset, sizeof(slot_size));
     return slot_size;
 }
 
-PageSlice ReadRecord(const Page& page, slot_id_t slot_id)
+PageSlice ReadRecord(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
@@ -160,10 +160,10 @@ PageSlice ReadRecord(const Page& page, slot_id_t slot_id)
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
             std::format("Slot {} is deleted", slot_id).c_str()
             );
-    return page.GetView().subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
+    return page.subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
-MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id)
+MutPageSlice WriteRecord(MutFullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
@@ -171,10 +171,10 @@ MutPageSlice WriteRecord(const Page& page, slot_id_t slot_id)
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
             std::format("Slot {} is deleted", slot_id).c_str()
             );
-    return page.GetMutView().subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
+    return page.subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
-std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size)
+std::optional<slot_id_t> AllocateSlot(MutFullPage page, size_t size)
 {
     if (SlotEntry::SIZE + size > GetFreeSpaceSize(page))
         return {};
@@ -200,7 +200,7 @@ std::optional<slot_id_t> AllocateSlot(const Page& page, size_t size)
  * has a previously allocated record that was <= to the size of the newly
  * desired slot the old record allocation will be reused otherwise freespace
  * will be used to allocate new space for the record */
-std::optional<slot_id_t> AllocateSlotOrReuseSlot(const Page& page, size_t size)
+std::optional<slot_id_t> AllocateSlotOrReuseSlot(MutFullPage page, size_t size)
 {
     for (slot_id_t slot = 0; slot < GetPageCapacity(page); slot++) {
         if (!IsSlotDeleted(page, slot))
@@ -229,13 +229,13 @@ std::optional<slot_id_t> AllocateSlotOrReuseSlot(const Page& page, size_t size)
     return AllocateSlot(page, size);
 }
 
-void DeleteSlot(const Page& page, slot_id_t slot_id)
+void DeleteSlot(MutFullPage page, slot_id_t slot_id)
 {
     SetNumTuples(page, GetNumTuples(page) - 1);
     SetSlotDeleted(page, slot_id, true);
 }
 
-void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted)
+void SetSlotDeleted(MutFullPage page, slot_id_t slot_id, bool deleted)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
@@ -245,10 +245,10 @@ void SetSlotDeleted(const Page& page, slot_id_t slot_id, bool deleted)
     offset_t slot_deleted_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::DELETED;
-    memcpy(page.GetMutView().data() + slot_deleted_offset, &value, sizeof(value));
+    memcpy(page.data() + slot_deleted_offset, &value, sizeof(value));
 }
 
-void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset)
+void SetSlotOffset(MutFullPage page, slot_id_t slot_id, offset_t offset)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
@@ -256,10 +256,10 @@ void SetSlotOffset(const Page& page, slot_id_t slot_id, offset_t offset)
     offset_t slot_offset_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::OFFSET;
-    memcpy(page.GetMutView().data() + slot_offset_offset, &offset, sizeof(offset));
+    memcpy(page.data() + slot_offset_offset, &offset, sizeof(offset));
 }
 
-void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size)
+void SetSlotSize(MutFullPage page, slot_id_t slot_id, uint16_t size)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
             std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
@@ -267,7 +267,7 @@ void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size)
     uint16_t slot_size_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::TUPLE_SIZE;
-    memcpy(page.GetMutView().data() + slot_size_offset, &size, sizeof(size));
+    memcpy(page.data() + slot_size_offset, &size, sizeof(size));
 }
 
 /*-----------------------------------------------------------------------------
@@ -278,7 +278,7 @@ void SetSlotSize(const Page& page, slot_id_t slot_id, uint16_t size)
 |_| |_|\___|_| .__/ \___|_|    |_|  \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
              |_|
 -----------------------------------------------------------------------------*/
-void PrintPage(const Page& page)
+void PrintPage(FullPage page)
 {
     std::cout << "Page type: " << static_cast<uint8_t>(GetPageType(page)) << '\n';
     std::cout << "Number of slots: " << GetNumTuples(page) << '\n';
@@ -287,14 +287,14 @@ void PrintPage(const Page& page)
     std::cout << "Checksum: " << GetChecksum(page) << "\n\n";
 
     constexpr std::size_t bytes_per_line = 16;
-    for (std::size_t i = 0; i < page.GetView().size(); i += bytes_per_line) {
+    for (std::size_t i = 0; i < page.size(); i += bytes_per_line) {
         // Print offset
         std::cout << std::setw(6) << std::setfill('0') << std::hex << i << "  ";
 
         // Hex bytes
         for (std::size_t j = 0; j < bytes_per_line; ++j) {
-            if (i + j < page.GetView().size()) {
-                unsigned byte = static_cast<unsigned char>(page.GetView()[i + j]);
+            if (i + j < page.size()) {
+                unsigned byte = static_cast<unsigned char>(page[i + j]);
                 std::cout << std::setw(2) << byte << ' ';
             } else {
                 std::cout << "   "; // padding
@@ -303,8 +303,8 @@ void PrintPage(const Page& page)
 
         // ASCII view
         std::cout << " |";
-        for (std::size_t j = 0; j < bytes_per_line && i + j < page.GetView().size(); ++j) {
-            unsigned char c = static_cast<unsigned char>(page.GetView()[i + j]);
+        for (std::size_t j = 0; j < bytes_per_line && i + j < page.size(); ++j) {
+            unsigned char c = static_cast<unsigned char>(page[i + j]);
             std::cout << (std::isprint(c) ? static_cast<char>(c) : '.');
         }
         std::cout << "|\n";
@@ -315,7 +315,7 @@ void PrintPage(const Page& page)
 }
 
 
-void VacuumPage(const Page& page)
+void VacuumPage(MutFullPage page)
 {
     struct SlotEntry {
         slot_id_t slot_id;
@@ -352,7 +352,7 @@ void VacuumPage(const Page& page)
         pq.pop();
 
         freespace_end -= slot_entry.size;
-        memmove(page.GetMutView().data() + freespace_end, page.GetMutView().data() + slot_entry.offset, slot_entry.size);
+        memmove(page.data() + freespace_end, page.data() + slot_entry.offset, slot_entry.size);
         SetSlotOffset(page, slot_entry.slot_id, freespace_end);
     }
     SetEndFreeSpace(page, freespace_end);

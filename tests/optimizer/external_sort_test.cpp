@@ -22,12 +22,12 @@ protected:
         page_id_t page_id = page_buffer_man.AllocatePage();
         Page page = page_buffer_man.GetPage(page_id);
         std::lock_guard<Page> lg(page);
-        InitPage(page, PageType::Data);
+        InitPage(page.GetMutView(), PageType::Data);
 
         for (int value : values) {
-            auto slot = AllocateSlot(page, sizeof(int));
+            auto slot = AllocateSlot(page.GetMutView(), sizeof(int));
             EXPECT_TRUE(slot.has_value());
-            auto write_span = WriteRecord(page, slot.value());
+            auto write_span = WriteRecord(page.GetMutView(), slot.value());
             std::memcpy(write_span.data(), &value, sizeof(int));
         }
 
@@ -38,11 +38,11 @@ protected:
     std::vector<int> ReadIntegersFromPage(Page& page)
     {
         std::vector<int> result;
-        uint16_t capacity = GetPageCapacity(page);
+        uint16_t capacity = GetPageCapacity(page.GetView());
 
         for (slot_id_t i = 0; i < capacity; i++) {
-            if (!IsSlotDeleted(page, i)) {
-                auto read_span = ReadRecord(page, i);
+            if (!IsSlotDeleted(page.GetView(), i)) {
+                auto read_span = ReadRecord(page.GetView(), i);
                 int value;
                 std::memcpy(&value, read_span.data(), sizeof(int));
                 result.push_back(value);
@@ -66,12 +66,12 @@ TEST_F(ExternalSortTest, SortEmptyPage)
     page_id_t page_id = page_buffer_man.AllocatePage();
     Page page = page_buffer_man.GetPage(page_id);
     std::lock_guard<Page> lg(page);
-    InitPage(page, PageType::Data);
+    InitPage(page.GetMutView(), PageType::Data);
 
     RecordComparisonFunction comp = IntComparator;
     SortPageInPlace(page, comp);
 
-    EXPECT_EQ(GetNumTuples(page), 0);
+    EXPECT_EQ(GetNumTuples(page.GetView()), 0);
 }
 
 TEST_F(ExternalSortTest, SortSingleElement)
@@ -224,23 +224,23 @@ TEST_F(ExternalSortTest, ShiftSlotsLeftWithDeleted)
     page_id_t page_id = page_buffer_man.AllocatePage();
     Page page = page_buffer_man.GetPage(page_id);
     std::lock_guard<Page> lg(page);
-    InitPage(page, PageType::Data);
+    InitPage(page.GetMutView(), PageType::Data);
 
     // Create slots with values 1, 2, 3, 4, 5
     std::vector<slot_id_t> slots;
     for (int i = 1; i <= 5; i++) {
-        auto slot = AllocateSlot(page, sizeof(int));
+        auto slot = AllocateSlot(page.GetMutView(), sizeof(int));
         ASSERT_TRUE(slot.has_value());
         slots.push_back(slot.value());
-        auto write_span = WriteRecord(page, slot.value());
+        auto write_span = WriteRecord(page.GetMutView(), slot.value());
         std::memcpy(write_span.data(), &i, sizeof(int));
     }
 
     // Delete slots 1 and 3 (values 2 and 4)
-    DeleteSlot(page, slots[1]);
-    DeleteSlot(page, slots[3]);
+    DeleteSlot(page.GetMutView(), slots[1]);
+    DeleteSlot(page.GetMutView(), slots[3]);
 
-    EXPECT_EQ(GetNumTuples(page), 3); // 1, 3, 5 remain
+    EXPECT_EQ(GetNumTuples(page.GetView()), 3); // 1, 3, 5 remain
 
     ShiftSlotsLeft(page);
 
@@ -257,20 +257,20 @@ TEST_F(ExternalSortTest, ShiftSlotsLeftDeletedAtBeginning)
     page_id_t page_id = page_buffer_man.AllocatePage();
     Page page = page_buffer_man.GetPage(page_id);
     std::lock_guard<Page> lg(page);
-    InitPage(page, PageType::Data);
+    InitPage(page.GetMutView(), PageType::Data);
 
     std::vector<slot_id_t> slots;
     for (int i = 1; i <= 4; i++) {
-        auto slot = AllocateSlot(page, sizeof(int));
+        auto slot = AllocateSlot(page.GetMutView(), sizeof(int));
         ASSERT_TRUE(slot.has_value());
         slots.push_back(slot.value());
-        auto write_span = WriteRecord(page, slot.value());
+        auto write_span = WriteRecord(page.GetMutView(), slot.value());
         std::memcpy(write_span.data(), &i, sizeof(int));
     }
 
     // Delete first two slots
-    DeleteSlot(page, slots[0]);
-    DeleteSlot(page, slots[1]);
+    DeleteSlot(page.GetMutView(), slots[0]);
+    DeleteSlot(page.GetMutView(), slots[1]);
 
     ShiftSlotsLeft(page);
 
