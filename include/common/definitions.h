@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <variant>
+#include <string>
 
 using slot_id_t = uint16_t;
 using offset_t = uint16_t;
@@ -27,3 +29,7 @@ using FullPage = std::span<const PageData, PAGE_SIZE>;
 /* Represents a section of a page (typically a record) */
 using MutPageSlice = std::span<PageData>;
 using PageSlice = std::span<const PageData>;
+
+using TableValue = std::variant<int, std::string>;
+
+using string_length_t = std::uint16_t;
