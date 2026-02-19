@@ -37,20 +37,6 @@ BufferBuilder& BufferBuilder::operator=(BufferBuilder&& other) noexcept {
     return *this;
 }
 
-void BufferBuilder::Push(std::string_view value) {
-    string_length_t string_length = value.size();
-    if (capacity_m < size_m + string_length + sizeof(string_length))
-        AllocateSpace();
-
-    // write string length first
-    std::memcpy(data_m + size_m, &string_length, sizeof(string_length));
-    size_m += sizeof(string_length);
-
-    // write string data
-    std::memcpy(data_m + size_m, value.data(), string_length);
-    size_m += string_length;
-}
-
 void BufferBuilder::AllocateSpace() {
     void *new_data;
     if (!data_m) {
