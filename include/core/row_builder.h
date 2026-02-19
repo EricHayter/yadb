@@ -6,18 +6,18 @@
 #include <cstring>
 #include <type_traits>
 
-class BufferBuilder {
+class RowBuilder {
     public:
     // likely might make sense to have a constructor that takes in a list of
     // types or a size to preallocate space
-    BufferBuilder() = default;
-    ~BufferBuilder();
+    RowBuilder() = default;
+    ~RowBuilder();
 
-    BufferBuilder(const BufferBuilder&) = delete;
-    BufferBuilder& operator=(const BufferBuilder&) = delete;
+    RowBuilder(const RowBuilder&) = delete;
+    RowBuilder& operator=(const RowBuilder&) = delete;
 
-    BufferBuilder(BufferBuilder&& other) noexcept;
-    BufferBuilder& operator=(BufferBuilder&& other) noexcept;
+    RowBuilder(RowBuilder&& other) noexcept;
+    RowBuilder& operator=(RowBuilder&& other) noexcept;
 
     template<DataType T>
     void Push(auto data);
@@ -35,7 +35,7 @@ class BufferBuilder {
 };
 
 template<DataType T>
-void BufferBuilder::Push(auto data) {
+void RowBuilder::Push(auto data) {
     if constexpr (T == DataType::INTEGER) {
         using IntegerType = type_for<DataType::INTEGER>;
         static_assert(std::is_convertible_v<decltype(data), IntegerType>,
