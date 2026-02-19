@@ -7,7 +7,7 @@
 #include "core/expected.h"
 
 
-using Row = std::pair<const row_id_t, std::span<const std::byte>>;
+using Row = std::pair<row_id_t, std::span<const std::byte>>;
 
 class Table {
 public:
