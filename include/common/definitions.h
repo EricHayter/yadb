@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
-#include <variant>
 #include <string>
 
 using slot_id_t = uint16_t;
@@ -71,3 +70,6 @@ template<typename T>
 constexpr auto enum_for = EnumMap<T>::value;
 
 using string_length_t = std::uint16_t;
+
+// Convert DataType enum to string representation
+std::string ToString(DataType dataType);
