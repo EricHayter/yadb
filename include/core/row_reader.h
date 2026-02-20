@@ -36,20 +36,16 @@ type_for<T> RowReader::Get(std::size_t pos) {
         ).c_str()
     );
 
-    type_for<T> popped;
     std::size_t offset = CalculateOffset(pos);
-    switch (T) {
-    case DataType::INTEGER: {
+
+    if constexpr (T == DataType::INTEGER) {
+        type_for<T> popped;
         std::memcpy(&popped, data_m.data() + offset, sizeof(popped));
-        break;
-    }
-    case DataType::TEXT: {
+        return popped;
+    } else if constexpr (T == DataType::TEXT) {
         string_length_t str_len;
         std::memcpy(&str_len, data_m.data() + offset, sizeof(string_length_t));
         offset += sizeof(string_length_t);
-        popped = std::string((char*)(data_m.data() + offset), str_len);
-        break;
+        return std::string((char*)(data_m.data() + offset), str_len);
     }
-    }
-    return popped;
 }
