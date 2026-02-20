@@ -45,6 +45,12 @@ public:
     Expected(const Unexpected<E>& unex) : data_m(unex.error) {}
     Expected(Unexpected<E>&& unex) : data_m(std::move(unex.error)) {}
 
+    /* Copy and move constructor */
+    Expected(const Expected<T, E>& other) = default;
+    Expected& operator=(const Expected<T, E>& other) = default;
+    Expected(Expected<T, E>&& other) = default;
+    Expected& operator=(Expected<T, E>&& other) = default;
+
     /* Check if contains a value */
     operator bool() const { return has_value(); }
     bool has_value() const { return std::holds_alternative<T>(data_m); }
