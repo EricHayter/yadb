@@ -2,6 +2,7 @@
 
 #include "common/definitions.h"
 #include "catalog/catalog.h"
+#include "core/assert.h"
 #include <cstring>
 #include <format>
 

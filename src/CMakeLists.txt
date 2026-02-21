@@ -1,3 +1,4 @@
+add_subdirectory(catalog)
 add_subdirectory(config)
 add_subdirectory(core)
 add_subdirectory(common)
