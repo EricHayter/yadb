@@ -1,8 +1,7 @@
 add_executable(external_sort_test external_sort_test.cpp)
 target_link_libraries(external_sort_test
     PRIVATE
-    yadb_buffer_manager
-    yadb_slotted_page
+    yadb_storage_bptree
     yadb_optimizer
     GTest::gtest
     GTest::gtest_main

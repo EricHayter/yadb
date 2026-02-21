@@ -1,4 +1,4 @@
-#include "storage/slotted_page/checksum.h"
+#include "storage/bptree/page/checksum.h"
 #include <gtest/gtest.h>
 #include <string.h>
 #include <algorithm>

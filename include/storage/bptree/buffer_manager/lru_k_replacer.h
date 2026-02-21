@@ -6,7 +6,7 @@
 
 #include <ctime>
 
-#include "storage/buffer_manager/frame.h"
+#include "storage/bptree/buffer_manager/frame.h"
 
 /**
  * LRU-K Replacement Policy

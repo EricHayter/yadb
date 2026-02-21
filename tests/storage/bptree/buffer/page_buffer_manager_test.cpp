@@ -10,9 +10,9 @@
 #include <vector>
 #include "common/definitions.h"
 #include "gtest/gtest.h"
-#include "storage/buffer_manager/page.h"
-#include "storage/buffer_manager/page_buffer_manager.h"
-#include "storage/slotted_page/page_format.h"
+#include "storage/bptree/buffer_manager/page.h"
+#include "storage/bptree/buffer_manager/page_buffer_manager.h"
+#include "storage/bptree/page/page_format.h"
 
 using namespace page;
 

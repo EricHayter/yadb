@@ -1,4 +1,4 @@
-#include "storage/disk/disk_scheduler.h"
+#include "storage/bptree/disk/disk_scheduler.h"
 #include <mutex>
 #include <stop_token>
 #include <thread>
@@ -6,8 +6,8 @@
 #include <utility>
 #include <variant>
 #include "config/config.h"
-#include "storage/disk/disk_manager.h"
-#include "storage/disk/io_tasks.h"
+#include "storage/bptree/disk/disk_manager.h"
+#include "storage/bptree/disk/io_tasks.h"
 
 DiskScheduler::DiskScheduler()
     : DiskScheduler(DatabaseConfig::CreateNull())

@@ -1,5 +1,5 @@
-#include "storage/buffer_manager/lru_k_replacer.h"
-#include "storage/buffer_manager/frame.h"
+#include "storage/bptree/buffer_manager/lru_k_replacer.h"
+#include "storage/bptree/buffer_manager/frame.h"
 
 LRUKReplacer::LRUFrameHistory::LRUFrameHistory(frame_id_t frame_id)
     : frame_id(frame_id)

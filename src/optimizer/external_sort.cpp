@@ -1,6 +1,6 @@
 #include "optimizer/external_sort.h"
 #include "common/definitions.h"
-#include "storage/slotted_page/page_format.h"
+#include "storage/bptree/page/page_format.h"
 #include <algorithm>
 #include <shared_mutex>
 

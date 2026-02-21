@@ -7,6 +7,5 @@ target_include_directories(yadb_optimizer PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(yadb_optimizer
     INTERFACE lib_compile_flags
     PRIVATE
-    yadb_buffer_manager
-    yadb_slotted_page
+    yadb_storage_bptree
 )
