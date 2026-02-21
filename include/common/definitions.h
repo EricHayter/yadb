@@ -13,7 +13,7 @@ struct row_id_t {
     page_id_t page_id;
     slot_id_t slot_id;
 
-    bool operator<=>(const row_id_t&) const = default;
+    auto operator<=>(const row_id_t&) const = default;
 };
 
 /* Size of ALL pages in the database. Maximum allowable value of 65536 due
