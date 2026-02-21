@@ -17,20 +17,33 @@ Catalog::Catalog(TableManager& table_manager)
           { "num_attributes", DataType::INTEGER },
       }
 {
-    constexpr std::string_view column_catalog_table_name = "column_catalog";
+    InitializeTableCatalog();
+    InitializeColumnCatalog();
+    LoadTableSchemas();
+    LoadColumnSchemas();
+}
 
-    if (!table_manager_m.TableExists(column_catalog_table_name)) {
-        table_manager_m.CreateTable(*this, column_catalog_table_name, column_catalog_schema_m);
-    }
-
+void Catalog::InitializeTableCatalog() {
     constexpr std::string_view table_catalog_table_name = "table_catalog";
 
     if (!table_manager_m.TableExists(table_catalog_table_name)) {
-        table_manager_m.CreateTable(*this, table_catalog_table_name, table_catalog_schema_m);
+        table_manager_m.CreateTable(table_catalog_table_name, table_catalog_schema_m);
     }
 
-    // Intialize each of the schemas based on the table catalog
     table_catalog_table_m = table_manager_m.GetTable(table_catalog_table_name);
+}
+
+void Catalog::InitializeColumnCatalog() {
+    constexpr std::string_view column_catalog_table_name = "column_catalog";
+
+    if (!table_manager_m.TableExists(column_catalog_table_name)) {
+        table_manager_m.CreateTable(column_catalog_table_name, column_catalog_schema_m);
+    }
+
+    column_catalog_table_m = table_manager_m.GetTable(column_catalog_table_name);
+}
+
+void Catalog::LoadTableSchemas() {
     table_catalog_table_m->scan_init();
     auto row = table_catalog_table_m->scan_next();
     while (row) {
@@ -42,11 +55,11 @@ Catalog::Catalog(TableManager& table_manager)
         row = table_catalog_table_m->scan_next();
     }
     table_catalog_table_m->scan_end();
+}
 
-    // Populate the schemas with the information from the column catalog schema
-    column_catalog_table_m = table_manager_m.GetTable(column_catalog_table_name);
+void Catalog::LoadColumnSchemas() {
     column_catalog_table_m->scan_init();
-    row = column_catalog_table_m->scan_next();
+    auto row = column_catalog_table_m->scan_next();
     while (row) {
         auto &[row_id, row_data] = row.value();
         RowReader rr(row_data, column_catalog_schema_m);
@@ -65,6 +78,9 @@ Catalog::Catalog(TableManager& table_manager)
 
 bool Catalog::AddTable(std::string_view table_name, const Schema& schema) {
     if (table_schemas_m.contains(std::string(table_name)))
+        return false;
+
+    if (!table_manager_m.CreateTable(table_name, schema))
         return false;
 
     // Create entry in table catalog
@@ -122,7 +138,7 @@ bool Catalog::RemoveTable(std::string_view table_name) {
     table_catalog_table_m->scan_end();
 
     // Delete the actual table
-    table_manager_m.DeleteTable(*this, table_name);
+    table_manager_m.DeleteTable(table_name);
 
     // Remove from in-memory cache
     table_schemas_m.erase(std::string(table_name));

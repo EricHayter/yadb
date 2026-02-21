@@ -8,8 +8,8 @@
 class TableManager {
     public:
     virtual ~TableManager() = default;
-    virtual void CreateTable(Catalog& catalog, std::string_view name, const Schema& schema) = 0;
-    virtual void DeleteTable(Catalog& catalog, std::string_view name) = 0;
+    virtual bool CreateTable(std::string_view name, const Schema& schema) = 0;
+    virtual bool DeleteTable(std::string_view name) = 0;
     virtual bool TableExists(std::string_view name) = 0;
     virtual std::unique_ptr<Table> GetTable(std::string_view name) = 0;
 };
