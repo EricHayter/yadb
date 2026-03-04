@@ -44,22 +44,22 @@ void Catalog::InitializeColumnCatalog() {
 }
 
 void Catalog::LoadTableSchemas() {
-    table_catalog_table_m->scan_init();
-    auto row = table_catalog_table_m->scan_next();
+    auto iter = table_catalog_table_m->iter();
+    auto row = iter->next();
     while (row) {
         auto &[row_id, row_data] = row.value();
         RowReader rr(row_data, table_catalog_schema_m);
         std::string table_name = rr.Get<DataType::TEXT>(0);
         std::int32_t num_attributes = rr.Get<DataType::INTEGER>(1);
         table_schemas_m[table_name] = std::vector<RelationAttribute>(num_attributes);
-        row = table_catalog_table_m->scan_next();
+        row = iter->next();
     }
-    table_catalog_table_m->scan_end();
+    iter->close();
 }
 
 void Catalog::LoadColumnSchemas() {
-    column_catalog_table_m->scan_init();
-    auto row = column_catalog_table_m->scan_next();
+    auto iter = column_catalog_table_m->iter();
+    auto row = iter->next();
     while (row) {
         auto &[row_id, row_data] = row.value();
         RowReader rr(row_data, column_catalog_schema_m);
@@ -71,9 +71,9 @@ void Catalog::LoadColumnSchemas() {
         table_schemas_m[relation_name][position].name = attribute_name;
         table_schemas_m[relation_name][position].type = attribute_type;
 
-        row = column_catalog_table_m->scan_next();
+        row = iter->next();
     }
-    column_catalog_table_m->scan_end();
+    iter->close();
 }
 
 bool Catalog::AddTable(std::string_view table_name, const Schema& schema) {
@@ -109,8 +109,8 @@ bool Catalog::RemoveTable(std::string_view table_name) {
         return false;
 
     // Delete all column entries from column_catalog
-    column_catalog_table_m->scan_init();
-    auto row = column_catalog_table_m->scan_next();
+    auto column_iter = column_catalog_table_m->iter();
+    auto row = column_iter->next();
     while (row) {
         auto &[row_id, row_data] = row.value();
         RowReader rr(row_data, column_catalog_schema_m);
@@ -118,13 +118,13 @@ bool Catalog::RemoveTable(std::string_view table_name) {
         if (relation_name == table_name) {
             column_catalog_table_m->delete_row(row_id);
         }
-        row = column_catalog_table_m->scan_next();
+        row = column_iter->next();
     }
-    column_catalog_table_m->scan_end();
+    column_iter->close();
 
     // Delete table entry from table_catalog
-    table_catalog_table_m->scan_init();
-    row = table_catalog_table_m->scan_next();
+    auto table_iter = table_catalog_table_m->iter();
+    row = table_iter->next();
     while (row) {
         auto &[row_id, row_data] = row.value();
         RowReader rr(row_data, table_catalog_schema_m);
@@ -133,9 +133,9 @@ bool Catalog::RemoveTable(std::string_view table_name) {
             table_catalog_table_m->delete_row(row_id);
             break;
         }
-        row = table_catalog_table_m->scan_next();
+        row = table_iter->next();
     }
-    table_catalog_table_m->scan_end();
+    table_iter->close();
 
     // Delete the actual table
     table_manager_m.DeleteTable(table_name);
