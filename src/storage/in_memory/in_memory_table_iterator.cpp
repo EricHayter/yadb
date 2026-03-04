@@ -1,4 +1,5 @@
 #include "storage/in_memory/in_memory_table_iterator.h"
+#include <stdexcept>
 
 InMemoryTableIterator::InMemoryTableIterator(std::map<row_id_t, std::vector<std::byte>>& data)
     : data_m(data)
@@ -14,7 +15,7 @@ InMemoryTableIterator::~InMemoryTableIterator()
     }
 }
 
-std::optional<Expected<Row, TableError>> InMemoryTableIterator::next()
+std::optional<Row> InMemoryTableIterator::next()
 {
     if (closed_m) {
         return std::nullopt;
@@ -29,21 +30,19 @@ std::optional<Expected<Row, TableError>> InMemoryTableIterator::next()
     Row row = std::make_pair(row_id, data_span);
 
     ++iterator_m;  // Advance to next row
-    return Expected<Row, TableError>(row);
+    return row;
 }
 
-std::optional<TableError> InMemoryTableIterator::seek(row_id_t rid)
+void InMemoryTableIterator::seek(row_id_t rid)
 {
     if (closed_m) {
-        return TableError::INVALID_ROW_ID;
+        throw std::runtime_error("Cannot seek on closed iterator");
     }
 
     iterator_m = data_m.find(rid);
     if (iterator_m == data_m.end()) {
-        return TableError::INVALID_ROW_ID;
+        throw std::invalid_argument("Invalid row_id in seek");
     }
-
-    return std::nullopt;
 }
 
 void InMemoryTableIterator::close()

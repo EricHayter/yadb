@@ -9,8 +9,8 @@ public:
     InMemoryTableIterator(std::map<row_id_t, std::vector<std::byte>>& data);
     ~InMemoryTableIterator() override;
 
-    std::optional<Expected<Row, TableError>> next() override;
-    std::optional<TableError> seek(row_id_t rid) override;
+    std::optional<Row> next() override;
+    void seek(row_id_t rid) override;
     void close() override;
 
 private:

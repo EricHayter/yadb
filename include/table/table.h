@@ -1,9 +1,7 @@
 #pragma once
 
 #include <span>
-#include <optional>
 #include "common/definitions.h"
-#include "core/expected.h"
 #include "table/table_iterator.h"
 #include <memory>
 
@@ -13,7 +11,8 @@ public:
 
     virtual std::unique_ptr<TableIterator> iter() = 0;
 
-    virtual Expected<row_id_t, TableError> insert_row(std::span<const std::byte> row) = 0;
-    virtual std::optional<TableError> update_row(Row row) = 0;
-    virtual std::optional<TableError> delete_row(const row_id_t& rid) = 0;
+    // CRUD operations - throw on error
+    virtual row_id_t insert_row(std::span<const std::byte> row) = 0;
+    virtual void update_row(Row row) = 0;
+    virtual void delete_row(const row_id_t& rid) = 0;
 };
