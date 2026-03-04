@@ -19,6 +19,11 @@ class RowReader {
 
     std::size_t NumValues() const { return schema_m.size(); }
 
+    // Low-level accessors for efficient field copying (e.g., in projection)
+    std::size_t GetOffset(std::size_t pos);
+    std::size_t GetSize(std::size_t pos);
+    std::span<const std::byte> GetRawData() const { return data_m; }
+
     private:
     // Calculates the offset of the pos inside of the row based on the schema
     // information.

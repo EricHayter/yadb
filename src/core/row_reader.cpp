@@ -38,3 +38,34 @@ std::size_t RowReader::CalculateOffset(size_t pos) {
 
     return offset;
 }
+
+std::size_t RowReader::GetOffset(std::size_t pos) {
+    return CalculateOffset(pos);
+}
+
+std::size_t RowReader::GetSize(std::size_t pos) {
+    YADB_ASSERT(pos < NumValues(),
+        std::format("Row position ({}) is out of range (row has {} values)", pos, NumValues()).c_str()
+    );
+
+    std::size_t offset = CalculateOffset(pos);
+
+    switch (schema_m[pos].type) {
+    case DataType::INTEGER: {
+        return sizeof(type_for<DataType::INTEGER>);
+    }
+    case DataType::TEXT: {
+        string_length_t str_len;
+        std::memcpy(&str_len, data_m.data() + offset, sizeof(string_length_t));
+        return sizeof(string_length_t) + str_len;
+    }
+    default: {
+        YADB_ASSERT(false,
+            std::format("Cannot get size for unimplemented DataType {}",
+                ToString(schema_m[pos].type)
+            ).c_str()
+        );
+        return 0; // Unreachable, but satisfies compiler
+    }
+    }
+}
