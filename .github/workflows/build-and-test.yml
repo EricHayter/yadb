@@ -43,6 +43,7 @@ jobs:
         cd gcovr
         gcovr -r .. \
         --exclude ../thirdparty/ \
+        --gcov-ignore-parse-errors=negative_hits.warn \
         --html-details coverage.html \
         --html-theme github.dark-green
 
