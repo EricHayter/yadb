@@ -1,3 +1,5 @@
+add_subdirectory(operators)
+
 add_library(yadb_optimizer
     external_sort.cpp
 )
@@ -8,4 +10,5 @@ target_link_libraries(yadb_optimizer
     INTERFACE lib_compile_flags
     PRIVATE
     yadb_storage_bptree
+    yadb_optimizer_operators
 )
