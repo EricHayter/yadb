@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <vector>
 
 using slot_id_t = uint16_t;
 using offset_t = uint16_t;
@@ -73,6 +74,13 @@ using string_length_t = std::uint16_t;
 
 // Convert DataType enum to string representation
 std::string ToString(DataType dataType);
+
+struct RelationAttribute {
+    std::string name;
+    DataType type;
+};
+
+using Schema = std::vector<RelationAttribute>;
 
 using Row = std::pair<row_id_t, std::span<const std::byte>>;
 

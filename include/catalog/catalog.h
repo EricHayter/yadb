@@ -9,14 +9,6 @@
 #include "table/table.h"
 #include "common/definitions.h"
 
-
-struct RelationAttribute {
-    std::string name;
-    DataType type;
-};
-
-using Schema = std::vector<RelationAttribute>;
-
 class TableManager;
 
 class Catalog {
