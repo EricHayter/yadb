@@ -3,20 +3,20 @@
 #include <optional>
 #include <vector>
 
-ProjectionIterator::ProjectionIterator(Iterator& iter, const Schema& schema, const std::vector<std::size_t>& selected_fields)
-    : iter_m(iter)
-    , schema_m(schema)
-    , selected_fields_m(selected_fields)
+ProjectionIterator::ProjectionIterator(std::unique_ptr<Iterator> iter, Schema schema, std::vector<std::size_t> selected_fields)
+    : iter_m(std::move(iter))
+    , schema_m(std::move(schema))
+    , selected_fields_m(std::move(selected_fields))
 {
     // Build output schema from selected fields
-    output_schema_m.reserve(selected_fields.size());
-    for (std::size_t field_idx : selected_fields) {
+    output_schema_m.reserve(selected_fields_m.size());
+    for (std::size_t field_idx : selected_fields_m) {
         output_schema_m.push_back(schema_m[field_idx]);
     }
 }
 
 std::optional<std::vector<std::byte>> ProjectionIterator::next() {
-    auto row = iter_m.next();
+    auto row = iter_m->next();
     if (!row.has_value())
         return std::nullopt;
 
@@ -43,5 +43,5 @@ std::optional<std::vector<std::byte>> ProjectionIterator::next() {
 }
 
 void ProjectionIterator::close() {
-    iter_m.close();
+    iter_m->close();
 }

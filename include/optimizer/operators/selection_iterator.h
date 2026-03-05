@@ -2,6 +2,7 @@
 
 #include "optimizer/operators/iterator.h"
 #include <functional>
+#include <memory>
 
 class SelectionIterator : public Iterator {
     public:
@@ -13,16 +14,13 @@ class SelectionIterator : public Iterator {
      */
     using SelectionFunction = std::function<bool(const std::vector<std::byte>&)>;
 
-    SelectionIterator(Iterator& in, const SelectionFunction& selection_func)
-        : in_m(in)
-        , selection_func_m(selection_func)
-    {}
+    SelectionIterator(std::unique_ptr<Iterator> in, SelectionFunction selection_func);
     ~SelectionIterator();
     std::optional<std::vector<std::byte>> next() override;
     void close() override;
 
     private:
     bool closed_m{false};
-    Iterator& in_m;
+    std::unique_ptr<Iterator> in_m;
     SelectionFunction selection_func_m;
 };
