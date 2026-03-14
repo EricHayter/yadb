@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <variant>
 #include <vector>
 
 using slot_id_t = uint16_t;
@@ -53,6 +54,11 @@ struct TypeMap<DataType::TEXT> {
 template<DataType T>
 using type_for = typename TypeMap<T>::type;
 
+// Variant type for SQL values - automatically derived from TypeMap
+using Value = std::variant<
+    type_for<DataType::INTEGER>,
+    type_for<DataType::TEXT>
+>;
 
 template<typename T>
 struct EnumMap;

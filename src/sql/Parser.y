@@ -20,8 +20,7 @@
     struct InsertStmt {
         std::string table_name;
         std::vector<std::string> columns;  // Optional: empty if not specified
-        // Values are represented as strings for now
-        std::vector<std::string> values;
+        std::vector<Value> values;
     };
 
     struct CreateTableStmt {
@@ -87,6 +86,8 @@
 %type <Schema> column_def_list
 %type <RelationAttribute> column_def
 %type <DataType> data_type
+%type <Value> value
+%type <std::vector<Value>> value_list
 
 %%
 
@@ -129,13 +130,14 @@ insert_stmt:
     INSERT INTO table_name VALUES LPAREN value_list RPAREN {
         InsertStmt stmt;
         stmt.table_name = $3;
-        // value_list values would go here (not captured yet)
+        stmt.values = $6;
         $$ = stmt;
     }
     | INSERT INTO table_name LPAREN column_list RPAREN VALUES LPAREN value_list RPAREN {
         InsertStmt stmt;
         stmt.table_name = $3;
-        // columns and values would go here (not captured yet)
+        // TODO: capture column names from $5
+        stmt.values = $9;
         $$ = stmt;
     }
     ;
@@ -234,14 +236,19 @@ comparison_op:
     ;
 
 value_list:
-    value
-    | value_list COMMA value
+    value {
+        $$ = std::vector<Value>{$1};
+    }
+    | value_list COMMA value {
+        $1.push_back($3);
+        $$ = $1;
+    }
     ;
 
 value:
-    NUMBER
-    | STRING
-    | IDENTIFIER
+    NUMBER      { $$ = Value{$1}; }
+    | STRING    { $$ = Value{$1}; }
+    | IDENTIFIER { $$ = Value{$1}; }
     ;
 
 column_name:
