@@ -2,6 +2,7 @@ add_subdirectory(operators)
 
 add_library(yadb_optimizer
     external_sort.cpp
+    optimizer.cpp
 )
 
 target_include_directories(yadb_optimizer PUBLIC ${CMAKE_SOURCE_DIR}/include)
@@ -11,4 +12,5 @@ target_link_libraries(yadb_optimizer
     PRIVATE
     yadb_storage_bptree
     yadb_optimizer_operators
+    sql_parser
 )

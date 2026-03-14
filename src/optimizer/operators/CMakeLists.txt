@@ -11,4 +11,5 @@ target_link_libraries(yadb_optimizer_operators
     PRIVATE
     yadb_core
     yadb_common
+    yadb_table
 )
