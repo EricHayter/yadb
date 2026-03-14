@@ -1,6 +1,7 @@
 #include "executor/executor.h"
 #include "catalog/catalog.h"
 #include "storage/in_memory/in_memory_table_manager.h"
+#include "core/row_builder.h"
 
 Executor::Executor()
     : table_manager_m{ std::make_unique<InMemoryTableManager>() }
@@ -32,8 +33,26 @@ Executor::ExecutionResult Executor::execute(const SelectStmt& stmt) {
 }
 
 Executor::ExecutionResult Executor::execute(const InsertStmt& stmt) {
-    // TODO: Implement INSERT execution
-    return ExecutionResult{};
+    // Check table exists
+    if (!table_manager_m->TableExists(stmt.table_name)) {
+        return ExecutionResult{ .success = false };
+    }
+
+    // Get table (contains schema)
+    auto table = table_manager_m->GetTable(stmt.table_name);
+    if (!table) {
+        return ExecutionResult{ .success = false };
+    }
+
+    // Type-safe insert with validation
+    try {
+        table->insert_row(stmt.values);
+        return ExecutionResult{ .success = true };
+    } catch (const std::exception& e) {
+        // TODO: Add error message field to ExecutionResult
+        // For now, just return failure
+        return ExecutionResult{ .success = false };
+    }
 }
 
 Executor::ExecutionResult Executor::execute(const CreateTableStmt& stmt) {
