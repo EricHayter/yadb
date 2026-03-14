@@ -6,7 +6,7 @@
 
 /* This is just the default projection iterator it WILL NOT remove duplicates.
  * likely going to create a separate operator for that. */
-class ProjectionIterator : Iterator {
+class ProjectionIterator : public Iterator {
     public:
     ProjectionIterator(std::unique_ptr<Iterator> iter, Schema schema, std::vector<std::size_t> selected_fields);
     std::optional<std::vector<std::byte>> next() override;
