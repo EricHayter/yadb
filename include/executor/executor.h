@@ -3,18 +3,24 @@
 #include "Parser.h"
 #include "catalog/catalog.h"
 #include "table/table_manager.h"
+#include "optimizer/optimizer.h"
+#include <vector>
+#include <optional>
 
 class Executor {
-    public:
+public:
     Executor();
 
     struct ExecutionResult {
         bool success;
+        // For SELECT queries
+        std::optional<std::vector<std::vector<std::byte>>> rows;
+        std::optional<Schema> schema;
     };
 
     ExecutionResult execute(const SqlStmt& stmt);
 
-    private:
+private:
     ExecutionResult execute(const SelectStmt& stmt);
     ExecutionResult execute(const InsertStmt& stmt);
     ExecutionResult execute(const CreateTableStmt& stmt);
@@ -22,7 +28,8 @@ class Executor {
     ExecutionResult execute(const DeleteStmt& stmt);
     ExecutionResult execute(const UpdateStmt& stmt);
 
-    private:
+private:
     std::unique_ptr<TableManager> table_manager_m;
     Catalog catalog_m;
+    Optimizer optimizer_m;
 };
