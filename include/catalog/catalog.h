@@ -25,8 +25,8 @@ class Catalog {
 
     TableManager& table_manager_m;
     std::unordered_map<std::string, Schema> table_schemas_m;
-    std::unique_ptr<Table> column_catalog_table_m;
-    std::unique_ptr<Table> table_catalog_table_m;
+    std::shared_ptr<Table> column_catalog_table_m;
+    std::shared_ptr<Table> table_catalog_table_m;
     const Schema column_catalog_schema_m;
     const Schema table_catalog_schema_m;
 };

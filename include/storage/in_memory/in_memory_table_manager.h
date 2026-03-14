@@ -14,7 +14,7 @@ public:
     bool CreateTable(std::string_view name, const Schema& schema) override;
     bool DeleteTable(std::string_view name) override;
     bool TableExists(std::string_view name) override;
-    std::unique_ptr<Table> GetTable(std::string_view name) override;
+    std::shared_ptr<Table> GetTable(std::string_view name) override;
 
 private:
     // Store actual table data in memory

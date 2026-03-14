@@ -36,7 +36,7 @@ bool InMemoryTableManager::TableExists(std::string_view name)
     return tables_m.contains(std::string(name));
 }
 
-std::unique_ptr<Table> InMemoryTableManager::GetTable(std::string_view name)
+std::shared_ptr<Table> InMemoryTableManager::GetTable(std::string_view name)
 {
     std::string table_name(name);
 
@@ -45,7 +45,6 @@ std::unique_ptr<Table> InMemoryTableManager::GetTable(std::string_view name)
         return nullptr;
     }
 
-    // Return a new unique_ptr that shares ownership with our shared_ptr
-    // This allows the caller to have a unique_ptr while we maintain the table in memory
-    return std::unique_ptr<Table>(new InMemoryTable(*it->second));
+    // Return shared_ptr to the actual table - no copy!
+    return it->second;
 }

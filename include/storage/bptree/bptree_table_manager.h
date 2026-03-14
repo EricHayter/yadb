@@ -8,5 +8,5 @@ class BPTreeTableManager : public TableManager {
     bool CreateTable(std::string_view name, const Schema& schema) override;
     bool DeleteTable(std::string_view name) override;
     virtual bool TableExists(std::string_view name) override;
-    virtual std::unique_ptr<Table> GetTable(std::string_view name) override;
+    virtual std::shared_ptr<Table> GetTable(std::string_view name) override;
 };
