@@ -2,6 +2,7 @@
 add_library(yadb_storage_in_memory
     in_memory_table.cpp
     in_memory_table_manager.cpp
+    in_memory_table_iterator.cpp
 )
 
 target_include_directories(yadb_storage_in_memory
@@ -10,4 +11,5 @@ target_include_directories(yadb_storage_in_memory
 
 target_link_libraries(yadb_storage_in_memory
     INTERFACE lib_compile_flags
+    PUBLIC yadb_table
 )

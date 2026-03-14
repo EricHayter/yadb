@@ -3,9 +3,18 @@
 #include <algorithm>
 #include <stdexcept>
 
-InMemoryTable::InMemoryTable()
-    : next_page_id_m(0)
+InMemoryTable::InMemoryTable(const Schema& schema)
+    : Table(schema)
+    , next_page_id_m(0)
     , next_slot_id_m(0)
+{
+}
+
+InMemoryTable::InMemoryTable(const InMemoryTable& other)
+    : Table(other.schema_m)
+    , data_m(other.data_m)
+    , next_page_id_m(other.next_page_id_m)
+    , next_slot_id_m(other.next_slot_id_m)
 {
 }
 
@@ -27,7 +36,7 @@ std::unique_ptr<TableIterator> InMemoryTable::iter()
     return std::make_unique<InMemoryTableIterator>(data_m);
 }
 
-row_id_t InMemoryTable::insert_row(std::span<const std::byte> row)
+row_id_t InMemoryTable::insert_row_impl(std::span<const std::byte> row)
 {
     row_id_t rid = GenerateRowId();
 

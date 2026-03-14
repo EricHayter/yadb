@@ -25,6 +25,7 @@ target_include_directories(yadb_storage_bptree
 
 target_link_libraries(yadb_storage_bptree
     PUBLIC yadb_config
+    PUBLIC yadb_table
     PRIVATE yadb_core
     INTERFACE lib_compile_flags
 )

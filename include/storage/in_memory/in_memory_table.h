@@ -7,16 +7,20 @@
 
 class InMemoryTable : public Table {
 public:
-    InMemoryTable();
+    explicit InMemoryTable(const Schema& schema);
+    InMemoryTable(const InMemoryTable& other);
     ~InMemoryTable() override = default;
 
     // Iterator interface
     std::unique_ptr<TableIterator> iter() override;
 
     // CRUD operations
-    row_id_t insert_row(std::span<const std::byte> row) override;
     void update_row(Row row) override;
     void delete_row(const row_id_t& rid) override;
+
+protected:
+    // Protected implementation interface
+    row_id_t insert_row_impl(std::span<const std::byte> row) override;
 
 private:
     // Simple std::map storage (sorted by row_id)

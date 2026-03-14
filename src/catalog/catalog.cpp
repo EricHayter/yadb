@@ -83,21 +83,21 @@ bool Catalog::AddTable(std::string_view table_name, const Schema& schema) {
     if (!table_manager_m.CreateTable(table_name, schema))
         return false;
 
-    // Create entry in table catalog
-    RowBuilder bb;
-    bb.Push<DataType::TEXT>(table_name);
-    bb.Push<DataType::INTEGER>(static_cast<std::int32_t>(schema.size()));
-    table_catalog_table_m->insert_row(bb.Data());
+    // Create entry in table catalog using type-safe API
+    table_catalog_table_m->insert_row({
+        Value(std::string(table_name)),
+        Value(static_cast<std::int32_t>(schema.size()))
+    });
 
     // Create entries for column catalog
     std::int32_t position = 0;
     for (const auto& attribute: schema) {
-        bb = RowBuilder();
-        bb.Push<DataType::TEXT>(attribute.name);
-        bb.Push<DataType::TEXT>(table_name);
-        bb.Push<DataType::INTEGER>((std::int32_t) attribute.type);
-        bb.Push<DataType::INTEGER>(position);
-        column_catalog_table_m->insert_row(bb.Data());
+        column_catalog_table_m->insert_row({
+            Value(std::string(attribute.name)),
+            Value(std::string(table_name)),
+            Value(static_cast<std::int32_t>(attribute.type)),
+            Value(position)
+        });
         position++;
     }
     table_schemas_m[std::string(table_name)] = schema;

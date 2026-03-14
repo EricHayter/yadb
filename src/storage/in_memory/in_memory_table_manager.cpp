@@ -10,10 +10,9 @@ bool InMemoryTableManager::CreateTable(std::string_view name, const Schema& sche
         return false;
     }
 
-    // Create new in-memory table
-    auto table = std::make_shared<InMemoryTable>();
+    // Create new in-memory table with schema
+    auto table = std::make_shared<InMemoryTable>(schema);
     tables_m[table_name] = table;
-    table_schemas_m[table_name] = schema;
 
     return true;
 }
@@ -28,7 +27,6 @@ bool InMemoryTableManager::DeleteTable(std::string_view name)
     }
 
     tables_m.erase(it);
-    table_schemas_m.erase(table_name);
 
     return true;
 }

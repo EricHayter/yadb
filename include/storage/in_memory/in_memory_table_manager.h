@@ -17,9 +17,6 @@ public:
     std::unique_ptr<Table> GetTable(std::string_view name) override;
 
 private:
-    // Store table schemas (catalog-like metadata)
-    std::unordered_map<std::string, Schema> table_schemas_m;
-
     // Store actual table data in memory
     std::unordered_map<std::string, std::shared_ptr<class InMemoryTable>> tables_m;
 };
