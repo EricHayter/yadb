@@ -18,6 +18,10 @@ educational project. YADB is focused on being simple, functional, and correct. A
 performance and scalability are intentionally *not* the top priorities—clarity
 and educational value come first.
 
+> **⚠️ DISCLAIMER**: YADB is in **very early stages** of development. Many features are incomplete,
+> unstable, or missing entirely. This is an educational project and should not be used for
+> production purposes. Expect bugs, breaking changes, and incomplete functionality.
+
 ---
 
 ## Contents
@@ -64,10 +68,53 @@ cmake --build .
 
 ## Usage
 
-yadb currently doesn't include a standalone executable to run queries against.
-However, tests can be built and run for the components implemented so far.
+After building, you can run the YADB shell:
 
+```bash
+# From the build/ directory
+./src/shell/yadb-shell
 ```
+
+### Demo
+
+Here's a quick demo of what YADB can currently do:
+
+```sql
+-- Create a table
+CREATE TABLE users (name TEXT, age INTEGER);
+
+-- Insert some data
+INSERT INTO users VALUES (Alice, 30);
+INSERT INTO users VALUES (Bob, 25);
+INSERT INTO users VALUES (Charlie, 35);
+
+-- Query the data
+SELECT * FROM users;
+```
+
+**Output:**
+```
+┌─────────┬─────┐
+│ name    │ age │
+├─────────┼─────┤
+│ Alice   │ 30  │
+│ Bob     │ 25  │
+│ Charlie │ 35  │
+└─────────┴─────┘
+3 rows in set
+```
+
+You can also select specific columns:
+
+```sql
+SELECT name FROM users;
+```
+
+### Running Tests
+
+Tests can be built and run for individual components:
+
+```bash
 # From the build/ directory
 cmake --build . --target test
 ```
@@ -80,12 +127,19 @@ cmake --build . --target test
 - [x] Implement disk manager
 - [x] Implement disk scheduler
 - [x] Implement page buffer
-- [X] Implement slotted page interface
-- [X] Implement lexer and parser for SQL subset
-- [X] Implement shell interface 
+- [x] Implement slotted page interface
+- [x] Implement lexer and parser for SQL subset
+- [x] Implement shell interface
+- [x] Implement basic executor with type-safe operations
+- [x] Implement result printer with formatted table output
 - [ ] Implement optimizer
+  - [x] Basic iterator-based query execution (Volcano model)
+  - [x] FileScanIterator and ProjectionIterator
+  - [ ] SelectionIterator (WHERE clause filtering)
+  - [ ] JoinIterator
   - [ ] Implement external sorting
-  - [ ] Implement algorithms for relation algebra operators
-  - [ ] TBD
-- [ ] Implement B+ trees
+  - [ ] Cost-based optimization
+- [ ] Implement B+ tree storage engine
+- [ ] Add transaction support
+- [ ] Add concurrency control
 
