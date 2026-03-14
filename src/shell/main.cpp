@@ -6,12 +6,17 @@
 #include <string_view>
 #include <vector>
 #include "Parser.h"
+#include "executor/executor.h"
 #include "replxx.hxx"
 
 using Replxx = replxx::Replxx;
 using namespace replxx::color;
 
+// not sure if this should really be optional at all
 std::optional<std::vector<SqlStmt>> parse_sql_string(std::string_view input);
+
+// just a stub for now
+void display_results(Executor::ExecutionResult res) {};
 
 int main(int argc, char **argv) {
     std::string prompt = "\x1b[1;32myadb\x1b[0m> ";
@@ -20,6 +25,8 @@ int main(int argc, char **argv) {
     std::cout
         << "Weclome to Yet Another Database 1.0\n"
         << "Type \"help\" for help\n";
+
+    Executor executor{};
 
     for (;;) {
 		// display the prompt and retrieve input from the user
@@ -54,5 +61,10 @@ int main(int argc, char **argv) {
         }
 
         std::cout << std::format("Recieved {} queries\n", result->size());
+
+        for (const SqlStmt& stmt: *result) {
+            auto exec_res = executor.execute(stmt);
+            display_results(exec_res);
+        }
     }
 }
