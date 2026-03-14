@@ -28,4 +28,9 @@ set_target_properties(sql_parser PROPERTIES
 target_include_directories(sql_parser PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_link_libraries(sql_parser
+    PUBLIC yadb_common
 )

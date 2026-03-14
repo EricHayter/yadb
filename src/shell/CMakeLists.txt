@@ -8,4 +8,5 @@ target_link_libraries(yadb-shell
     INTERFACE lib_compile_flags
     PUBLIC replxx
     PUBLIC sql_parser
+    PUBLIC yadb_executor
 )

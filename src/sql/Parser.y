@@ -8,6 +8,7 @@
     #include <variant>
     #include <optional>
     #include <string_view>
+    #include "common/definitions.h"
 
     // AST node types
     struct SelectStmt {
@@ -23,14 +24,9 @@
         std::vector<std::string> values;
     };
 
-    struct ColumnDef {
-        std::string name;
-        std::string type;  // "INTEGER" or "TEXT"
-    };
-
     struct CreateTableStmt {
         std::string table_name;
-        std::vector<ColumnDef> columns;
+        Schema columns;
     };
 
     struct DropTableStmt {
@@ -88,9 +84,9 @@
 %type <DeleteStmt> delete_stmt
 %type <UpdateStmt> update_stmt
 %type <bool> column_list
-%type <std::vector<ColumnDef>> column_def_list
-%type <ColumnDef> column_def
-%type <std::string> data_type
+%type <Schema> column_def_list
+%type <RelationAttribute> column_def
+%type <DataType> data_type
 
 %%
 
@@ -204,7 +200,7 @@ assignment:
 
 column_def_list:
     column_def {
-        $$ = std::vector<ColumnDef>{$1};
+        $$ = Schema{$1};
     }
     | column_def_list COMMA column_def {
         $1.push_back($3);
@@ -214,7 +210,7 @@ column_def_list:
 
 column_def:
     column_name data_type {
-        ColumnDef def;
+        RelationAttribute def;
         def.name = $1;
         def.type = $2;
         $$ = def;
@@ -222,8 +218,8 @@ column_def:
     ;
 
 data_type:
-    INTEGER     { $$ = "INTEGER"; }
-    | TEXT      { $$ = "TEXT"; }
+    INTEGER     { $$ = DataType::INTEGER; }
+    | TEXT      { $$ = DataType::TEXT; }
     ;
 
 condition:
