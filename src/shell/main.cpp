@@ -7,6 +7,7 @@
 #include <vector>
 #include "Parser.h"
 #include "executor/executor.h"
+#include "shell/result_printer.h"
 #include "replxx.hxx"
 
 using Replxx = replxx::Replxx;
@@ -15,8 +16,9 @@ using namespace replxx::color;
 // not sure if this should really be optional at all
 std::optional<std::vector<SqlStmt>> parse_sql_string(std::string_view input);
 
-// just a stub for now
-void display_results(Executor::ExecutionResult res) {};
+void display_results(Executor::ExecutionResult res) {
+    ResultPrinter::print(res);
+}
 
 int main(int argc, char **argv) {
     std::string prompt = "\x1b[1;32myadb\x1b[0m> ";

@@ -1,5 +1,6 @@
 add_executable(yadb-shell
     main.cpp
+    result_printer.cpp
 )
 
 target_include_directories(yadb-shell PUBLIC ${CMAKE_SOURCE_DIR}/include)
