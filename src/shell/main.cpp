@@ -21,14 +21,33 @@ void display_results(Executor::ExecutionResult res) {
 }
 
 int main(int argc, char **argv) {
+    Executor executor{};
+
+    // Check for -c flag to execute a command string
+    if (argc >= 3 && std::string(argv[1]) == "-c") {
+        std::string query = argv[2];
+
+        auto result = parse_sql_string(query);
+        if (!result) {
+            std::cerr << "Invalid SQL\n";
+            return 1;
+        }
+
+        for (const SqlStmt& stmt: *result) {
+            auto exec_res = executor.execute(stmt);
+            display_results(exec_res);
+        }
+
+        return 0;
+    }
+
+    // Interactive mode
     std::string prompt = "\x1b[1;32myadb\x1b[0m> ";
     Replxx rx;
 
     std::cout
         << "Weclome to Yet Another Database 1.0\n"
         << "Type \"help\" for help\n";
-
-    Executor executor{};
 
     for (;;) {
 		// display the prompt and retrieve input from the user
