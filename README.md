@@ -41,6 +41,7 @@ You can check out the blog [here](https://www.erichayter.com/yadb-docs/).
 
 | Date | Post |
 |------|------|
+| 14/03/2026 | [dev/3: liftoff](https://www.erichayter.com/yadb-docs/dev/2026/03/14/liftoff.html) |
 | 11/09/2025 | [dev/2: no tests, no failures](https://www.erichayter.com/yadb-docs/dev/2025/09/11/no-tests-no-failures.html) |
 | 15/06/2025 | [dev/1: Page Buffer Manager and Asynchronous Disk I/O in YADB](https://www.erichayter.com/yadb-docs/dev/2025/06/15/page-buffer-manager-and-async-disk-io.html) |
 | 02/06/2025 | [Database Internals: Page Buffers](https://www.erichayter.com/yadb-docs/meta/2025/06/02/page-buffer.html) |
