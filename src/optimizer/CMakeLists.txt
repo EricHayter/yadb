@@ -9,8 +9,8 @@ target_include_directories(yadb_optimizer PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 target_link_libraries(yadb_optimizer
     INTERFACE lib_compile_flags
+    PUBLIC sql_parser
     PRIVATE
     yadb_storage_bptree
     yadb_optimizer_operators
-    sql_parser
 )

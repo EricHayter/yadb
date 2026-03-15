@@ -1,8 +1,11 @@
 #pragma once
 
+#include "common/definitions.h"
 #include "optimizer/operators/iterator.h"
+#include "Parser.h"
 #include <functional>
 #include <memory>
+#include <span>
 
 class SelectionIterator : public Iterator {
     public:
@@ -14,13 +17,22 @@ class SelectionIterator : public Iterator {
      */
     using SelectionFunction = std::function<bool(const std::vector<std::byte>&)>;
 
-    SelectionIterator(std::unique_ptr<Iterator> in, SelectionFunction selection_func);
+    // TODO need to figure out if I hsould be using pointers or references it seems ugly to mix them...
+    SelectionIterator(std::unique_ptr<Iterator> in, const Schema& schema, const Condition& condition);
     ~SelectionIterator();
     std::optional<std::vector<std::byte>> next() override;
     void close() override;
 
     private:
+    bool evaluate_condition(const Condition& cond, std::span<const std::byte> tuple) const;
+    bool evaluate_logical_condition(const LogicalCondition& cond, std::span<const std::byte> tuple) const;
+    bool evaluate_comparison(const Comparison& cmp, std::span<const std::byte> tuple) const;
+    Value resolve_value(const Value& val, std::span<const std::byte> tuple) const;
+    bool compare_values(const Value& left, ComparisonOp op, const Value& right) const;
+
+    private:
     bool closed_m{false};
     std::unique_ptr<Iterator> in_m;
-    SelectionFunction selection_func_m;
+    const Schema& schema_m;
+    const Condition& condition_m;
 };

@@ -1,6 +1,7 @@
 #include "optimizer/optimizer.h"
 #include "optimizer/operators/file_scan_iterator.h"
 #include "optimizer/operators/projection_iterator.h"
+#include "optimizer/operators/selection_iterator.h"
 #include <stdexcept>
 #include <format>
 
@@ -26,7 +27,12 @@ std::unique_ptr<Iterator> Optimizer::get_execution_iterator(const SelectStmt& st
     // Create base FileScanIterator from table's iterator
     std::unique_ptr<Iterator> iter = std::make_unique<FileScanIterator>(table->iter());
 
-    // If SELECT *, return file scan iterator as-is
+    // Apply WHERE clause if present (selection)
+    if (stmt.where_clause) {
+        iter = std::make_unique<SelectionIterator>(std::move(iter), schema, *stmt.where_clause);
+    }
+
+    // If SELECT *, return iterator as-is (possibly with selection)
     if (stmt.select_all) {
         return iter;
     }

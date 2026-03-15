@@ -30,23 +30,18 @@
         OR
     };
 
-    // An operand in a comparison can be a column name or a literal value
-    struct Operand {
-        std::variant<std::string, Value> data;
-    };
-
-    // Simple comparison: column_name op value
+    // Simple comparison: operands are Values (either literals or will be resolved from column names)
     struct Comparison {
-        Operand left;
+        Value left;
         ComparisonOp op;
-        Operand right;
+        Value right;
     };
 
     // Compound condition: condition AND/OR condition
     struct LogicalCondition {
-        std::shared_ptr<Condition> left;
+        std::unique_ptr<Condition> left;
         LogicalOp op;
-        std::shared_ptr<Condition> right;
+        std::unique_ptr<Condition> right;
     };
 
     // A condition can be either a simple comparison or a compound logical condition
@@ -59,7 +54,7 @@
         std::string table_name;
         std::vector<std::string> columns;
         bool select_all = false;
-        std::shared_ptr<Condition> where_clause;
+        std::unique_ptr<Condition> where_clause;
     };
 
     struct InsertStmt {
@@ -80,14 +75,14 @@
     struct DeleteStmt {
         std::string table_name;
         bool has_where = false;
-        std::shared_ptr<Condition> where_clause;
+        std::unique_ptr<Condition> where_clause;
     };
 
     struct UpdateStmt {
         std::string table_name;
         std::vector<std::string> set_columns;  // Columns being updated
         bool has_where = false;
-        std::shared_ptr<Condition> where_clause;
+        std::unique_ptr<Condition> where_clause;
     };
 
     using SqlStmt = std::variant<
@@ -133,9 +128,8 @@
 %type <DataType> data_type
 %type <Value> value
 %type <std::vector<Value>> value_list
-%type <std::shared_ptr<Condition>> condition
+%type <std::unique_ptr<Condition>> condition
 %type <ComparisonOp> comparison_op
-%type <Operand> operand
 
 %%
 
@@ -145,12 +139,12 @@ sql_stmt_list:
     ;
 
 sql_stmt:
-    select_stmt SEMICOLON       { result.push_back($1); }
-    | insert_stmt SEMICOLON     { result.push_back($1); }
-    | create_stmt SEMICOLON     { result.push_back($1); }
-    | drop_stmt SEMICOLON       { result.push_back($1); }
-    | delete_stmt SEMICOLON     { result.push_back($1); }
-    | update_stmt SEMICOLON     { result.push_back($1); }
+    select_stmt SEMICOLON       { result.push_back(std::move($1)); }
+    | insert_stmt SEMICOLON     { result.push_back(std::move($1)); }
+    | create_stmt SEMICOLON     { result.push_back(std::move($1)); }
+    | drop_stmt SEMICOLON       { result.push_back(std::move($1)); }
+    | delete_stmt SEMICOLON     { result.push_back(std::move($1)); }
+    | update_stmt SEMICOLON     { result.push_back(std::move($1)); }
     ;
 
 select_stmt:
@@ -159,14 +153,14 @@ select_stmt:
         stmt.select_all = $2;
         stmt.table_name = $4;
         stmt.where_clause = nullptr;
-        $$ = stmt;
+        $$ = std::move(stmt);
     }
     | SELECT column_list FROM table_name WHERE condition {
         SelectStmt stmt;
         stmt.select_all = $2;
         stmt.table_name = $4;
-        stmt.where_clause = $6;
-        $$ = stmt;
+        stmt.where_clause = std::move($6);
+        $$ = std::move(stmt);
     }
     ;
 
@@ -215,14 +209,14 @@ delete_stmt:
         stmt.table_name = $3;
         stmt.has_where = false;
         stmt.where_clause = nullptr;
-        $$ = stmt;
+        $$ = std::move(stmt);
     }
     | DELETE FROM table_name WHERE condition {
         DeleteStmt stmt;
         stmt.table_name = $3;
         stmt.has_where = true;
-        stmt.where_clause = $5;
-        $$ = stmt;
+        stmt.where_clause = std::move($5);
+        $$ = std::move(stmt);
     }
     ;
 
@@ -233,15 +227,15 @@ update_stmt:
         stmt.has_where = false;
         stmt.where_clause = nullptr;
         // assignment_list would populate set_columns (not captured yet)
-        $$ = stmt;
+        $$ = std::move(stmt);
     }
     | UPDATE table_name SET assignment_list WHERE condition {
         UpdateStmt stmt;
         stmt.table_name = $2;
         stmt.has_where = true;
-        stmt.where_clause = $6;
+        stmt.where_clause = std::move($6);
         // assignment_list would populate set_columns (not captured yet)
-        $$ = stmt;
+        $$ = std::move(stmt);
     }
     ;
 
@@ -279,48 +273,35 @@ data_type:
     ;
 
 condition:
-    operand comparison_op operand {
-        auto cond = std::make_shared<Condition>();
+    value comparison_op value {
+        auto cond = std::make_unique<Condition>();
         Comparison cmp;
         cmp.left = $1;
         cmp.op = $2;
         cmp.right = $3;
         cond->expr = cmp;
-        $$ = cond;
+        $$ = std::move(cond);
     }
     | condition AND condition {
-        auto cond = std::make_shared<Condition>();
+        auto cond = std::make_unique<Condition>();
         LogicalCondition logical;
-        logical.left = $1;
+        logical.left = std::move($1);
         logical.op = LogicalOp::AND;
-        logical.right = $3;
-        cond->expr = logical;
-        $$ = cond;
+        logical.right = std::move($3);
+        cond->expr = std::move(logical);
+        $$ = std::move(cond);
     }
     | condition OR condition {
-        auto cond = std::make_shared<Condition>();
+        auto cond = std::make_unique<Condition>();
         LogicalCondition logical;
-        logical.left = $1;
+        logical.left = std::move($1);
         logical.op = LogicalOp::OR;
-        logical.right = $3;
-        cond->expr = logical;
-        $$ = cond;
+        logical.right = std::move($3);
+        cond->expr = std::move(logical);
+        $$ = std::move(cond);
     }
     | LPAREN condition RPAREN {
-        $$ = $2;
-    }
-    ;
-
-operand:
-    column_name {
-        Operand op;
-        op.data = $1;
-        $$ = op;
-    }
-    | value {
-        Operand op;
-        op.data = $1;
-        $$ = op;
+        $$ = std::move($2);
     }
     ;
 
@@ -344,7 +325,7 @@ value_list:
     ;
 
 value:
-    NUMBER      { $$ = Value{$1}; }
+    NUMBER      { $$ = Value{static_cast<std::int32_t>($1)}; }
     | STRING    { $$ = Value{$1}; }
     | IDENTIFIER { $$ = Value{$1}; }
     ;
