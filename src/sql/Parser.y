@@ -8,13 +8,58 @@
     #include <variant>
     #include <optional>
     #include <string_view>
+    #include <memory>
     #include "common/definitions.h"
+
+    // Forward declarations for recursive structures
+    struct Condition;
+
+    // Comparison operators
+    enum class ComparisonOp {
+        EQ,   // =
+        NEQ,  // !=
+        LT,   // <
+        GT,   // >
+        LE,   // <=
+        GE    // >=
+    };
+
+    // Logical operators
+    enum class LogicalOp {
+        AND,
+        OR
+    };
+
+    // An operand in a comparison can be a column name or a literal value
+    struct Operand {
+        std::variant<std::string, Value> data;
+    };
+
+    // Simple comparison: column_name op value
+    struct Comparison {
+        Operand left;
+        ComparisonOp op;
+        Operand right;
+    };
+
+    // Compound condition: condition AND/OR condition
+    struct LogicalCondition {
+        std::shared_ptr<Condition> left;
+        LogicalOp op;
+        std::shared_ptr<Condition> right;
+    };
+
+    // A condition can be either a simple comparison or a compound logical condition
+    struct Condition {
+        std::variant<Comparison, LogicalCondition> expr;
+    };
 
     // AST node types
     struct SelectStmt {
         std::string table_name;
         std::vector<std::string> columns;
         bool select_all = false;
+        std::shared_ptr<Condition> where_clause;
     };
 
     struct InsertStmt {
@@ -35,14 +80,14 @@
     struct DeleteStmt {
         std::string table_name;
         bool has_where = false;
-        // WHERE condition details can be added later
+        std::shared_ptr<Condition> where_clause;
     };
 
     struct UpdateStmt {
         std::string table_name;
         std::vector<std::string> set_columns;  // Columns being updated
         bool has_where = false;
-        // WHERE condition and values can be added later
+        std::shared_ptr<Condition> where_clause;
     };
 
     using SqlStmt = std::variant<
@@ -88,6 +133,9 @@
 %type <DataType> data_type
 %type <Value> value
 %type <std::vector<Value>> value_list
+%type <std::shared_ptr<Condition>> condition
+%type <ComparisonOp> comparison_op
+%type <Operand> operand
 
 %%
 
@@ -110,12 +158,14 @@ select_stmt:
         SelectStmt stmt;
         stmt.select_all = $2;
         stmt.table_name = $4;
+        stmt.where_clause = nullptr;
         $$ = stmt;
     }
     | SELECT column_list FROM table_name WHERE condition {
         SelectStmt stmt;
         stmt.select_all = $2;
         stmt.table_name = $4;
+        stmt.where_clause = $6;
         $$ = stmt;
     }
     ;
@@ -164,12 +214,14 @@ delete_stmt:
         DeleteStmt stmt;
         stmt.table_name = $3;
         stmt.has_where = false;
+        stmt.where_clause = nullptr;
         $$ = stmt;
     }
     | DELETE FROM table_name WHERE condition {
         DeleteStmt stmt;
         stmt.table_name = $3;
         stmt.has_where = true;
+        stmt.where_clause = $5;
         $$ = stmt;
     }
     ;
@@ -179,6 +231,7 @@ update_stmt:
         UpdateStmt stmt;
         stmt.table_name = $2;
         stmt.has_where = false;
+        stmt.where_clause = nullptr;
         // assignment_list would populate set_columns (not captured yet)
         $$ = stmt;
     }
@@ -186,6 +239,7 @@ update_stmt:
         UpdateStmt stmt;
         stmt.table_name = $2;
         stmt.has_where = true;
+        stmt.where_clause = $6;
         // assignment_list would populate set_columns (not captured yet)
         $$ = stmt;
     }
@@ -225,14 +279,58 @@ data_type:
     ;
 
 condition:
-    column_name comparison_op value
-    | condition AND condition
-    | condition OR condition
-    | LPAREN condition RPAREN
+    operand comparison_op operand {
+        auto cond = std::make_shared<Condition>();
+        Comparison cmp;
+        cmp.left = $1;
+        cmp.op = $2;
+        cmp.right = $3;
+        cond->expr = cmp;
+        $$ = cond;
+    }
+    | condition AND condition {
+        auto cond = std::make_shared<Condition>();
+        LogicalCondition logical;
+        logical.left = $1;
+        logical.op = LogicalOp::AND;
+        logical.right = $3;
+        cond->expr = logical;
+        $$ = cond;
+    }
+    | condition OR condition {
+        auto cond = std::make_shared<Condition>();
+        LogicalCondition logical;
+        logical.left = $1;
+        logical.op = LogicalOp::OR;
+        logical.right = $3;
+        cond->expr = logical;
+        $$ = cond;
+    }
+    | LPAREN condition RPAREN {
+        $$ = $2;
+    }
+    ;
+
+operand:
+    column_name {
+        Operand op;
+        op.data = $1;
+        $$ = op;
+    }
+    | value {
+        Operand op;
+        op.data = $1;
+        $$ = op;
+    }
     ;
 
 comparison_op:
-    EQ | NEQ | LT | GT | LE | GE
+    EQ      { $$ = ComparisonOp::EQ; }
+    | NEQ   { $$ = ComparisonOp::NEQ; }
+    | LT    { $$ = ComparisonOp::LT; }
+    | GT    { $$ = ComparisonOp::GT; }
+    | LE    { $$ = ComparisonOp::LE; }
+    | GE    { $$ = ComparisonOp::GE; }
     ;
 
 value_list:
