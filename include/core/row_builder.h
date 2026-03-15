@@ -41,8 +41,9 @@ void RowBuilder::Push(auto data) {
         static_assert(std::is_convertible_v<decltype(data), IntegerType>,
                       "Push<DataType::INTEGER> requires data convertible to integer type");
         IntegerType integer_data = static_cast<IntegerType>(data);
-        if (size_m + sizeof(integer_data) > capacity_m)
-            AllocateSpace();
+        std::size_t required_size = size_m + sizeof(integer_data);
+        if (required_size > capacity_m)
+            AllocateSpace(required_size);
         std::memcpy(data_m + size_m, &integer_data, sizeof(integer_data));
         size_m += sizeof(integer_data);
     } else if constexpr (T == DataType::TEXT) {
@@ -50,8 +51,9 @@ void RowBuilder::Push(auto data) {
                       "Push<DataType::TEXT> requires data convertible to std::string_view");
         std::string_view string_data = static_cast<std::string_view>(data);
         string_length_t string_length = string_data.size();
-        if (capacity_m < size_m + string_length + sizeof(string_length))
-            AllocateSpace();
+        std::size_t required_size = size_m + string_length + sizeof(string_length);
+        if (capacity_m < required_size)
+            AllocateSpace(required_size);
 
         // write string length first
         std::memcpy(data_m + size_m, &string_length, sizeof(string_length));
