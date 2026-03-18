@@ -122,6 +122,69 @@ cmake --build . --target test
 
 ---
 
+## Supported SQL Syntax
+
+YADB currently supports a subset of SQL. Here's what you can use:
+
+### CREATE TABLE
+
+```sql
+CREATE TABLE table_name (
+    column1 TYPE,
+    column2 TYPE,
+    ...
+);
+```
+
+**Supported Types:**
+- `INTEGER` - 32-bit signed integer
+- `TEXT` - Variable-length string
+
+**Example:**
+```sql
+CREATE TABLE users (name TEXT, age INTEGER);
+```
+
+### INSERT
+
+```sql
+INSERT INTO table_name VALUES (value1, value2, ...);
+```
+
+**Notes:**
+- Values must match the column order and types from the table definition
+- TEXT values do not require quotes
+
+**Example:**
+```sql
+INSERT INTO users VALUES (Alice, 30);
+```
+
+### SELECT
+
+```sql
+SELECT column1, column2, ... FROM table_name [WHERE condition];
+SELECT * FROM table_name [WHERE condition];
+```
+
+**Supported WHERE operators:**
+- `=` - Equality
+- `!=` - Inequality
+- `<` - Less than
+- `>` - Greater than
+- `<=` - Less than or equal
+- `>=` - Greater than or equal
+
+**Examples:**
+```sql
+SELECT * FROM users;
+SELECT name FROM users;
+SELECT name, age FROM users WHERE age > 25;
+SELECT * FROM users WHERE name = Alice;
+```
+
+---
+
 ## Roadmap
 
 - [x] Set up blog
@@ -136,7 +199,7 @@ cmake --build . --target test
 - [ ] Implement optimizer
   - [x] Basic iterator-based query execution (Volcano model)
   - [x] FileScanIterator and ProjectionIterator
-  - [ ] SelectionIterator (WHERE clause filtering)
+  - [x] SelectionIterator (WHERE clause filtering)
   - [ ] JoinIterator
   - [ ] Implement external sorting
   - [ ] Cost-based optimization
