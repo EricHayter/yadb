@@ -4,3 +4,8 @@ CMakeFiles
 .tofix
 Testing
 todo
+
+# DrawIO backup and temporary files
+*.drawio.bkp
+*.drawio.dtmp
+.~$*.drawio
