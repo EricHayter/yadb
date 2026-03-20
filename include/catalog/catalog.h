@@ -12,10 +12,16 @@ class TableManager;
 
 class Catalog {
     public:
+    struct TableInfo {
+        TableType type;
+        Schema schema;
+    };
+
     Catalog(TableManager& table_manager);
-    bool AddTable(std::string_view table_name, const Schema& schema);
+    bool AddTable(std::string_view table_name, TableType table_type, const Schema& schema);
     bool RemoveTable(std::string_view table_name);
     std::optional<Schema> GetSchema(std::string_view table_name);
+    std::optional<TableType> GetTableType(std::string_view table_name);
 
     private:
     void InitializeTableCatalog();
@@ -24,7 +30,7 @@ class Catalog {
     void LoadColumnSchemas();
 
     TableManager& table_manager_m;
-    std::unordered_map<std::string, Schema> table_schemas_m;
+    std::unordered_map<std::string, TableInfo> table_info_m;
     std::shared_ptr<Table> column_catalog_table_m;
     std::shared_ptr<Table> table_catalog_table_m;
     const Schema column_catalog_schema_m;

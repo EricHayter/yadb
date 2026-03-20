@@ -93,3 +93,8 @@ using Row = std::pair<row_id_t, std::span<const std::byte>>;
 enum class TableError {
     INVALID_ROW_ID,
 };
+
+enum class TableType {
+    InMemory,
+    BPlusTree
+};

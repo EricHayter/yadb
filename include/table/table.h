@@ -21,6 +21,9 @@ public:
     // Schema accessor
     const Schema& GetSchema() const;
 
+    // Get the type of this table
+    virtual TableType GetType() const = 0;
+
 protected:
     // Protected implementation interface for subclasses
     virtual row_id_t insert_row_impl(std::span<const std::byte> row) = 0;

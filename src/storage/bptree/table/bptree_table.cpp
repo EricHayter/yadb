@@ -25,3 +25,8 @@ void BPTreeTable::delete_row(const row_id_t& rid)
 {
     throw std::runtime_error("BPTreeTable::delete_row not yet implemented");
 }
+
+TableType BPTreeTable::GetType() const
+{
+    return TableType::BPlusTree;
+}

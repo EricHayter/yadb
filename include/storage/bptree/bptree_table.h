@@ -11,6 +11,8 @@ public:
     void update_row(Row row) override;
     void delete_row(const row_id_t& rid) override;
 
+    TableType GetType() const override;
+
 protected:
     row_id_t insert_row_impl(std::span<const std::byte> row) override;
 };

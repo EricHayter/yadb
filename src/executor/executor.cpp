@@ -102,7 +102,8 @@ Executor::ExecutionResult Executor::execute(const InsertStmt& stmt) {
 
 Executor::ExecutionResult Executor::execute(const CreateTableStmt& stmt) {
     ExecutionResult res;
-    res.success = catalog_m.AddTable(stmt.table_name, stmt.columns);
+    // Default to InMemory table type
+    res.success = catalog_m.AddTable(stmt.table_name, TableType::InMemory, stmt.columns);
     return res;
 }
 

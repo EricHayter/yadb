@@ -69,3 +69,8 @@ void InMemoryTable::delete_row(const row_id_t& rid)
 
     data_m.erase(it);
 }
+
+TableType InMemoryTable::GetType() const
+{
+    return TableType::InMemory;
+}
