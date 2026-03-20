@@ -29,6 +29,8 @@ and educational value come first.
 - [Blog Series](#blog-series)
 - [Building](#building)
 - [Usage](#usage)
+- [Architecture](#architecture)
+- [Supported SQL Syntax](#supported-sql-syntax)
 - [Roadmap](#roadmap)
 
 ---
@@ -119,6 +121,22 @@ Tests can be built and run for individual components:
 # From the build/ directory
 cmake --build . --target test
 ```
+
+---
+
+## Architecture
+
+![System Architecture](docs/export/system-architecture.png)
+
+YADB is organized into distinct layers handling parsing, query execution, storage, and result formatting. The diagram above shows the high-level architecture and relationships between major components:
+
+- **SQL Parsing Layer**: Lexer and Parser (Flex/Bison) tokenize and parse SQL into an AST
+- **Executor**: Dispatches SQL statements to appropriate handlers
+- **Core Components**: Optimizer (iterator pipeline), Catalog (schema management), Table Manager, and Serialization
+- **Iterator Pipeline**: Volcano-style query execution with FileScan, Selection, and Projection iterators
+- **Storage Layer**: In-memory tables (default) and B+ tree infrastructure with disk management, buffering, and slotted page format
+
+> **Note:** For more detailed information about specific components, check the README files in the respective subdirectories (e.g., `src/optimizer/README.md`).
 
 ---
 
