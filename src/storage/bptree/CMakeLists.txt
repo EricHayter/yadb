@@ -16,7 +16,6 @@ add_library(yadb_storage_bptree
 
     # Table implementation
     table/bptree_table.cpp
-    table/bptree_table_manager.cpp
 )
 
 target_include_directories(yadb_storage_bptree

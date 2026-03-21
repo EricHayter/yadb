@@ -5,7 +5,7 @@
 class BPTreeTable : public Table {
 public:
     explicit BPTreeTable(const Schema& schema);
-    virtual ~BPTreeTable() override = default;
+    ~BPTreeTable() override = default;
 
     std::unique_ptr<TableIterator> iter() override;
     void update_row(Row row) override;

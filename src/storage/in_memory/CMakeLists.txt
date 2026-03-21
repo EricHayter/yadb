@@ -1,7 +1,6 @@
 # In-memory storage engine library
 add_library(yadb_storage_in_memory
     in_memory_table.cpp
-    in_memory_table_manager.cpp
     in_memory_table_iterator.cpp
 )
 

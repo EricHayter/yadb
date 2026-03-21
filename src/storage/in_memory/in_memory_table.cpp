@@ -1,6 +1,5 @@
 #include "storage/in_memory/in_memory_table.h"
 #include "storage/in_memory/in_memory_table_iterator.h"
-#include <algorithm>
 #include <stdexcept>
 
 InMemoryTable::InMemoryTable(const Schema& schema)

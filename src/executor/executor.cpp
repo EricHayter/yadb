@@ -1,9 +1,9 @@
 #include "executor/executor.h"
 #include "catalog/catalog.h"
-#include "storage/in_memory/in_memory_table_manager.h"
+#include "table/table_manager.h"
 
 Executor::Executor()
-    : table_manager_m{ std::make_unique<InMemoryTableManager>() }
+    : table_manager_m{ std::make_unique<TableManager>() }
     , catalog_m(*table_manager_m)
     , optimizer_m(*table_manager_m)
 {

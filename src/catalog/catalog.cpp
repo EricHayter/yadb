@@ -28,7 +28,8 @@ void Catalog::InitializeTableCatalog() {
     constexpr std::string_view table_catalog_table_name = "table_catalog";
 
     if (!table_manager_m.TableExists(table_catalog_table_name)) {
-        table_manager_m.CreateTable(table_catalog_table_name, table_catalog_schema_m);
+        // Catalog tables use InMemory storage
+        table_manager_m.CreateTable(table_catalog_table_name, TableType::InMemory, table_catalog_schema_m);
     }
 
     table_catalog_table_m = table_manager_m.GetTable(table_catalog_table_name);
@@ -38,7 +39,8 @@ void Catalog::InitializeColumnCatalog() {
     constexpr std::string_view column_catalog_table_name = "column_catalog";
 
     if (!table_manager_m.TableExists(column_catalog_table_name)) {
-        table_manager_m.CreateTable(column_catalog_table_name, column_catalog_schema_m);
+        // Catalog tables use InMemory storage
+        table_manager_m.CreateTable(column_catalog_table_name, TableType::InMemory, column_catalog_schema_m);
     }
 
     column_catalog_table_m = table_manager_m.GetTable(column_catalog_table_name);
@@ -88,7 +90,7 @@ bool Catalog::AddTable(std::string_view table_name, TableType table_type, const 
     if (table_info_m.contains(std::string(table_name)))
         return false;
 
-    if (!table_manager_m.CreateTable(table_name, schema))
+    if (!table_manager_m.CreateTable(table_name, table_type, schema))
         return false;
 
     // Create entry in table catalog using type-safe API
@@ -158,10 +160,15 @@ bool Catalog::RemoveTable(std::string_view table_name) {
     return true;
 }
 
+bool Catalog::TableExists(std::string_view table_name)
+{
+    return table_info_m.contains(std::string(table_name));
+}
+
 std::optional<Schema> Catalog::GetSchema(std::string_view table_name)
 {
     std::string table_name_str = std::string(table_name);
-    if (!table_info_m.contains(table_name_str))
+    if (!TableExists(table_name))
         return std::nullopt;
 
     return table_info_m[table_name_str].schema;

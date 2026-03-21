@@ -2,6 +2,7 @@
 
 #include "table/table.h"
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include <span>
 
