@@ -5,14 +5,15 @@
 #include <cstring>
 
 RowReader::RowReader(std::span<const std::byte> data, const Schema& schema)
-    : data_m{ data }
-    , schema_m{ schema }
-{}
+    : data_m { data }
+    , schema_m { schema }
+{
+}
 
-std::size_t RowReader::CalculateOffset(size_t pos) {
+std::size_t RowReader::CalculateOffset(size_t pos)
+{
     YADB_ASSERT(pos < NumValues(),
-        std::format("Row position offset ({}) is out of range (row has {} values)", pos, NumValues()).c_str()
-    );
+        std::format("Row position offset ({}) is out of range (row has {} values)", pos, NumValues()).c_str());
     std::size_t offset = 0;
     for (std::size_t i = 0; i < pos; i++) {
         switch (schema_m[i].type) {
@@ -29,9 +30,8 @@ std::size_t RowReader::CalculateOffset(size_t pos) {
         default: {
             YADB_ASSERT(false,
                 std::format("Cannot pop value from row reader: unimplemented DataType {}",
-                    ToString(schema_m[i].type)
-                ).c_str()
-            );
+                    ToString(schema_m[i].type))
+                    .c_str());
         }
         }
     }
@@ -39,14 +39,15 @@ std::size_t RowReader::CalculateOffset(size_t pos) {
     return offset;
 }
 
-std::size_t RowReader::GetOffset(std::size_t pos) {
+std::size_t RowReader::GetOffset(std::size_t pos)
+{
     return CalculateOffset(pos);
 }
 
-std::size_t RowReader::GetSize(std::size_t pos) {
+std::size_t RowReader::GetSize(std::size_t pos)
+{
     YADB_ASSERT(pos < NumValues(),
-        std::format("Row position ({}) is out of range (row has {} values)", pos, NumValues()).c_str()
-    );
+        std::format("Row position ({}) is out of range (row has {} values)", pos, NumValues()).c_str());
 
     std::size_t offset = CalculateOffset(pos);
 
@@ -62,9 +63,8 @@ std::size_t RowReader::GetSize(std::size_t pos) {
     default: {
         YADB_ASSERT(false,
             std::format("Cannot get size for unimplemented DataType {}",
-                ToString(schema_m[pos].type)
-            ).c_str()
-        );
+                ToString(schema_m[pos].type))
+                .c_str());
         return 0; // Unreachable, but satisfies compiler
     }
     }

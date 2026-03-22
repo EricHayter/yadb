@@ -1,13 +1,15 @@
 #include "optimizer/operators/file_scan_iterator.h"
 #include <optional>
 
-FileScanIterator::~FileScanIterator() {
+FileScanIterator::~FileScanIterator()
+{
     if (!is_closed_m) {
         table_iter_m->close();
     }
 }
 
-std::optional<std::vector<std::byte>> FileScanIterator::next() {
+std::optional<std::vector<std::byte>> FileScanIterator::next()
+{
     auto row = table_iter_m->next();
     if (!row.has_value())
         return std::nullopt;
@@ -16,7 +18,8 @@ std::optional<std::vector<std::byte>> FileScanIterator::next() {
     return res;
 }
 
-void FileScanIterator::close() {
+void FileScanIterator::close()
+{
     if (!is_closed_m) {
         table_iter_m->close();
         is_closed_m = true;

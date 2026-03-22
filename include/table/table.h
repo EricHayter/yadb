@@ -1,10 +1,10 @@
 #pragma once
 
-#include <span>
-#include <vector>
 #include "common/definitions.h"
 #include "table/table_iterator.h"
 #include <memory>
+#include <span>
+#include <vector>
 
 class Table {
 public:

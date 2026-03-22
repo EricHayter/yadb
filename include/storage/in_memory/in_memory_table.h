@@ -2,9 +2,9 @@
 
 #include "table/table.h"
 #include <map>
+#include <span>
 #include <unordered_map>
 #include <vector>
-#include <span>
 
 class InMemoryTable : public Table {
 public:

@@ -2,10 +2,10 @@
 
 #include "Parser.h"
 #include "catalog/catalog.h"
-#include "table/table_manager.h"
 #include "optimizer/optimizer.h"
-#include <vector>
+#include "table/table_manager.h"
 #include <optional>
+#include <vector>
 
 class Executor {
 public:

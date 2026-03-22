@@ -3,13 +3,14 @@
 #include "table/table_manager.h"
 
 Executor::Executor()
-    : table_manager_m{ std::make_unique<TableManager>() }
+    : table_manager_m { std::make_unique<TableManager>() }
     , catalog_m(*table_manager_m)
     , optimizer_m(*table_manager_m)
 {
 }
 
-Executor::ExecutionResult Executor::execute(const SqlStmt& stmt) {
+Executor::ExecutionResult Executor::execute(const SqlStmt& stmt)
+{
     return std::visit([this](auto&& s) -> ExecutionResult {
         using T = std::decay_t<decltype(s)>;
         if constexpr (std::is_same_v<T, SelectStmt>)
@@ -24,10 +25,12 @@ Executor::ExecutionResult Executor::execute(const SqlStmt& stmt) {
             return this->execute(s);
         else if constexpr (std::is_same_v<T, UpdateStmt>)
             return this->execute(s);
-    }, stmt);
+    },
+        stmt);
 }
 
-Executor::ExecutionResult Executor::execute(const SelectStmt& stmt) {
+Executor::ExecutionResult Executor::execute(const SelectStmt& stmt)
+{
     try {
         // Get execution iterator from optimizer
         auto iter = optimizer_m.get_execution_iterator(stmt);
@@ -65,7 +68,7 @@ Executor::ExecutionResult Executor::execute(const SelectStmt& stmt) {
             }
         }
 
-        return ExecutionResult{
+        return ExecutionResult {
             .success = true,
             .rows = std::move(result_rows),
             .schema = std::move(result_schema)
@@ -73,52 +76,57 @@ Executor::ExecutionResult Executor::execute(const SelectStmt& stmt) {
 
     } catch (const std::exception& e) {
         // Error during execution
-        return ExecutionResult{ .success = false };
+        return ExecutionResult { .success = false };
     }
 }
 
-Executor::ExecutionResult Executor::execute(const InsertStmt& stmt) {
+Executor::ExecutionResult Executor::execute(const InsertStmt& stmt)
+{
     // Check table exists
     if (!table_manager_m->TableExists(stmt.table_name)) {
-        return ExecutionResult{ .success = false };
+        return ExecutionResult { .success = false };
     }
 
     // Get table (contains schema)
     auto table = table_manager_m->GetTable(stmt.table_name);
     if (!table) {
-        return ExecutionResult{ .success = false };
+        return ExecutionResult { .success = false };
     }
 
     // Type-safe insert with validation
     try {
         table->insert_row(stmt.values);
-        return ExecutionResult{ .success = true };
+        return ExecutionResult { .success = true };
     } catch (const std::exception& e) {
         // TODO: Add error message field to ExecutionResult
         // For now, just return failure
-        return ExecutionResult{ .success = false };
+        return ExecutionResult { .success = false };
     }
 }
 
-Executor::ExecutionResult Executor::execute(const CreateTableStmt& stmt) {
+Executor::ExecutionResult Executor::execute(const CreateTableStmt& stmt)
+{
     ExecutionResult res;
     // Default to InMemory table type
     res.success = catalog_m.AddTable(stmt.table_name, TableType::InMemory, stmt.columns);
     return res;
 }
 
-Executor::ExecutionResult Executor::execute(const DropTableStmt& stmt) {
+Executor::ExecutionResult Executor::execute(const DropTableStmt& stmt)
+{
     ExecutionResult res;
     res.success = catalog_m.RemoveTable(stmt.table_name);
     return res;
 }
 
-Executor::ExecutionResult Executor::execute(const DeleteStmt& stmt) {
+Executor::ExecutionResult Executor::execute(const DeleteStmt& stmt)
+{
     // TODO: Implement DELETE execution
-    return ExecutionResult{};
+    return ExecutionResult {};
 }
 
-Executor::ExecutionResult Executor::execute(const UpdateStmt& stmt) {
+Executor::ExecutionResult Executor::execute(const UpdateStmt& stmt)
+{
     // TODO: Implement UPDATE execution
-    return ExecutionResult{};
+    return ExecutionResult {};
 }

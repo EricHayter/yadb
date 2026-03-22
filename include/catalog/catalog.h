@@ -1,17 +1,17 @@
 #pragma once
 
-#include <string_view>
-#include <string>
-#include <unordered_map>
-#include <optional>
-#include <memory>
-#include "table/table.h"
 #include "common/definitions.h"
+#include "table/table.h"
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
 class TableManager;
 
 class Catalog {
-    public:
+public:
     struct TableInfo {
         TableType type;
         Schema schema;
@@ -24,7 +24,7 @@ class Catalog {
     std::optional<Schema> GetSchema(std::string_view table_name);
     std::optional<TableType> GetTableType(std::string_view table_name);
 
-    private:
+private:
     void InitializeTableCatalog();
     void InitializeColumnCatalog();
     void LoadTableSchemas();

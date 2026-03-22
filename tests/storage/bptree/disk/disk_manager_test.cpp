@@ -1,9 +1,9 @@
+#include "common/definitions.h"
 #include "storage/bptree/disk/disk_manager.h"
-#include <gtest/gtest.h>
 #include <array>
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <string>
-#include "common/definitions.h"
 
 /**
  * \brief RAII class for creating a temporary directory for creating files in
@@ -39,7 +39,7 @@ TEST_F(DiskManagerTest, TestCreateManagerTwice)
 TEST_F(DiskManagerTest, TestSimpleWriteRead)
 {
     std::array<PageData, PAGE_SIZE> page_data_write;
-    page_data_write.fill(PageData{'A'});
+    page_data_write.fill(PageData { 'A' });
 
     DiskManager disk_manager {};
 
@@ -59,7 +59,7 @@ TEST_F(DiskManagerTest, TestSimpleWriteRead)
 TEST_F(DiskManagerTest, TestFreePage)
 {
     std::array<PageData, PAGE_SIZE> page_data_write;
-    page_data_write.fill(PageData{'A'});
+    page_data_write.fill(PageData { 'A' });
 
     DiskManager disk_manager(1);
     page_id_t page_id = disk_manager.AllocatePage();
@@ -79,7 +79,7 @@ TEST_F(DiskManagerTest, TestFreePage)
 TEST_F(DiskManagerTest, TestResizePage)
 {
     std::array<PageData, PAGE_SIZE> page_data_write;
-    page_data_write.fill(PageData{'A'});
+    page_data_write.fill(PageData { 'A' });
     DiskManager disk_manager(1);
 
     for (int i = 0; i < 8; i++) {

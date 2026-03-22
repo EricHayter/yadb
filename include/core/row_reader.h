@@ -1,16 +1,16 @@
 #pragma once
 
-#include "common/definitions.h"
 #include "catalog/catalog.h"
+#include "common/definitions.h"
 #include "core/assert.h"
 #include <cstring>
 #include <format>
 
 class RowReader {
-    public:
+public:
     RowReader(std::span<const std::byte> data, const Schema& schema);
 
-    template<DataType T>
+    template <DataType T>
     type_for<T> Get(std::size_t pos);
 
     // TODO maybe create an iterator for more efficient reading if there's lots
@@ -24,7 +24,7 @@ class RowReader {
     std::size_t GetSize(std::size_t pos);
     std::span<const std::byte> GetRawData() const { return data_m; }
 
-    private:
+private:
     // Calculates the offset of the pos inside of the row based on the schema
     // information.
     std::size_t CalculateOffset(size_t pos);
@@ -33,14 +33,14 @@ class RowReader {
     std::span<const std::byte> data_m;
 };
 
-template<DataType T>
-type_for<T> RowReader::Get(std::size_t pos) {
+template <DataType T>
+type_for<T> RowReader::Get(std::size_t pos)
+{
     YADB_ASSERT(T == schema_m[pos].type,
         std::format("Popped type does not conform with schema. Expected: {}, Actual: {}",
             ToString(T),
-            ToString(schema_m[pos].type)
-        ).c_str()
-    );
+            ToString(schema_m[pos].type))
+            .c_str());
 
     std::size_t offset = CalculateOffset(pos);
 

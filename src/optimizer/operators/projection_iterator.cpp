@@ -15,7 +15,8 @@ ProjectionIterator::ProjectionIterator(std::unique_ptr<Iterator> iter, Schema sc
     }
 }
 
-std::optional<std::vector<std::byte>> ProjectionIterator::next() {
+std::optional<std::vector<std::byte>> ProjectionIterator::next()
+{
     auto row = iter_m->next();
     if (!row.has_value())
         return std::nullopt;
@@ -35,13 +36,14 @@ std::optional<std::vector<std::byte>> ProjectionIterator::next() {
         std::size_t offset = row_reader.GetOffset(selected_field);
         std::size_t size = row_reader.GetSize(selected_field);
         data.insert(data.end(),
-                   row.value().begin() + offset,
-                   row.value().begin() + offset + size);
+            row.value().begin() + offset,
+            row.value().begin() + offset + size);
     }
 
     return data;
 }
 
-void ProjectionIterator::close() {
+void ProjectionIterator::close()
+{
     iter_m->close();
 }

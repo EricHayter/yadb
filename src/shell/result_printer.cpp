@@ -1,9 +1,10 @@
 #include "shell/result_printer.h"
 #include "core/row_reader.h"
-#include <iomanip>
 #include <algorithm>
+#include <iomanip>
 
-void ResultPrinter::print(const Executor::ExecutionResult& result, std::ostream& out) {
+void ResultPrinter::print(const Executor::ExecutionResult& result, std::ostream& out)
+{
     // Handle failures
     if (!result.success) {
         out << "Error: Query failed\n";
@@ -56,8 +57,8 @@ void ResultPrinter::print(const Executor::ExecutionResult& result, std::ostream&
 
 std::vector<std::vector<std::string>> ResultPrinter::deserialize_rows(
     const std::vector<std::vector<std::byte>>& rows,
-    const Schema& schema
-) {
+    const Schema& schema)
+{
     std::vector<std::vector<std::string>> result;
     result.reserve(rows.size());
 
@@ -78,8 +79,8 @@ std::vector<std::vector<std::string>> ResultPrinter::deserialize_rows(
 std::string ResultPrinter::value_to_string(
     const std::vector<std::byte>& row_bytes,
     const Schema& schema,
-    size_t col_idx
-) {
+    size_t col_idx)
+{
     RowReader reader(row_bytes, schema);
     const auto& attr = schema[col_idx];
 
@@ -89,13 +90,13 @@ std::string ResultPrinter::value_to_string(
         return reader.Get<DataType::TEXT>(col_idx);
     }
 
-    return "???";  // Unknown type
+    return "???"; // Unknown type
 }
 
 std::vector<size_t> ResultPrinter::calculate_column_widths(
     const std::vector<std::vector<std::string>>& string_rows,
-    const Schema& schema
-) {
+    const Schema& schema)
+{
     std::vector<size_t> widths;
     widths.reserve(schema.size());
 
@@ -116,8 +117,8 @@ std::vector<size_t> ResultPrinter::calculate_column_widths(
 
 void ResultPrinter::print_header_separator(
     const std::vector<size_t>& widths,
-    std::ostream& out
-) {
+    std::ostream& out)
+{
     out << "┌";
     for (size_t i = 0; i < widths.size(); ++i) {
         for (size_t j = 0; j < widths[i] + 2; ++j) {
@@ -132,8 +133,8 @@ void ResultPrinter::print_header_separator(
 
 void ResultPrinter::print_row_separator(
     const std::vector<size_t>& widths,
-    std::ostream& out
-) {
+    std::ostream& out)
+{
     out << "├";
     for (size_t i = 0; i < widths.size(); ++i) {
         for (size_t j = 0; j < widths[i] + 2; ++j) {
@@ -148,8 +149,8 @@ void ResultPrinter::print_row_separator(
 
 void ResultPrinter::print_footer_separator(
     const std::vector<size_t>& widths,
-    std::ostream& out
-) {
+    std::ostream& out)
+{
     out << "└";
     for (size_t i = 0; i < widths.size(); ++i) {
         for (size_t j = 0; j < widths[i] + 2; ++j) {
@@ -165,8 +166,8 @@ void ResultPrinter::print_footer_separator(
 void ResultPrinter::print_row(
     const std::vector<std::string>& row,
     const std::vector<size_t>& widths,
-    std::ostream& out
-) {
+    std::ostream& out)
+{
     out << "│";
     for (size_t i = 0; i < row.size(); ++i) {
         out << " " << std::left << std::setw(widths[i]) << row[i] << " ";

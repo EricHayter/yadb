@@ -71,12 +71,12 @@
 
 #pragma once
 
-#include <stddef.h>
+#include "common/definitions.h"
 #include <cstdint>
 #include <optional>
+#include <stddef.h>
 #include <stdexcept>
 #include <string>
-#include "common/definitions.h"
 class Page;
 
 namespace page {
@@ -87,7 +87,6 @@ enum class PageType : uint8_t {
     BPTreeLeaf = 0x2,
 };
 
-
 /*-----------------------------------------------------------------------------
    _                    _
   | |__   ___  __ _  __| | ___ _ __
@@ -97,17 +96,17 @@ enum class PageType : uint8_t {
 -----------------------------------------------------------------------------*/
 namespace Header {
 
-/* offset into the page header for fields */
-namespace Offsets {
-    constexpr offset_t CHECKSUM = 0x00;
-    constexpr offset_t PAGE_TYPE = CHECKSUM + sizeof(uint64_t);
-    constexpr offset_t NUM_TUPLES = PAGE_TYPE + sizeof(PageType);
-    constexpr offset_t FREE_START = NUM_TUPLES + sizeof(slot_id_t);
-    constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
-};
+    /* offset into the page header for fields */
+    namespace Offsets {
+        constexpr offset_t CHECKSUM = 0x00;
+        constexpr offset_t PAGE_TYPE = CHECKSUM + sizeof(uint64_t);
+        constexpr offset_t NUM_TUPLES = PAGE_TYPE + sizeof(PageType);
+        constexpr offset_t FREE_START = NUM_TUPLES + sizeof(slot_id_t);
+        constexpr offset_t FREE_END = FREE_START + sizeof(offset_t);
+    };
 
-/* size of the page header */
-constexpr offset_t SIZE = Offsets::FREE_END + sizeof(offset_t);
+    /* size of the page header */
+    constexpr offset_t SIZE = Offsets::FREE_END + sizeof(offset_t);
 };
 
 PageType GetPageType(FullPage page);
@@ -124,18 +123,17 @@ void SetStartFreeSpace(MutFullPage page, offset_t offset);
 void SetEndFreeSpace(MutFullPage page, offset_t offset);
 
 /* initializes the fields inside of the page header. NOTE: This should only
-* be used when creating a page for the first time i.e. right after calling
-* NewPage with the page buffer manager. */
+ * be used when creating a page for the first time i.e. right after calling
+ * NewPage with the page buffer manager. */
 void InitPage(MutFullPage page, PageType page_type);
 
 /* Check if the checksum for a page is valid */
 bool ValidChecksum(FullPage page);
 
 /* Updates the checksum field in the page header. This MUST be called
-* before flushing pages as the checksum will be validated on page
-* load */
+ * before flushing pages as the checksum will be validated on page
+ * load */
 void UpdateChecksum(MutFullPage page);
-
 
 /*-----------------------------------------------------------------------------
        _       _             _
@@ -147,14 +145,14 @@ void UpdateChecksum(MutFullPage page);
 -----------------------------------------------------------------------------*/
 namespace SlotEntry {
 
-/* offset into the slot entry for fields */
-namespace Offsets {
-    constexpr offset_t DELETED = 0x00;
-    constexpr offset_t OFFSET = DELETED + sizeof(uint8_t);
-    constexpr offset_t TUPLE_SIZE = OFFSET + sizeof(offset_t);
-};
-/* size of slot entries */
-constexpr offset_t SIZE = Offsets::TUPLE_SIZE + sizeof(uint16_t);
+    /* offset into the slot entry for fields */
+    namespace Offsets {
+        constexpr offset_t DELETED = 0x00;
+        constexpr offset_t OFFSET = DELETED + sizeof(uint8_t);
+        constexpr offset_t TUPLE_SIZE = OFFSET + sizeof(offset_t);
+    };
+    /* size of slot entries */
+    constexpr offset_t SIZE = Offsets::TUPLE_SIZE + sizeof(uint16_t);
 };
 
 class ChecksumValidationException : public std::runtime_error {
@@ -203,7 +201,6 @@ void SetSlotSize(MutFullPage page, slot_id_t slot_id, uint16_t size);
 /* Print out contents of page and values for headers. Mainly to be used
  * for debugging purposes */
 void PrintPage(FullPage page);
-
 
 /* Reacquires freed space from deleted tuples. This is a fairly expensive
  * operation use it sparingly. */

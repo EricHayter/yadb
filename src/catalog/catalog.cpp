@@ -1,22 +1,22 @@
 #include "catalog/catalog.h"
 #include "common/definitions.h"
-#include "table/table_manager.h"
 #include "core/row_builder.h"
 #include "core/row_reader.h"
+#include "table/table_manager.h"
 
 Catalog::Catalog(TableManager& table_manager)
-    : table_manager_m{table_manager},
-      column_catalog_schema_m{
-          { "attr_name",      DataType::TEXT },
-          { "rel_name",       DataType::TEXT },
-          { "type",           DataType::INTEGER },
-          { "position",       DataType::INTEGER },
-      },
-      table_catalog_schema_m{
-          { "table_name",     DataType::TEXT },
-          { "type",           DataType::INTEGER },
-          { "num_attributes", DataType::INTEGER },
-      }
+    : table_manager_m { table_manager }
+    , column_catalog_schema_m {
+        { "attr_name", DataType::TEXT },
+        { "rel_name", DataType::TEXT },
+        { "type", DataType::INTEGER },
+        { "position", DataType::INTEGER },
+    }
+    , table_catalog_schema_m {
+        { "table_name", DataType::TEXT },
+        { "type", DataType::INTEGER },
+        { "num_attributes", DataType::INTEGER },
+    }
 {
     InitializeTableCatalog();
     InitializeColumnCatalog();
@@ -24,7 +24,8 @@ Catalog::Catalog(TableManager& table_manager)
     LoadColumnSchemas();
 }
 
-void Catalog::InitializeTableCatalog() {
+void Catalog::InitializeTableCatalog()
+{
     constexpr std::string_view table_catalog_table_name = "table_catalog";
 
     if (!table_manager_m.TableExists(table_catalog_table_name)) {
@@ -35,7 +36,8 @@ void Catalog::InitializeTableCatalog() {
     table_catalog_table_m = table_manager_m.GetTable(table_catalog_table_name);
 }
 
-void Catalog::InitializeColumnCatalog() {
+void Catalog::InitializeColumnCatalog()
+{
     constexpr std::string_view column_catalog_table_name = "column_catalog";
 
     if (!table_manager_m.TableExists(column_catalog_table_name)) {
@@ -46,11 +48,12 @@ void Catalog::InitializeColumnCatalog() {
     column_catalog_table_m = table_manager_m.GetTable(column_catalog_table_name);
 }
 
-void Catalog::LoadTableSchemas() {
+void Catalog::LoadTableSchemas()
+{
     auto iter = table_catalog_table_m->iter();
     auto row = iter->next();
     while (row) {
-        auto &[row_id, row_data] = row.value();
+        auto& [row_id, row_data] = row.value();
         RowReader rr(row_data, table_catalog_schema_m);
         std::string table_name = rr.Get<DataType::TEXT>(0);
         std::int32_t table_type_int = rr.Get<DataType::INTEGER>(1);
@@ -67,11 +70,12 @@ void Catalog::LoadTableSchemas() {
     iter->close();
 }
 
-void Catalog::LoadColumnSchemas() {
+void Catalog::LoadColumnSchemas()
+{
     auto iter = column_catalog_table_m->iter();
     auto row = iter->next();
     while (row) {
-        auto &[row_id, row_data] = row.value();
+        auto& [row_id, row_data] = row.value();
         RowReader rr(row_data, column_catalog_schema_m);
         std::string attribute_name = rr.Get<DataType::TEXT>(0);
         std::string relation_name = rr.Get<DataType::TEXT>(1);
@@ -86,7 +90,8 @@ void Catalog::LoadColumnSchemas() {
     iter->close();
 }
 
-bool Catalog::AddTable(std::string_view table_name, TableType table_type, const Schema& schema) {
+bool Catalog::AddTable(std::string_view table_name, TableType table_type, const Schema& schema)
+{
     if (table_info_m.contains(std::string(table_name)))
         return false;
 
@@ -94,31 +99,28 @@ bool Catalog::AddTable(std::string_view table_name, TableType table_type, const 
         return false;
 
     // Create entry in table catalog using type-safe API
-    table_catalog_table_m->insert_row({
-        Value(std::string(table_name)),
+    table_catalog_table_m->insert_row({ Value(std::string(table_name)),
         Value(static_cast<std::int32_t>(table_type)),
-        Value(static_cast<std::int32_t>(schema.size()))
-    });
+        Value(static_cast<std::int32_t>(schema.size())) });
 
     // Create entries for column catalog
     std::int32_t position = 0;
-    for (const auto& attribute: schema) {
-        column_catalog_table_m->insert_row({
-            Value(std::string(attribute.name)),
+    for (const auto& attribute : schema) {
+        column_catalog_table_m->insert_row({ Value(std::string(attribute.name)),
             Value(std::string(table_name)),
             Value(static_cast<std::int32_t>(attribute.type)),
-            Value(position)
-        });
+            Value(position) });
         position++;
     }
-    table_info_m[std::string(table_name)] = TableInfo{
+    table_info_m[std::string(table_name)] = TableInfo {
         .type = table_type,
         .schema = schema
     };
     return true;
 }
 
-bool Catalog::RemoveTable(std::string_view table_name) {
+bool Catalog::RemoveTable(std::string_view table_name)
+{
     if (!table_info_m.contains(std::string(table_name)))
         return false;
 
@@ -126,7 +128,7 @@ bool Catalog::RemoveTable(std::string_view table_name) {
     auto column_iter = column_catalog_table_m->iter();
     auto row = column_iter->next();
     while (row) {
-        auto &[row_id, row_data] = row.value();
+        auto& [row_id, row_data] = row.value();
         RowReader rr(row_data, column_catalog_schema_m);
         std::string relation_name = rr.Get<DataType::TEXT>(1);
         if (relation_name == table_name) {
@@ -140,7 +142,7 @@ bool Catalog::RemoveTable(std::string_view table_name) {
     auto table_iter = table_catalog_table_m->iter();
     row = table_iter->next();
     while (row) {
-        auto &[row_id, row_data] = row.value();
+        auto& [row_id, row_data] = row.value();
         RowReader rr(row_data, table_catalog_schema_m);
         std::string catalog_table_name = rr.Get<DataType::TEXT>(0);
         if (catalog_table_name == table_name) {

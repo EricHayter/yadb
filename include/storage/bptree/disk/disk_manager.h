@@ -1,12 +1,14 @@
 #pragma once
 
+#include "common/definitions.h"
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <unordered_set>
-#include "common/definitions.h"
-namespace spdlog { class logger; }
+namespace spdlog {
+class logger;
+}
 struct DatabaseConfig;
 
 /*

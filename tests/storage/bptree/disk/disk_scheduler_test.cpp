@@ -1,14 +1,14 @@
+#include "common/definitions.h"
 #include "storage/bptree/disk/disk_scheduler.h"
-#include <gtest/gtest.h>
 #include <filesystem>
 #include <future>
+#include <gtest/gtest.h>
 #include <set>
 #include <string>
 #include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include "common/definitions.h"
 
 /**
  * \brief RAII class for creating a temporary directory for creating files in
@@ -73,7 +73,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
         page_id_t page_id = page_id_future.get();
 
         // perform the write
-        std::vector<PageData> write_buffer(PAGE_SIZE, PageData{static_cast<unsigned char>(i)});
+        std::vector<PageData> write_buffer(PAGE_SIZE, PageData { static_cast<unsigned char>(i) });
         MutFullPage write_data_view(write_buffer.begin(), PAGE_SIZE);
         std::promise<bool> write_promise;
         std::future<bool> write_future = write_promise.get_future();
@@ -81,7 +81,7 @@ TEST_F(DiskSchedulerTest, TestConcurrentCRUD)
         EXPECT_TRUE(write_future.get());
 
         // perform the read
-        std::vector<PageData> read_buffer(PAGE_SIZE, PageData{0});
+        std::vector<PageData> read_buffer(PAGE_SIZE, PageData { 0 });
         MutFullPage read_data_view(read_buffer.begin(), PAGE_SIZE);
         std::promise<bool> read_promise;
         std::future<bool> read_future = read_promise.get_future();

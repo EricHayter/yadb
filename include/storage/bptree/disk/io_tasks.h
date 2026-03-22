@@ -1,8 +1,8 @@
 #pragma once
 
+#include "common/definitions.h"
 #include <future>
 #include <variant>
-#include "common/definitions.h"
 
 /*
  * Disk Scheduler Tasks

@@ -31,49 +31,47 @@ using FullPage = std::span<const PageData, PAGE_SIZE>;
 using MutPageSlice = std::span<PageData>;
 using PageSlice = std::span<const PageData>;
 
-
 /* list of all of the available types and enums */
 enum class DataType : std::uint8_t {
-    INTEGER,    // std::int32_t
-    TEXT,       // std::string
+    INTEGER, // std::int32_t
+    TEXT, // std::string
 };
 
-template<DataType T>
+template <DataType T>
 struct TypeMap;
 
-template<>
+template <>
 struct TypeMap<DataType::INTEGER> {
     using type = std::int32_t;
 };
 
-template<>
+template <>
 struct TypeMap<DataType::TEXT> {
     using type = std::string;
 };
 
-template<DataType T>
+template <DataType T>
 using type_for = typename TypeMap<T>::type;
 
 // Variant type for SQL values - automatically derived from TypeMap
 using Value = std::variant<
     type_for<DataType::INTEGER>,
-    type_for<DataType::TEXT>
->;
+    type_for<DataType::TEXT>>;
 
-template<typename T>
+template <typename T>
 struct EnumMap;
 
-template<>
+template <>
 struct EnumMap<std::int32_t> {
     static constexpr DataType value = DataType::INTEGER;
 };
 
-template<>
+template <>
 struct EnumMap<std::string> {
     static constexpr DataType value = DataType::TEXT;
 };
 
-template<typename T>
+template <typename T>
 constexpr auto enum_for = EnumMap<T>::value;
 
 using string_length_t = std::uint16_t;

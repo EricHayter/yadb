@@ -3,21 +3,24 @@
 #include <cstring>
 #include <new>
 
-RowBuilder::~RowBuilder() {
+RowBuilder::~RowBuilder()
+{
     if (data_m)
         free(data_m);
 }
 
 RowBuilder::RowBuilder(RowBuilder&& other) noexcept
-    : size_m(other.size_m),
-      capacity_m(other.capacity_m),
-      data_m(other.data_m) {
+    : size_m(other.size_m)
+    , capacity_m(other.capacity_m)
+    , data_m(other.data_m)
+{
     other.size_m = 0;
     other.capacity_m = 0;
     other.data_m = nullptr;
 }
 
-RowBuilder& RowBuilder::operator=(RowBuilder&& other) noexcept {
+RowBuilder& RowBuilder::operator=(RowBuilder&& other) noexcept
+{
     if (this != &other) {
         // Free our current resources
         if (data_m)
@@ -36,8 +39,9 @@ RowBuilder& RowBuilder::operator=(RowBuilder&& other) noexcept {
     return *this;
 }
 
-void RowBuilder::AllocateSpace() {
-    void *new_data;
+void RowBuilder::AllocateSpace()
+{
+    void* new_data;
     if (!data_m) {
         new_data = malloc(DEFAULT_ALLOC_SIZE);
         capacity_m = DEFAULT_ALLOC_SIZE;
@@ -49,14 +53,15 @@ void RowBuilder::AllocateSpace() {
     if (!new_data)
         throw std::bad_alloc();
 
-    data_m = (std::byte*) new_data;
+    data_m = (std::byte*)new_data;
 }
 
-void RowBuilder::AllocateSpace(std::size_t size) {
+void RowBuilder::AllocateSpace(std::size_t size)
+{
     if (size <= capacity_m)
         return;
 
-    void *new_data;
+    void* new_data;
     if (!data_m) {
         new_data = malloc(size);
     } else {
@@ -67,5 +72,5 @@ void RowBuilder::AllocateSpace(std::size_t size) {
     if (!new_data)
         throw std::bad_alloc();
 
-    data_m = (std::byte*) new_data;
+    data_m = (std::byte*)new_data;
 }

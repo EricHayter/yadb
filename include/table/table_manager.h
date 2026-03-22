@@ -1,11 +1,11 @@
 #pragma once
 
-#include <string_view>
-#include <string>
-#include <unordered_map>
-#include <memory>
 #include "common/definitions.h"
 #include "table/table.h"
+#include <memory>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
 class TableManager {
 public:

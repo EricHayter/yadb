@@ -6,7 +6,8 @@
 
 class FileScanIterator : public Iterator {
 public:
-    FileScanIterator(std::unique_ptr<TableIterator> table_iter) : table_iter_m(std::move(table_iter)) {};
+    FileScanIterator(std::unique_ptr<TableIterator> table_iter)
+        : table_iter_m(std::move(table_iter)) { };
     ~FileScanIterator() override;
     std::optional<std::vector<std::byte>> next() override;
     void close() override;

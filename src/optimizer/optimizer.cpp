@@ -2,15 +2,16 @@
 #include "optimizer/operators/file_scan_iterator.h"
 #include "optimizer/operators/projection_iterator.h"
 #include "optimizer/operators/selection_iterator.h"
-#include <stdexcept>
 #include <format>
+#include <stdexcept>
 
 Optimizer::Optimizer(TableManager& table_manager)
     : table_manager_m(table_manager)
 {
 }
 
-std::unique_ptr<Iterator> Optimizer::get_execution_iterator(const SelectStmt& stmt) {
+std::unique_ptr<Iterator> Optimizer::get_execution_iterator(const SelectStmt& stmt)
+{
     // Check table exists
     if (!table_manager_m.TableExists(stmt.table_name)) {
         throw std::runtime_error(std::format("Table '{}' does not exist", stmt.table_name));
@@ -55,8 +56,7 @@ std::unique_ptr<Iterator> Optimizer::get_execution_iterator(const SelectStmt& st
 
         if (!found) {
             throw std::runtime_error(
-                std::format("Column '{}' does not exist in table '{}'", col_name, stmt.table_name)
-            );
+                std::format("Column '{}' does not exist in table '{}'", col_name, stmt.table_name));
         }
     }
 

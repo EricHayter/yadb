@@ -1,15 +1,15 @@
 #include "storage/bptree/page/page_format.h"
+#include "core/assert.h"
+#include "storage/bptree/buffer_manager/page.h"
+#include "storage/bptree/page/checksum.h"
 #include <cctype>
 #include <cstring>
+#include <format>
 #include <iomanip>
 #include <iostream>
-#include <format>
 #include <queue>
 #include <span>
 #include <vector>
-#include "core/assert.h"
-#include "storage/bptree/page/checksum.h"
-#include "storage/bptree/buffer_manager/page.h"
 
 namespace page {
 
@@ -105,7 +105,6 @@ void UpdateChecksum(MutFullPage page)
     SetChecksum(page, new_checksum);
 }
 
-
 /*-----------------------------------------------------------------------------
        _       _             _
    ___| | ___ | |_ ___ _ __ | |_ _ __ _   _
@@ -122,8 +121,7 @@ uint16_t GetPageCapacity(FullPage page)
 bool IsSlotDeleted(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
     uint8_t deleted;
     offset_t deleted_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::DELETED;
     memcpy(&deleted, page.data() + deleted_offset, sizeof(deleted));
@@ -133,8 +131,7 @@ bool IsSlotDeleted(FullPage page, slot_id_t slot_id)
 offset_t GetSlotOffset(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
     offset_t offset;
     offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::OFFSET;
     memcpy(&offset, page.data() + slot_entry_offset, sizeof(offset));
@@ -144,8 +141,7 @@ offset_t GetSlotOffset(FullPage page, slot_id_t slot_id)
 uint16_t GetSlotSize(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
     uint16_t slot_size;
     offset_t slot_entry_offset = Header::SIZE + slot_id * SlotEntry::SIZE + SlotEntry::Offsets::TUPLE_SIZE;
     memcpy(&slot_size, page.data() + slot_entry_offset, sizeof(slot_size));
@@ -155,22 +151,18 @@ uint16_t GetSlotSize(FullPage page, slot_id_t slot_id)
 PageSlice ReadRecord(FullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
-            std::format("Slot {} is deleted", slot_id).c_str()
-            );
+        std::format("Slot {} is deleted", slot_id).c_str());
     return page.subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
 MutPageSlice WriteRecord(MutFullPage page, slot_id_t slot_id)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
     YADB_ASSERT(!IsSlotDeleted(page, slot_id),
-            std::format("Slot {} is deleted", slot_id).c_str()
-            );
+        std::format("Slot {} is deleted", slot_id).c_str());
     return page.subspan(GetSlotOffset(page, slot_id), GetSlotSize(page, slot_id));
 }
 
@@ -238,8 +230,7 @@ void DeleteSlot(MutFullPage page, slot_id_t slot_id)
 void SetSlotDeleted(MutFullPage page, slot_id_t slot_id, bool deleted)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
 
     uint8_t value = deleted ? 1 : 0;
     offset_t slot_deleted_offset = Header::SIZE
@@ -251,8 +242,7 @@ void SetSlotDeleted(MutFullPage page, slot_id_t slot_id, bool deleted)
 void SetSlotOffset(MutFullPage page, slot_id_t slot_id, offset_t offset)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
     offset_t slot_offset_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::OFFSET;
@@ -262,8 +252,7 @@ void SetSlotOffset(MutFullPage page, slot_id_t slot_id, offset_t offset)
 void SetSlotSize(MutFullPage page, slot_id_t slot_id, uint16_t size)
 {
     YADB_ASSERT(slot_id >= 0 && slot_id < GetPageCapacity(page),
-            std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str()
-            );
+        std::format("Slot id {} is out of range [0, {}]\n", slot_id, GetPageCapacity(page)).c_str());
     uint16_t slot_size_offset = Header::SIZE
         + slot_id * SlotEntry::SIZE
         + SlotEntry::Offsets::TUPLE_SIZE;
@@ -313,7 +302,6 @@ void PrintPage(FullPage page)
     // Reset stream flags
     std::cout << std::dec << std::setfill(' ');
 }
-
 
 void VacuumPage(MutFullPage page)
 {

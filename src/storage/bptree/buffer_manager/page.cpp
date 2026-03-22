@@ -1,7 +1,7 @@
 #include "storage/bptree/buffer_manager/page.h"
+#include "core/shared_spinlock.h"
 #include "storage/bptree/buffer_manager/frame.h"
 #include "storage/bptree/buffer_manager/page_buffer_manager.h"
-#include "core/shared_spinlock.h"
 
 Page::~Page()
 {
@@ -74,6 +74,7 @@ FullPage Page::GetView() const
     return frame_m->data;
 }
 
-page_id_t Page::GetPageId() const {
+page_id_t Page::GetPageId() const
+{
     return frame_m->page_id;
 }

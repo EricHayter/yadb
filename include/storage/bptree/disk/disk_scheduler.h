@@ -1,5 +1,8 @@
 #pragma once
 
+#include "common/definitions.h"
+#include "storage/bptree/disk/disk_manager.h"
+#include "storage/bptree/disk/io_tasks.h"
 #include <condition_variable>
 #include <future>
 #include <memory>
@@ -7,10 +10,9 @@
 #include <queue>
 #include <stop_token>
 #include <thread>
-#include "common/definitions.h"
-#include "storage/bptree/disk/disk_manager.h"
-#include "storage/bptree/disk/io_tasks.h"
-namespace spdlog { class logger; }
+namespace spdlog {
+class logger;
+}
 struct DatabaseConfig;
 
 /*

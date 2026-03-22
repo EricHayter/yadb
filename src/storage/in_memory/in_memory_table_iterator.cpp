@@ -22,14 +22,14 @@ std::optional<Row> InMemoryTableIterator::next()
     }
 
     if (iterator_m == data_m.end()) {
-        return std::nullopt;  // End of iteration
+        return std::nullopt; // End of iteration
     }
 
     const auto& [row_id, row_data] = *iterator_m;
     std::span<const std::byte> data_span(row_data.data(), row_data.size());
     Row row = std::make_pair(row_id, data_span);
 
-    ++iterator_m;  // Advance to next row
+    ++iterator_m; // Advance to next row
     return row;
 }
 

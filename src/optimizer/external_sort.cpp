@@ -4,35 +4,35 @@
 #include <algorithm>
 #include <shared_mutex>
 
-//std::vector<Page> SortPages(PageBufferManager& page_buffer_manager, std::vector<Page>& pages, RecordComparisonFunction& func)
+// std::vector<Page> SortPages(PageBufferManager& page_buffer_manager, std::vector<Page>& pages, RecordComparisonFunction& func)
 //{
 //
-//    // Run 0
-//    int desired_page_count = std::max(MAX_SORT_POOL_SIZE, pages.size());
+//     // Run 0
+//     int desired_page_count = std::max(MAX_SORT_POOL_SIZE, pages.size());
 //
-//    std::vector<Run> runs;
+//     std::vector<Run> runs;
 //
-//    Run run;
-//    for (int i = 0; i < desired_page_count; i++) {
-//        page_id_t page_id = page_buffer_manager.AllocatePage();
-//        auto page_opt = page_buffer_manager.GetPageIfFrameAvailable(page_id);
-//        if (!page_opt.has_value()) {
-//            // delete the newly allocated page (TODO add this to page buffer manger interface)
-//            break;
-//        }
+//     Run run;
+//     for (int i = 0; i < desired_page_count; i++) {
+//         page_id_t page_id = page_buffer_manager.AllocatePage();
+//         auto page_opt = page_buffer_manager.GetPageIfFrameAvailable(page_id);
+//         if (!page_opt.has_value()) {
+//             // delete the newly allocated page (TODO add this to page buffer manger interface)
+//             break;
+//         }
 //
-//        // maybe just copy over the data then sort?
-//        Page page = std::move(page_opt.value());
-//        Page& input_page = pages[i];
-//        std::shared_lock<Page> lk(input_page);
-//        std::copy(input_page.GetView().begin(), input_page.GetView().end(), page.GetMutView().begin());;
-//        run.push_back(std::move(page));
-//    }
-//    //sort the run
+//         // maybe just copy over the data then sort?
+//         Page page = std::move(page_opt.value());
+//         Page& input_page = pages[i];
+//         std::shared_lock<Page> lk(input_page);
+//         std::copy(input_page.GetView().begin(), input_page.GetView().end(), page.GetMutView().begin());;
+//         run.push_back(std::move(page));
+//     }
+//     //sort the run
 //
 //
-//    return {};
-//}
+//     return {};
+// }
 
 void SortPageInPlace(Page& page, RecordComparisonFunction& func)
 {
@@ -63,7 +63,7 @@ void SortPageInPlace(Page& page, RecordComparisonFunction& comp, slot_id_t left_
         /* move the lt_ptr to find an element that is before partition in
          * comp's ordering. */
         while (lt_ptr < partition_ptr && !comp(ReadRecord(page.GetView(), lt_ptr), ReadRecord(page.GetView(), partition_ptr))) {
-                lt_ptr++;
+            lt_ptr++;
         }
 
         if (lt_ptr < partition_ptr) {

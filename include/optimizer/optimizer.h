@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory>
+#include "Parser.h"
 #include "optimizer/operators/iterator.h"
 #include "table/table_manager.h"
-#include "Parser.h"
+#include <memory>
 
 class Optimizer {
 public:

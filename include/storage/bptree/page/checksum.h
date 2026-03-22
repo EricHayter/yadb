@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include "common/definitions.h"
+#include <cstdint>
 
 /*
  * Calculate 64-bit checksum of page

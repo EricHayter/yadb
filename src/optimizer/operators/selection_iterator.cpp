@@ -1,6 +1,6 @@
 #include "optimizer/operators/selection_iterator.h"
-#include "core/row_reader.h"
 #include "Parser.h"
+#include "core/row_reader.h"
 #include <optional>
 #include <type_traits>
 #include <variant>
@@ -9,14 +9,17 @@ SelectionIterator::SelectionIterator(std::unique_ptr<Iterator> in, const Schema&
     : in_m(std::move(in))
     , schema_m(schema)
     , condition_m(condition)
-{}
+{
+}
 
-SelectionIterator::~SelectionIterator() {
+SelectionIterator::~SelectionIterator()
+{
     if (!closed_m)
         in_m->close();
 }
 
-std::optional<std::vector<std::byte>> SelectionIterator::next() {
+std::optional<std::vector<std::byte>> SelectionIterator::next()
+{
     auto data = in_m->next();
     if (!data.has_value())
         return std::nullopt;
@@ -26,7 +29,8 @@ std::optional<std::vector<std::byte>> SelectionIterator::next() {
     return data;
 }
 
-bool SelectionIterator::evaluate_condition(const Condition& cond, std::span<const std::byte> tuple) const {
+bool SelectionIterator::evaluate_condition(const Condition& cond, std::span<const std::byte> tuple) const
+{
     return std::visit([&](auto&& expr) -> bool {
         using T = std::decay_t<decltype(expr)>;
         if constexpr (std::is_same_v<T, Comparison>) {
@@ -35,10 +39,12 @@ bool SelectionIterator::evaluate_condition(const Condition& cond, std::span<cons
             return evaluate_logical_condition(expr, tuple);
         }
         return false; // Should never reach here
-    }, cond.expr);
+    },
+        cond.expr);
 }
 
-bool SelectionIterator::evaluate_logical_condition(const LogicalCondition& cond, std::span<const std::byte> tuple) const {
+bool SelectionIterator::evaluate_logical_condition(const LogicalCondition& cond, std::span<const std::byte> tuple) const
+{
     bool left_result = evaluate_condition(*cond.left, tuple);
 
     // Short-circuit evaluation
@@ -55,13 +61,15 @@ bool SelectionIterator::evaluate_logical_condition(const LogicalCondition& cond,
         return left_result || right_result;
 }
 
-bool SelectionIterator::evaluate_comparison(const Comparison& cmp, std::span<const std::byte> tuple) const {
+bool SelectionIterator::evaluate_comparison(const Comparison& cmp, std::span<const std::byte> tuple) const
+{
     Value left_val = resolve_value(cmp.left, tuple);
     Value right_val = resolve_value(cmp.right, tuple);
     return compare_values(left_val, cmp.op, right_val);
 }
 
-Value SelectionIterator::resolve_value(const Value& val, std::span<const std::byte> tuple) const {
+Value SelectionIterator::resolve_value(const Value& val, std::span<const std::byte> tuple) const
+{
     // If it's a string, it might be a column name - try to resolve it
     if (std::holds_alternative<std::string>(val)) {
         const std::string& str = std::get<std::string>(val);
@@ -73,9 +81,9 @@ Value SelectionIterator::resolve_value(const Value& val, std::span<const std::by
                 RowReader reader(tuple, schema_m);
 
                 if (schema_m[i].type == DataType::INTEGER) {
-                    return Value{reader.Get<DataType::INTEGER>(i)};
+                    return Value { reader.Get<DataType::INTEGER>(i) };
                 } else if (schema_m[i].type == DataType::TEXT) {
-                    return Value{reader.Get<DataType::TEXT>(i)};
+                    return Value { reader.Get<DataType::TEXT>(i) };
                 }
             }
         }
@@ -87,7 +95,8 @@ Value SelectionIterator::resolve_value(const Value& val, std::span<const std::by
     return val;
 }
 
-bool SelectionIterator::compare_values(const Value& left, ComparisonOp op, const Value& right) const {
+bool SelectionIterator::compare_values(const Value& left, ComparisonOp op, const Value& right) const
+{
     return std::visit([op](auto&& lhs, auto&& rhs) -> bool {
         using L = std::decay_t<decltype(lhs)>;
         using R = std::decay_t<decltype(rhs)>;
@@ -98,19 +107,27 @@ bool SelectionIterator::compare_values(const Value& left, ComparisonOp op, const
         } else {
             // Same types - perform the comparison
             switch (op) {
-                case ComparisonOp::EQ:  return lhs == rhs;
-                case ComparisonOp::NEQ: return lhs != rhs;
-                case ComparisonOp::LT:  return lhs < rhs;
-                case ComparisonOp::GT:  return lhs > rhs;
-                case ComparisonOp::LE:  return lhs <= rhs;
-                case ComparisonOp::GE:  return lhs >= rhs;
+            case ComparisonOp::EQ:
+                return lhs == rhs;
+            case ComparisonOp::NEQ:
+                return lhs != rhs;
+            case ComparisonOp::LT:
+                return lhs < rhs;
+            case ComparisonOp::GT:
+                return lhs > rhs;
+            case ComparisonOp::LE:
+                return lhs <= rhs;
+            case ComparisonOp::GE:
+                return lhs >= rhs;
             }
             return false; // Should never reach here
         }
-    }, left, right);
+    },
+        left, right);
 }
 
-void SelectionIterator::close() {
+void SelectionIterator::close()
+{
     closed_m = true;
     in_m->close();
 }

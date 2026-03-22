@@ -41,7 +41,7 @@ row_id_t InMemoryTable::insert_row_impl(std::span<const std::byte> row)
 
     // Copy the row data into our storage
     std::vector<std::byte> row_data(row.begin(), row.end());
-    data_m.insert({rid, std::move(row_data)});
+    data_m.insert({ rid, std::move(row_data) });
 
     return rid;
 }

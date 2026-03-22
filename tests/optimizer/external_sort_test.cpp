@@ -1,20 +1,20 @@
-#include "optimizer/external_sort.h"
 #include "common/definitions.h"
-#include "storage/bptree/buffer_manager/page_buffer_manager.h"
+#include "optimizer/external_sort.h"
 #include "storage/bptree/buffer_manager//page.h"
+#include "storage/bptree/buffer_manager/page_buffer_manager.h"
 #include "storage/bptree/page/page_format.h"
 #include <algorithm>
 #include <cstring>
 #include <gtest/gtest.h>
-#include <vector>
 #include <iostream>
+#include <vector>
 
 using namespace page;
 
 class ExternalSortTest : public ::testing::Test {
 protected:
     static constexpr int number_frames = 10;
-    PageBufferManager page_buffer_man{number_frames};
+    PageBufferManager page_buffer_man { number_frames };
 
     // Helper: Create a page with integer data in slots
     Page CreatePageWithIntegers(const std::vector<int>& values)
@@ -76,7 +76,7 @@ TEST_F(ExternalSortTest, SortEmptyPage)
 
 TEST_F(ExternalSortTest, SortSingleElement)
 {
-    Page page = CreatePageWithIntegers({42});
+    Page page = CreatePageWithIntegers({ 42 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -89,7 +89,7 @@ TEST_F(ExternalSortTest, SortSingleElement)
 
 TEST_F(ExternalSortTest, SortTwoElementsAscending)
 {
-    Page page = CreatePageWithIntegers({1, 2});
+    Page page = CreatePageWithIntegers({ 1, 2 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -103,7 +103,7 @@ TEST_F(ExternalSortTest, SortTwoElementsAscending)
 
 TEST_F(ExternalSortTest, SortTwoElementsDescending)
 {
-    Page page = CreatePageWithIntegers({2, 1});
+    Page page = CreatePageWithIntegers({ 2, 1 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -117,7 +117,7 @@ TEST_F(ExternalSortTest, SortTwoElementsDescending)
 
 TEST_F(ExternalSortTest, SortAlreadySorted)
 {
-    Page page = CreatePageWithIntegers({1, 2, 3, 4, 5});
+    Page page = CreatePageWithIntegers({ 1, 2, 3, 4, 5 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -132,7 +132,7 @@ TEST_F(ExternalSortTest, SortAlreadySorted)
 
 TEST_F(ExternalSortTest, SortReverseSorted)
 {
-    Page page = CreatePageWithIntegers({5, 4, 3, 2, 1});
+    Page page = CreatePageWithIntegers({ 5, 4, 3, 2, 1 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -147,7 +147,7 @@ TEST_F(ExternalSortTest, SortReverseSorted)
 
 TEST_F(ExternalSortTest, SortRandomOrder)
 {
-    Page page = CreatePageWithIntegers({3, 1, 4, 1, 5, 9, 2, 6});
+    Page page = CreatePageWithIntegers({ 3, 1, 4, 1, 5, 9, 2, 6 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -157,13 +157,13 @@ TEST_F(ExternalSortTest, SortRandomOrder)
     ASSERT_EQ(values.size(), 8);
 
     // Verify sorted: 1, 1, 2, 3, 4, 5, 6, 9
-    std::vector<int> expected = {1, 1, 2, 3, 4, 5, 6, 9};
+    std::vector<int> expected = { 1, 1, 2, 3, 4, 5, 6, 9 };
     EXPECT_EQ(values, expected);
 }
 
 TEST_F(ExternalSortTest, SortWithDuplicates)
 {
-    Page page = CreatePageWithIntegers({5, 2, 8, 2, 9, 5, 5});
+    Page page = CreatePageWithIntegers({ 5, 2, 8, 2, 9, 5, 5 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -172,13 +172,13 @@ TEST_F(ExternalSortTest, SortWithDuplicates)
     auto values = ReadIntegersFromPage(page);
     ASSERT_EQ(values.size(), 7);
 
-    std::vector<int> expected = {2, 2, 5, 5, 5, 8, 9};
+    std::vector<int> expected = { 2, 2, 5, 5, 5, 8, 9 };
     EXPECT_EQ(values, expected);
 }
 
 TEST_F(ExternalSortTest, SwapSlotsBasic)
 {
-    Page page = CreatePageWithIntegers({10, 20, 30});
+    Page page = CreatePageWithIntegers({ 10, 20, 30 });
     std::lock_guard<Page> lg(page);
 
     // Swap slots 0 and 2
@@ -193,7 +193,7 @@ TEST_F(ExternalSortTest, SwapSlotsBasic)
 
 TEST_F(ExternalSortTest, SwapSlotsAdjacent)
 {
-    Page page = CreatePageWithIntegers({100, 200});
+    Page page = CreatePageWithIntegers({ 100, 200 });
     std::lock_guard<Page> lg(page);
 
     SwapSlots(page, 0, 1);
@@ -206,7 +206,7 @@ TEST_F(ExternalSortTest, SwapSlotsAdjacent)
 
 TEST_F(ExternalSortTest, ShiftSlotsLeftNoDeleted)
 {
-    Page page = CreatePageWithIntegers({1, 2, 3, 4, 5});
+    Page page = CreatePageWithIntegers({ 1, 2, 3, 4, 5 });
     std::lock_guard<Page> lg(page);
 
     ShiftSlotsLeft(page);
@@ -282,7 +282,7 @@ TEST_F(ExternalSortTest, ShiftSlotsLeftDeletedAtBeginning)
 
 TEST_F(ExternalSortTest, SortPageWithBounds)
 {
-    Page page = CreatePageWithIntegers({10, 5, 3, 8, 2, 9, 1});
+    Page page = CreatePageWithIntegers({ 10, 5, 3, 8, 2, 9, 1 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -310,8 +310,8 @@ TEST_F(ExternalSortTest, SortPageWithBounds)
 TEST_F(ExternalSortTest, SortLargerDataset)
 {
     // Create a larger unsorted dataset
-    std::vector<int> input = {15, 3, 9, 1, 23, 7, 12, 5, 18, 11,
-                              2, 19, 8, 14, 6, 17, 4, 13, 10, 20};
+    std::vector<int> input = { 15, 3, 9, 1, 23, 7, 12, 5, 18, 11,
+        2, 19, 8, 14, 6, 17, 4, 13, 10, 20 };
 
     Page page = CreatePageWithIntegers(input);
     std::lock_guard<Page> lg(page);
@@ -324,14 +324,14 @@ TEST_F(ExternalSortTest, SortLargerDataset)
 
     // Verify it's sorted
     for (size_t i = 1; i < values.size(); i++) {
-        EXPECT_LE(values[i-1], values[i])
+        EXPECT_LE(values[i - 1], values[i])
             << "Values not sorted at index " << i;
     }
 }
 
 TEST_F(ExternalSortTest, SortAllSameValues)
 {
-    Page page = CreatePageWithIntegers({7, 7, 7, 7, 7});
+    Page page = CreatePageWithIntegers({ 7, 7, 7, 7, 7 });
     std::lock_guard<Page> lg(page);
 
     RecordComparisonFunction comp = IntComparator;
@@ -348,13 +348,13 @@ TEST_F(ExternalSortTest, SortThreeElements)
 {
     // Test various permutations of 3 elements
     std::vector<std::vector<int>> permutations = {
-        {1, 2, 3}, {1, 3, 2}, {2, 1, 3},
-        {2, 3, 1}, {3, 1, 2}, {3, 2, 1}
+        { 1, 2, 3 }, { 1, 3, 2 }, { 2, 1, 3 },
+        { 2, 3, 1 }, { 3, 1, 2 }, { 3, 2, 1 }
     };
 
     for (const auto& perm : permutations) {
         std::cout << "Sorting: [ ";
-        for (auto num: perm) {
+        for (auto num : perm) {
             std::cout << num << " ";
         }
         std::cout << "]\n";
