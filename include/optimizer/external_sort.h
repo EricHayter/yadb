@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common/definitions.h"
-#include "storage/bptree/buffer_manager/page.h"
-#include "storage/bptree/buffer_manager/page_buffer_manager.h"
+#include "storage/on_disk/buffer_manager/page.h"
+#include "storage/on_disk/buffer_manager/page_buffer_manager.h"
 #include <functional>
 #include <vector>
 

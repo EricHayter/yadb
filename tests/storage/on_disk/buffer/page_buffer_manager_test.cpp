@@ -1,7 +1,7 @@
 #include "common/definitions.h"
-#include "storage/bptree/buffer_manager/page.h"
-#include "storage/bptree/buffer_manager/page_buffer_manager.h"
-#include "storage/bptree/page/page_format.h"
+#include "storage/on_disk/buffer_manager/page.h"
+#include "storage/on_disk/buffer_manager/page_buffer_manager.h"
+#include "storage/on_disk/page/page_format.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <chrono>

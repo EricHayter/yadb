@@ -11,5 +11,5 @@ target_link_libraries(yadb_table
     PRIVATE yadb_common
     PRIVATE yadb_core
     PRIVATE yadb_storage_in_memory
-    PRIVATE yadb_storage_bptree
+    PRIVATE yadb_storage_on_disk
 )

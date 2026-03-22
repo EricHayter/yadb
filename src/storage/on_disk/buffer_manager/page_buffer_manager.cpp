@@ -1,12 +1,12 @@
-#include "storage/bptree/buffer_manager/page_buffer_manager.h"
+#include "storage/on_disk/buffer_manager/page_buffer_manager.h"
 #include "config/config.h"
 #include "spdlog/fmt/bundled/base.h"
 #include "spdlog/fmt/bundled/format.h"
 #include "spdlog/logger.h"
-#include "storage/bptree/buffer_manager/frame.h"
-#include "storage/bptree/buffer_manager/lru_k_replacer.h"
-#include "storage/bptree/buffer_manager/page.h"
-#include "storage/bptree/disk/disk_scheduler.h"
+#include "storage/on_disk/buffer_manager/frame.h"
+#include "storage/on_disk/buffer_manager/lru_k_replacer.h"
+#include "storage/on_disk/buffer_manager/page.h"
+#include "storage/on_disk/disk/disk_scheduler.h"
 #include <atomic>
 #include <cassert>
 #include <future>

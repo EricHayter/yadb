@@ -1,4 +1,4 @@
-#include "storage/bptree/page/checksum.h"
+#include "storage/on_disk/page/checksum.h"
 #include <cstring>
 
 /*

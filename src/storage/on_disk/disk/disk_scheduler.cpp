@@ -1,7 +1,7 @@
-#include "storage/bptree/disk/disk_scheduler.h"
+#include "storage/on_disk/disk/disk_scheduler.h"
 #include "config/config.h"
-#include "storage/bptree/disk/disk_manager.h"
-#include "storage/bptree/disk/io_tasks.h"
+#include "storage/on_disk/disk/disk_manager.h"
+#include "storage/on_disk/disk/io_tasks.h"
 #include <mutex>
 #include <stop_token>
 #include <thread>

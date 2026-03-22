@@ -11,6 +11,8 @@ using slot_id_t = uint16_t;
 using offset_t = uint16_t;
 using page_id_t = uint32_t;
 
+constexpr page_id_t NULL_PAGE_ID = -1;
+
 struct row_id_t {
     page_id_t page_id;
     slot_id_t slot_id;

@@ -11,6 +11,6 @@ target_link_libraries(yadb_optimizer
     INTERFACE lib_compile_flags
     PUBLIC sql_parser
     PRIVATE
-    yadb_storage_bptree
+    yadb_storage_on_disk
     yadb_optimizer_operators
 )

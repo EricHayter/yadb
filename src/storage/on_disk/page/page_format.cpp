@@ -1,7 +1,7 @@
-#include "storage/bptree/page/page_format.h"
+#include "storage/on_disk/page/page_format.h"
 #include "core/assert.h"
-#include "storage/bptree/buffer_manager/page.h"
-#include "storage/bptree/page/checksum.h"
+#include "storage/on_disk/buffer_manager/page.h"
+#include "storage/on_disk/page/checksum.h"
 #include <cctype>
 #include <cstring>
 #include <format>

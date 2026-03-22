@@ -1,1 +1,1 @@
-add_subdirectory(bptree)
+add_subdirectory(on_disk)

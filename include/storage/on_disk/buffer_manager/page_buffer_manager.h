@@ -1,10 +1,10 @@
 #pragma once
 
 #include "common/definitions.h"
-#include "storage/bptree/buffer_manager/frame.h"
-#include "storage/bptree/buffer_manager/lru_k_replacer.h"
-#include "storage/bptree/buffer_manager/page.h"
-#include "storage/bptree/disk/disk_scheduler.h"
+#include "storage/on_disk/buffer_manager/frame.h"
+#include "storage/on_disk/buffer_manager/lru_k_replacer.h"
+#include "storage/on_disk/buffer_manager/page.h"
+#include "storage/on_disk/disk/disk_scheduler.h"
 #include <condition_variable>
 #include <cstddef>
 #include <memory>

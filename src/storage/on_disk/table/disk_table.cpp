@@ -1,4 +1,4 @@
-#include "storage/bptree/disk_table.h"
+#include "storage/on_disk/disk_table.h"
 #include <stdexcept>
 
 DiskTable::DiskTable(const Schema& schema)

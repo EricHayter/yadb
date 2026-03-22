@@ -1,5 +1,5 @@
-# Unified B+ tree storage engine library
-add_library(yadb_storage_bptree
+# Unified on-disk storage engine library
+add_library(yadb_storage_on_disk
     # Disk I/O
     disk/disk_manager.cpp
     disk/disk_scheduler.cpp
@@ -16,13 +16,16 @@ add_library(yadb_storage_bptree
 
     # Table implementation
     table/disk_table.cpp
+
+    # Heap Files
+    heap/heap_page.cpp
 )
 
-target_include_directories(yadb_storage_bptree
+target_include_directories(yadb_storage_on_disk
     PUBLIC ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(yadb_storage_bptree
+target_link_libraries(yadb_storage_on_disk
     PUBLIC yadb_config
     PUBLIC yadb_table
     PRIVATE yadb_core

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common/definitions.h"
-#include "storage/bptree/disk/disk_manager.h"
-#include "storage/bptree/disk/io_tasks.h"
+#include "storage/on_disk/disk/disk_manager.h"
+#include "storage/on_disk/disk/io_tasks.h"
 #include <condition_variable>
 #include <future>
 #include <memory>

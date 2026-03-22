@@ -1,5 +1,5 @@
 #include "common/definitions.h"
-#include "storage/bptree/disk/disk_manager.h"
+#include "storage/on_disk/disk/disk_manager.h"
 #include <array>
 #include <filesystem>
 #include <gtest/gtest.h>
