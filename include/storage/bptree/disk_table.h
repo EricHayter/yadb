@@ -2,10 +2,10 @@
 
 #include "table/table.h"
 
-class BPTreeTable : public Table {
+class DiskTable : public Table {
 public:
-    explicit BPTreeTable(const Schema& schema);
-    ~BPTreeTable() override = default;
+    explicit DiskTable(const Schema& schema);
+    ~DiskTable() override = default;
 
     std::unique_ptr<TableIterator> iter() override;
     void update_row(Row row) override;

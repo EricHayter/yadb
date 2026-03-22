@@ -15,7 +15,7 @@ add_library(yadb_storage_bptree
     page/checksum.cpp
 
     # Table implementation
-    table/bptree_table.cpp
+    table/disk_table.cpp
 )
 
 target_include_directories(yadb_storage_bptree

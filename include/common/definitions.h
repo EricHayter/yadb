@@ -96,5 +96,5 @@ enum class TableError {
 
 enum class TableType {
     InMemory,
-    BPlusTree
+    Disk
 };

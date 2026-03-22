@@ -1,6 +1,6 @@
 #include "table/table_manager.h"
 #include "storage/in_memory/in_memory_table.h"
-#include "storage/bptree/bptree_table.h"
+#include "storage/bptree/disk_table.h"
 #include <stdexcept>
 
 bool TableManager::CreateTable(std::string_view name, TableType type, const Schema& schema)
@@ -18,8 +18,8 @@ bool TableManager::CreateTable(std::string_view name, TableType type, const Sche
         case TableType::InMemory:
             table = std::make_shared<InMemoryTable>(schema);
             break;
-        case TableType::BPlusTree:
-            table = std::make_shared<BPTreeTable>(schema);
+        case TableType::Disk:
+            table = std::make_shared<DiskTable>(schema);
             break;
         default:
             throw std::runtime_error("Unknown table type");
