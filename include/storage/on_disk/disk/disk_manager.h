@@ -6,6 +6,7 @@
 #include <fstream>
 #include <memory>
 #include <unordered_set>
+#include <unordered_map>
 namespace spdlog {
 class logger;
 }
@@ -22,9 +23,10 @@ struct DatabaseConfig;
 class DiskManager {
 public:
     DiskManager();
-    DiskManager(std::size_t page_capacity);
-    DiskManager(const DatabaseConfig& config, std::size_t page_capacity);
+    DiskManager(const DatabaseConfig& config);
     ~DiskManager();
+
+    file_id_t RegisterFile(const std::filesystem::path& file_path, std::size_t page_capacity);
 
     /*
      * Allocated a new page in the database file for writing to
@@ -32,21 +34,21 @@ public:
      * This function will either a) use a "free" page already existing in the
      * database file or b) increase the capacity of the database file.
      */
-    page_id_t AllocatePage();
+    page_id_t AllocatePage(file_id_t file_id);
 
     /*
      * Write page data to disk
      *
      * return true on success false otherwise.
      */
-    bool WritePage(page_id_t page_id, FullPage page);
+    bool WritePage(file_id_t file_id, page_id_t page_id, FullPage page);
 
     /*
      * Read data from disk
      *
      * return true on success false otherwise.
      */
-    bool ReadPage(page_id_t page_id, MutFullPage page);
+    bool ReadPage(file_id_t file_id, page_id_t page_id, MutFullPage page);
 
     /*
      * Deletes a page from the database file
@@ -55,20 +57,28 @@ public:
      * data is in fact still there and there is no shrinkage of the database
      * file itself. The page may then reused when allocating new pages.
      */
-    void DeletePage(page_id_t page_id);
+    void DeletePage(file_id_t, page_id_t page_id);
 
 private:
-    std::size_t GetOffset(page_id_t page_id);
-    std::size_t GetDatabaseFileSize();
+    file_id_t GenerateFileId();
+    std::size_t GetOffset(page_id_t page_id) const;
+    std::size_t GetDatabaseFileSize(file_id_t file_id) const;
 
-    /* list of pages that are considered free */
-    std::unordered_set<page_id_t> free_pages_m;
+    struct DatabaseFile {
+        std::filesystem::path path;
 
-    std::size_t page_capacity_m;
+        /* iostream to write to database file */
+        std::fstream file_stream;
 
-    /* iostream to write to database file */
-    std::fstream db_io_m;
-    std::filesystem::path db_file_path_m;
+        /* list of pages that are considered free */
+        std::unordered_set<page_id_t> free_pages;
+        std::size_t page_capacity = 1;
+    };
+
+    std::unordered_map<std::filesystem::path, file_id_t> path_map_m;
+    std::unordered_map<file_id_t, DatabaseFile> id_map_m;
+
+    file_id_t next_file_id_m = 0;
 
     std::shared_ptr<spdlog::logger> logger_m;
 };
