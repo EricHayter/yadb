@@ -7,6 +7,8 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include <mutex>
+
 namespace spdlog {
 class logger;
 }
@@ -65,6 +67,7 @@ private:
     std::size_t GetDatabaseFileSize(file_id_t file_id) const;
 
     struct DatabaseFile {
+        mutable std::mutex mut;
         std::filesystem::path path;
 
         /* iostream to write to database file */
@@ -75,6 +78,7 @@ private:
         std::size_t page_capacity = 1;
     };
 
+    mutable std::mutex mut_m;
     std::unordered_map<std::filesystem::path, file_id_t> path_map_m;
     std::unordered_map<file_id_t, DatabaseFile> id_map_m;
 
