@@ -1,6 +1,5 @@
 add_executable(on_disk_storage_test
     disk/disk_manager_test.cpp
-    disk/disk_scheduler_test.cpp
     buffer/page_buffer_manager_test.cpp
     page/checksum_test.cpp
 )

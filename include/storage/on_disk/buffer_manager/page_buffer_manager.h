@@ -4,7 +4,7 @@
 #include "storage/on_disk/buffer_manager/frame.h"
 #include "storage/on_disk/buffer_manager/lru_k_replacer.h"
 #include "storage/on_disk/buffer_manager/page.h"
-#include "storage/on_disk/disk/disk_scheduler.h"
+#include "storage/on_disk/disk/disk_manager.h"
 #include <condition_variable>
 #include <cstddef>
 #include <memory>
@@ -43,7 +43,7 @@ struct DatabaseConfig;
  * header files.
  *
  * All requirements for disk I/O for reading and writing data to and from disk
- * is handled by the disk scheduler.
+ * is handled by the disk manager.
  */
 class PageBufferManager {
     friend Page;
@@ -111,7 +111,7 @@ private:
 
     LRUKReplacer replacer_m;
 
-    DiskScheduler disk_scheduler_m;
+    DiskManager disk_manager_m;
 
     /* buffer for the entire page buffer pool */
     char* buffer_m;

@@ -2,7 +2,6 @@
 add_library(yadb_storage_on_disk
     # Disk I/O
     disk/disk_manager.cpp
-    disk/disk_scheduler.cpp
 
     # Buffer management
     buffer_manager/page.cpp

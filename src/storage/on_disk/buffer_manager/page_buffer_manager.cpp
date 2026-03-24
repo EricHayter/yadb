@@ -6,10 +6,9 @@
 #include "storage/on_disk/buffer_manager/frame.h"
 #include "storage/on_disk/buffer_manager/lru_k_replacer.h"
 #include "storage/on_disk/buffer_manager/page.h"
-#include "storage/on_disk/disk/disk_scheduler.h"
+#include "storage/on_disk/disk/disk_manager.h"
 #include <atomic>
 #include <cassert>
-#include <future>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -28,7 +27,7 @@ PageBufferManager::PageBufferManager(std::size_t num_frames)
 }
 
 PageBufferManager::PageBufferManager(const DatabaseConfig& config, std::size_t num_frames)
-    : disk_scheduler_m(config)
+    : disk_manager_m(config)
     , logger_m(config.page_buffer_manager_logger)
     , replacer_m()
     , buffer_m((char*)malloc(num_frames * PAGE_SIZE))
@@ -52,11 +51,9 @@ PageBufferManager::~PageBufferManager()
 
 page_id_t PageBufferManager::AllocatePage()
 {
-    /* request the disk scheduler to create a page */
-    std::promise<page_id_t> page_promise;
-    std::future<page_id_t> page_future = page_promise.get_future();
-    disk_scheduler_m.AllocatePage(std::move(page_promise));
-    return page_future.get();
+    // TODO: Add file_id parameter and pass it here
+    file_id_t file_id = 0;  // FIXME: Needs to be passed as parameter
+    return disk_manager_m.AllocatePage(file_id);
 }
 
 Page PageBufferManager::GetPage(page_id_t page_id)
@@ -119,10 +116,9 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
     page_map_m.erase(frame->page_id);
 
     // read the desired page data from disk to the frame
-    std::promise<bool> read_status_promise;
-    std::future<bool> read_status_future = read_status_promise.get_future();
-    disk_scheduler_m.ReadPage(page_id, frame->data, std::move(read_status_promise));
-    if (!read_status_future.get()) {
+    // TODO: Add file_id parameter and pass it here
+    file_id_t file_id = 0;  // FIXME: Needs to be passed as parameter
+    if (!disk_manager_m.ReadPage(file_id, page_id, frame->data)) {
         logger_m->warn("Failed to load page {} due to read failure", page_id);
         return LoadPageStatus::IOError;
     }
@@ -141,11 +137,10 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
 
 PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_id)
 {
-    std::promise<bool> write_status_promise;
-    std::future<bool> write_status_future = write_status_promise.get_future();
     Frame* frame = GetFrameForPage(page_id);
-    disk_scheduler_m.WritePage(page_id, frame->data, std::move(write_status_promise));
-    if (!write_status_future.get()) {
+    // TODO: Add file_id parameter and pass it here
+    file_id_t file_id = 0;  // FIXME: Needs to be passed as parameter
+    if (!disk_manager_m.WritePage(file_id, page_id, frame->data)) {
         logger_m->warn("Failed to flush page {}", page_id);
         return FlushPageStatus::IOError;
     }
