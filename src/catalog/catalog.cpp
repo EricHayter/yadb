@@ -162,25 +162,25 @@ bool Catalog::RemoveTable(std::string_view table_name)
     return true;
 }
 
-bool Catalog::TableExists(std::string_view table_name)
+bool Catalog::TableExists(std::string_view table_name) const
 {
     return table_info_m.contains(std::string(table_name));
 }
 
-std::optional<Schema> Catalog::GetSchema(std::string_view table_name)
+std::optional<Schema> Catalog::GetSchema(std::string_view table_name) const
 {
     std::string table_name_str = std::string(table_name);
     if (!TableExists(table_name))
         return std::nullopt;
 
-    return table_info_m[table_name_str].schema;
+    return table_info_m.at(table_name_str).schema;
 }
 
-std::optional<TableType> Catalog::GetTableType(std::string_view table_name)
+std::optional<TableType> Catalog::GetTableType(std::string_view table_name) const
 {
     std::string table_name_str = std::string(table_name);
     if (!table_info_m.contains(table_name_str))
         return std::nullopt;
 
-    return table_info_m[table_name_str].type;
+    return table_info_m.at(table_name_str).type;
 }

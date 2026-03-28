@@ -20,9 +20,9 @@ public:
     Catalog(TableManager& table_manager);
     bool AddTable(std::string_view table_name, TableType table_type, const Schema& schema);
     bool RemoveTable(std::string_view table_name);
-    bool TableExists(std::string_view table_name);
-    std::optional<Schema> GetSchema(std::string_view table_name);
-    std::optional<TableType> GetTableType(std::string_view table_name);
+    bool TableExists(std::string_view table_name) const;
+    std::optional<Schema> GetSchema(std::string_view table_name) const;
+    std::optional<TableType> GetTableType(std::string_view table_name) const;
 
 private:
     void InitializeTableCatalog();
