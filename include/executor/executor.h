@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Parser.h"
-#include "catalog/catalog.h"
 #include "optimizer/optimizer.h"
 #include "table/table_manager.h"
 #include <optional>
@@ -30,6 +29,5 @@ private:
 
 private:
     std::unique_ptr<TableManager> table_manager_m;
-    Catalog catalog_m;
     Optimizer optimizer_m;
 };

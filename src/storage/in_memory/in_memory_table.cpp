@@ -2,6 +2,9 @@
 #include "storage/in_memory/in_memory_table_iterator.h"
 #include <stdexcept>
 
+// Define the static registry
+std::unordered_map<std::string, std::shared_ptr<InMemoryTable>> InMemoryTable::tables_m;
+
 bool InMemoryTable::CreateTable(std::string_view table_name, const Schema& schema) {
     if (tables_m.contains(std::string(table_name)))
         return false;

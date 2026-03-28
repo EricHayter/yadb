@@ -1,21 +1,24 @@
 #pragma once
 
+#include "catalog/catalog.h"
 #include "common/definitions.h"
 #include "table/table.h"
 #include <memory>
-#include <string>
 #include <string_view>
-#include <unordered_map>
 
 class TableManager {
 public:
-    TableManager() = default;
+    TableManager();
 
-    bool CreateTable(std::string_view name, TableType type, const Schema& schema);
+    template<typename... Args>
+    bool CreateTable(std::string_view name, TableType type, const Schema& schema, const Args&... args);
+
+    template<typename... Args>
+    std::shared_ptr<Table> GetTable(std::string_view name, const Args&... args) const;
+
     bool DeleteTable(std::string_view name);
-    bool TableExists(std::string_view name) const;
-    std::shared_ptr<Table> GetTable(std::string_view name) const;
 
+    bool TableExists(std::string_view name) const;
 private:
-    std::unordered_map<std::string, std::shared_ptr<Table>> tables_m;
+    Catalog catalog_m;
 };

@@ -1,10 +1,8 @@
 #include "executor/executor.h"
-#include "catalog/catalog.h"
 #include "table/table_manager.h"
 
 Executor::Executor()
     : table_manager_m { std::make_unique<TableManager>() }
-    , catalog_m(*table_manager_m)
     , optimizer_m(*table_manager_m)
 {
 }
@@ -108,14 +106,14 @@ Executor::ExecutionResult Executor::execute(const CreateTableStmt& stmt)
 {
     ExecutionResult res;
     // Default to InMemory table type
-    res.success = catalog_m.AddTable(stmt.table_name, TableType::InMemory, stmt.columns);
+    res.success = table_manager_m->CreateTable(stmt.table_name, TableType::InMemory, stmt.columns);
     return res;
 }
 
 Executor::ExecutionResult Executor::execute(const DropTableStmt& stmt)
 {
     ExecutionResult res;
-    res.success = catalog_m.RemoveTable(stmt.table_name);
+    res.success = table_manager_m->DeleteTable(stmt.table_name);
     return res;
 }
 
