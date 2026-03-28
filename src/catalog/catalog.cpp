@@ -1,5 +1,6 @@
 #include "catalog/catalog.h"
 #include "common/definitions.h"
+#include "core/assert.h"
 #include "core/row_builder.h"
 #include "core/row_reader.h"
 #include "table/table_manager.h"
@@ -167,20 +168,18 @@ bool Catalog::TableExists(std::string_view table_name) const
     return table_info_m.contains(std::string(table_name));
 }
 
-std::optional<Schema> Catalog::GetSchema(std::string_view table_name) const
+Schema Catalog::GetSchema(std::string_view table_name) const
 {
     std::string table_name_str = std::string(table_name);
-    if (!TableExists(table_name))
-        return std::nullopt;
+    YADB_ASSERT(TableExists(table_name), "Table does not exist");
 
     return table_info_m.at(table_name_str).schema;
 }
 
-std::optional<TableType> Catalog::GetTableType(std::string_view table_name) const
+TableType Catalog::GetTableType(std::string_view table_name) const
 {
     std::string table_name_str = std::string(table_name);
-    if (!table_info_m.contains(table_name_str))
-        return std::nullopt;
+    YADB_ASSERT(table_info_m.contains(table_name_str), "Table does not exist");
 
     return table_info_m.at(table_name_str).type;
 }

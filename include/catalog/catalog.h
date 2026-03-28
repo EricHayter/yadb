@@ -3,7 +3,6 @@
 #include "common/definitions.h"
 #include "table/table.h"
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -21,8 +20,8 @@ public:
     bool AddTable(std::string_view table_name, TableType table_type, const Schema& schema);
     bool RemoveTable(std::string_view table_name);
     bool TableExists(std::string_view table_name) const;
-    std::optional<Schema> GetSchema(std::string_view table_name) const;
-    std::optional<TableType> GetTableType(std::string_view table_name) const;
+    Schema GetSchema(std::string_view table_name) const;
+    TableType GetTableType(std::string_view table_name) const;
 
 private:
     void InitializeTableCatalog();
