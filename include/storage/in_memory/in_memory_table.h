@@ -2,14 +2,15 @@
 
 #include "table/table.h"
 #include <map>
-#include <span>
 #include <unordered_map>
+#include <span>
 #include <vector>
 
 class InMemoryTable : public Table {
 public:
-    explicit InMemoryTable(const Schema& schema);
-    InMemoryTable(const InMemoryTable& other);
+    static bool CreateTable(std::string_view table_name, const Schema& schema);
+    static std::shared_ptr<InMemoryTable> GetTable(std::string_view table_name);
+
     ~InMemoryTable() override = default;
 
     // Iterator interface
@@ -28,7 +29,13 @@ protected:
 
 private:
     // Simple std::map storage (sorted by row_id)
-    std::map<row_id_t, std::vector<std::byte>> data_m;
+    using TableData = std::map<row_id_t, std::vector<std::byte>>;
+
+    InMemoryTable(const Schema& schema);
+
+    static std::unordered_map<std::string, std::shared_ptr<InMemoryTable>> tables_m;
+
+    TableData table_data_m;
 
     // Auto-incrementing row ID generator
     uint32_t next_page_id_m = 0;
