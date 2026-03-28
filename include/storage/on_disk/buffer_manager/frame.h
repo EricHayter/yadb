@@ -31,7 +31,7 @@ struct Frame {
     frame_id_t id;
 
     /* The associated page that the frame is storing. */
-    page_id_t page_id;
+    file_page_id_t fp_id;
 
     /* Has this page been written to? */
     std::atomic<bool> is_dirty { false };

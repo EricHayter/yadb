@@ -14,8 +14,7 @@
 #include <stdexcept>
 #include <stdlib.h>
 #include <string>
-#include <utility>
-//
+
 PageBufferManager::PageBufferManager()
     : PageBufferManager(128)
 {
@@ -49,51 +48,49 @@ PageBufferManager::~PageBufferManager()
     logger_m->info("Closed page buffer manager");
 }
 
-page_id_t PageBufferManager::AllocatePage()
+page_id_t PageBufferManager::AllocatePage(file_id_t file_id)
 {
-    // TODO: Add file_id parameter and pass it here
-    file_id_t file_id = 0;  // FIXME: Needs to be passed as parameter
     return disk_manager_m.AllocatePage(file_id);
 }
 
-Page PageBufferManager::GetPage(page_id_t page_id)
+Page PageBufferManager::GetPage(const file_page_id_t& fp_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
-    available_frame_m.wait(lk, [this, page_id]() {
-        return page_map_m.contains(page_id) || replacer_m.GetEvictableCount() > 0;
+    available_frame_m.wait(lk, [this, fp_id]() {
+        return page_map_m.contains(fp_id) || replacer_m.GetEvictableCount() > 0;
     });
 
-    if (!page_map_m.contains(page_id)) {
-        if (LoadPage(page_id) != LoadPageStatus::Success) {
+    if (!page_map_m.contains(fp_id)) {
+        if (LoadPage(fp_id) != LoadPageStatus::Success) {
             throw std::runtime_error("Failed to load page");
         }
     }
 
-    return PinAndReturnPage(page_id);
+    return PinAndReturnPage(fp_id);
 }
 
-std::optional<Page> PageBufferManager::GetPageIfFrameAvailable(page_id_t page_id)
+std::optional<Page> PageBufferManager::GetPageIfFrameAvailable(const file_page_id_t& fp_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
 
     /* If there is no way to "immediately" (i.e. no free slots we can replace
      * and not in cache) get the page without waiting then return early */
-    if (!page_map_m.contains(page_id) && replacer_m.GetEvictableCount() == 0)
+    if (!page_map_m.contains(fp_id) && replacer_m.GetEvictableCount() == 0)
         return {};
 
-    if (!page_map_m.contains(page_id)) {
-        if (LoadPage(page_id) != LoadPageStatus::Success) {
+    if (!page_map_m.contains(fp_id)) {
+        if (LoadPage(fp_id) != LoadPageStatus::Success) {
             return {};
         }
     }
 
-    return PinAndReturnPage(page_id);
+    return PinAndReturnPage(fp_id);
 }
 
-PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
+PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(const file_page_id_t& fp_id)
 {
     // it's already loaded no more IO to handle
-    if (page_map_m.contains(page_id)) {
+    if (page_map_m.contains(fp_id)) {
         return LoadPageStatus::Success;
     }
 
@@ -101,25 +98,23 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
     // We must evict a frame to find a spot for our page
     std::optional<frame_id_t> frame_id_opt = replacer_m.EvictFrame();
     if (!frame_id_opt.has_value()) {
-        logger_m->info("Couldn't find a frame to evict for page {}", page_id);
+        logger_m->info("Couldn't find a frame to evict for page {}", fp_id.page_id);
         return LoadPageStatus::NoFreeFrameError;
     }
     Frame* frame = frames_m[*frame_id_opt].get();
 
     // if the current frame contains page data that was updated
-    if (frame->is_dirty && FlushPage(frame->page_id) != FlushPageStatus::Success) {
-        logger_m->warn("Failed to load page {} due to flush failure", page_id);
+    if (frame->is_dirty && FlushPage(frame->fp_id) != FlushPageStatus::Success) {
+        logger_m->warn("Failed to load page {} due to flush failure", fp_id.page_id);
         return LoadPageStatus::IOError;
     }
 
     // unmap the old page from the page-to-frame map.
-    page_map_m.erase(frame->page_id);
+    page_map_m.erase(frame->fp_id);
 
     // read the desired page data from disk to the frame
-    // TODO: Add file_id parameter and pass it here
-    file_id_t file_id = 0;  // FIXME: Needs to be passed as parameter
-    if (!disk_manager_m.ReadPage(file_id, page_id, frame->data)) {
-        logger_m->warn("Failed to load page {} due to read failure", page_id);
+    if (!disk_manager_m.ReadPage(fp_id, frame->data)) {
+        logger_m->warn("Failed to load page {} due to read failure", fp_id.page_id);
         return LoadPageStatus::IOError;
     }
 
@@ -128,29 +123,27 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(page_id_t page_id)
     available_frame_m.notify_all();
 
     // update frame information
-    page_map_m[page_id] = frame->id;
-    frame->page_id = page_id;
+    page_map_m[fp_id] = frame->id;
+    frame->fp_id = fp_id;
     frame->is_dirty = false;
     frame->pin_count = 0;
     return LoadPageStatus::Success;
 }
 
-PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(page_id_t page_id)
+PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(const file_page_id_t& fp_id)
 {
-    Frame* frame = GetFrameForPage(page_id);
-    // TODO: Add file_id parameter and pass it here
-    file_id_t file_id = 0;  // FIXME: Needs to be passed as parameter
-    if (!disk_manager_m.WritePage(file_id, page_id, frame->data)) {
-        logger_m->warn("Failed to flush page {}", page_id);
+    Frame* frame = GetFrameForPage(fp_id);
+    if (!disk_manager_m.WritePage(fp_id, frame->data)) {
+        logger_m->warn("Failed to flush page {}", fp_id.page_id);
         return FlushPageStatus::IOError;
     }
     return FlushPageStatus::Success;
 }
 
-void PageBufferManager::RemoveAccessor(page_id_t page_id)
+void PageBufferManager::RemoveAccessor(const file_page_id_t& fp_id)
 {
     std::lock_guard<std::mutex> lk(mut_m);
-    Frame* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(fp_id);
     auto prev = frame->pin_count.fetch_sub(1, std::memory_order_acq_rel);
 
     assert(prev > 0 && "RemoveAccessor called when pin_count == 0");
@@ -162,18 +155,18 @@ void PageBufferManager::RemoveAccessor(page_id_t page_id)
     }
 }
 
-Frame* PageBufferManager::GetFrameForPage(page_id_t page_id) const
+Frame* PageBufferManager::GetFrameForPage(const file_page_id_t& fp_id) const
 {
-    auto it = page_map_m.find(page_id);
+    auto it = page_map_m.find(fp_id);
     if (it == page_map_m.end()) {
-        throw std::runtime_error("Failed to get frame for page " + std::to_string(page_id) + " - page not in buffer pool");
+        throw std::runtime_error("Failed to get frame for page " + std::to_string(fp_id.page_id) + " - page not in buffer pool");
     }
     return frames_m[it->second].get();
 }
 
-Page PageBufferManager::PinAndReturnPage(page_id_t page_id)
+Page PageBufferManager::PinAndReturnPage(const file_page_id_t& fp_id)
 {
-    Frame* frame = GetFrameForPage(page_id);
+    Frame* frame = GetFrameForPage(fp_id);
     frame->pin_count.fetch_add(1, std::memory_order_acq_rel);
     replacer_m.RecordAccess(frame->id);
     replacer_m.SetEvictable(frame->id, false);

@@ -57,15 +57,15 @@ public:
     /**
      * Creates a new page by signalling to the disk manager
      */
-    page_id_t AllocatePage();
+    page_id_t AllocatePage(file_id_t file_id);
 
-    Page GetPage(page_id_t page_id);
+    Page GetPage(const file_page_id_t& fp_id);
 
     /* Retrieves a page if a buffer frame is immediately available.
      * Returns std::nullopt if the page is not cached and no frames can be evicted.
      * Will block on disk I/O if the page needs to be loaded from disk.
      * Will block briefly to acquire the buffer pool lock. */
-    std::optional<Page> GetPageIfFrameAvailable(page_id_t page_id);
+    std::optional<Page> GetPageIfFrameAvailable(const file_page_id_t& fp_id);
 
 private:
     enum class LoadPageStatus {
@@ -74,20 +74,20 @@ private:
         NoFreeFrameError,
     };
 
-    LoadPageStatus LoadPage(page_id_t page_id);
+    LoadPageStatus LoadPage(const file_page_id_t& fp_id);
 
     enum class FlushPageStatus {
         Success,
         IOError,
     };
 
-    FlushPageStatus FlushPage(page_id_t page_id);
+    FlushPageStatus FlushPage(const file_page_id_t& fp_id);
 
     /**
      * Notify the page buffer manager that an accessor has been dropped
      * from a frame
      */
-    void RemoveAccessor(page_id_t page_id);
+    void RemoveAccessor(const file_page_id_t& fp_id);
 
     /*
      * returns a pointer to the frame header for the frame containing the
@@ -97,14 +97,14 @@ private:
      * not located inside of a frame. This function should be used to prevent
      * accidentally creating entries in the page map.
      */
-    Frame* GetFrameForPage(page_id_t page_id) const;
+    Frame* GetFrameForPage(const file_page_id_t& fp_id) const;
 
     /*
      * Pins a page that is already loaded in the buffer pool and returns
      * a Page handle to it. Increments the pin count, records access for
      * the LRU-K replacer, and marks the frame as non-evictable.
      */
-    Page PinAndReturnPage(page_id_t page_id);
+    Page PinAndReturnPage(const file_page_id_t& fp_id);
 
 private:
     std::shared_ptr<spdlog::logger> logger_m;
@@ -117,7 +117,7 @@ private:
     char* buffer_m;
 
     /* the map of page's to their corresponding frame containing their data */
-    std::unordered_map<page_id_t, frame_id_t> page_map_m;
+    std::unordered_map<file_page_id_t, frame_id_t> page_map_m;
 
     /* all frame metadata */
     std::vector<std::unique_ptr<Frame>> frames_m;

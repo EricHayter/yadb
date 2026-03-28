@@ -36,7 +36,7 @@ TEST_F(PageBufferManagerTest, TestPageInit)
     Page page = page_buffer_man.GetPage(page_id);
     std::shared_lock<Page> sl(page);
 
-    ASSERT_EQ(page.GetPageId(), page_id);
+    ASSERT_EQ(page.GetFilePageId(), page_id);
     ASSERT_EQ(GetNumTuples(page.GetView()), 0);
     ASSERT_GT(GetFreeSpaceSize(page.GetView()), 0);
 }
@@ -46,7 +46,7 @@ TEST_F(PageBufferManagerTest, TestAllocateSlot)
     Page page = page_buffer_man.GetPage(page_id);
     std::lock_guard<Page> lg(page);
 
-    EXPECT_EQ(page.GetPageId(), page_id);
+    EXPECT_EQ(page.GetFilePageId(), page_id);
     EXPECT_EQ(GetNumTuples(page.GetView()), 0);
     EXPECT_GT(GetFreeSpaceSize(page.GetView()), 0);
 

@@ -14,6 +14,13 @@ using file_id_t = uint32_t;
 
 constexpr page_id_t NULL_PAGE_ID = -1;
 
+struct file_page_id_t {
+    file_id_t file_id;
+    page_id_t page_id;
+
+    auto operator<=>(const file_page_id_t&) const = default;
+};
+
 struct row_id_t {
     page_id_t page_id;
     slot_id_t slot_id;

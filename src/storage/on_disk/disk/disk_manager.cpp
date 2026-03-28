@@ -4,10 +4,8 @@
 #include "spdlog/fmt/bundled/base.h"
 #include "spdlog/fmt/bundled/format.h"
 #include "spdlog/logger.h"
-#include <algorithm>
 #include <cassert>
 #include <mutex>
-#include <stdexcept>
 #include <filesystem>
 #include "core/assert.h"
 
@@ -68,58 +66,58 @@ file_id_t DiskManager::GenerateFileId()
     return next_file_id_m++;
 }
 
-bool DiskManager::WritePage(file_id_t file_id, page_id_t page_id, FullPage page)
+bool DiskManager::WritePage(const file_page_id_t& fp_id, FullPage page)
 {
     std::unique_lock<std::mutex> lk(mut_m);
-    YADB_ASSERT(id_map_m.contains(file_id), "File hasn't been registered");
-    DatabaseFile& db_file = id_map_m[file_id];
+    YADB_ASSERT(id_map_m.contains(fp_id.file_id), "File hasn't been registered");
+    DatabaseFile& db_file = id_map_m[fp_id.file_id];
     lk.unlock();
 
     std::lock_guard<std::mutex> lg(db_file.mut);
-    YADB_ASSERT(page_id < db_file.page_capacity && !db_file.free_pages.contains(page_id), "Out of index page");
-    std::size_t offset = GetOffset(page_id);
+    YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
+    std::size_t offset = GetOffset(fp_id.page_id);
     db_file.file_stream.seekg(offset);
 
     db_file.file_stream.write(reinterpret_cast<const char*>(page.data()), page.size());
     db_file.file_stream.flush();
     if (!db_file.file_stream.good()) {
-        logger_m->warn("Failed to write data to page id {}", page_id);
+        logger_m->warn("Failed to write data to page id {}", fp_id.page_id);
         return false;
     }
     return true;
 }
 
 // Read the contents of page data into page_data
-bool DiskManager::ReadPage(file_id_t file_id, page_id_t page_id, MutFullPage page)
+bool DiskManager::ReadPage(const file_page_id_t& fp_id, MutFullPage page)
 {
     std::unique_lock<std::mutex> lk(mut_m);
-    YADB_ASSERT(id_map_m.contains(file_id), "File hasn't been registered");
-    DatabaseFile& db_file = id_map_m[file_id];
+    YADB_ASSERT(id_map_m.contains(fp_id.file_id), "File hasn't been registered");
+    DatabaseFile& db_file = id_map_m[fp_id.file_id];
     lk.unlock();
 
     std::lock_guard<std::mutex> lg(db_file.mut);
-    YADB_ASSERT(page_id < db_file.page_capacity && !db_file.free_pages.contains(page_id), "Out of index page");
+    YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
 
-    size_t offset = GetOffset(page_id);
+    size_t offset = GetOffset(fp_id.page_id);
     db_file.file_stream.seekg(offset);
     db_file.file_stream.read(reinterpret_cast<char*>(page.data()), page.size());
     if (!db_file.file_stream.good()) {
-        logger_m->warn("Failed to read data from page id {}", page_id);
+        logger_m->warn("Failed to read data from page id {}", fp_id.page_id);
         return false;
     }
     return true;
 }
 
-void DiskManager::DeletePage(file_id_t file_id, page_id_t page_id)
+void DiskManager::DeletePage(const file_page_id_t& fp_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
-    YADB_ASSERT(id_map_m.contains(file_id), "File hasn't been registered");
-    DatabaseFile& db_file = id_map_m[file_id];
+    YADB_ASSERT(id_map_m.contains(fp_id.file_id), "File hasn't been registered");
+    DatabaseFile& db_file = id_map_m[fp_id.file_id];
     lk.unlock();
 
     std::lock_guard<std::mutex> lg(db_file.mut);
-    YADB_ASSERT(page_id < db_file.page_capacity && !db_file.free_pages.contains(page_id), "Out of index page");
-    db_file.free_pages.insert(page_id);
+    YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
+    db_file.free_pages.insert(fp_id.page_id);
 }
 
 page_id_t DiskManager::AllocatePage(file_id_t file_id)

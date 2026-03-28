@@ -51,7 +51,7 @@ public:
     FullPage GetView() const;
 
     /* Page Metadata Operations */
-    page_id_t GetPageId() const;
+    file_page_id_t GetFilePageId() const;
 
 private:
     PageBufferManager* page_buffer_manager_m;

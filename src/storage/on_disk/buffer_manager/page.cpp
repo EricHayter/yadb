@@ -6,7 +6,7 @@
 Page::~Page()
 {
     if (page_buffer_manager_m)
-        page_buffer_manager_m->RemoveAccessor(frame_m->page_id);
+        page_buffer_manager_m->RemoveAccessor(frame_m->fp_id);
 }
 
 Page::Page(PageBufferManager* page_buffer_manager, Frame* frame)
@@ -74,7 +74,7 @@ FullPage Page::GetView() const
     return frame_m->data;
 }
 
-page_id_t Page::GetPageId() const
+file_page_id_t Page::GetFilePageId() const
 {
-    return frame_m->page_id;
+    return frame_m->fp_id;
 }

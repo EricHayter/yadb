@@ -43,14 +43,14 @@ public:
      *
      * return true on success false otherwise.
      */
-    bool WritePage(file_id_t file_id, page_id_t page_id, FullPage page);
+    bool WritePage(const file_page_id_t& fp_id, FullPage page);
 
     /*
      * Read data from disk
      *
      * return true on success false otherwise.
      */
-    bool ReadPage(file_id_t file_id, page_id_t page_id, MutFullPage page);
+    bool ReadPage(const file_page_id_t& fp_id, MutFullPage page);
 
     /*
      * Deletes a page from the database file
@@ -59,7 +59,7 @@ public:
      * data is in fact still there and there is no shrinkage of the database
      * file itself. The page may then reused when allocating new pages.
      */
-    void DeletePage(file_id_t, page_id_t page_id);
+    void DeletePage(const file_page_id_t& fp_id);
 
 private:
     file_id_t GenerateFileId();
