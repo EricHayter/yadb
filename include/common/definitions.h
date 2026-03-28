@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <span>
 #include <string>
 #include <variant>
@@ -106,3 +107,16 @@ enum class TableType {
     InMemory,
     Disk
 };
+
+// Hash function for file_page_id_t to enable use in unordered_map
+namespace std {
+template <>
+struct hash<file_page_id_t> {
+    std::size_t operator()(const file_page_id_t& id) const noexcept {
+        // Combine hashes of file_id and page_id
+        std::size_t h1 = std::hash<file_id_t>{}(id.file_id);
+        std::size_t h2 = std::hash<page_id_t>{}(id.page_id);
+        return h1 ^ (h2 << 1);
+    }
+};
+}
