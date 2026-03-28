@@ -15,12 +15,19 @@ class ExternalSortTest : public ::testing::Test {
 protected:
     static constexpr int number_frames = 10;
     PageBufferManager page_buffer_man { number_frames };
+    file_id_t file_id;
+
+    void SetUp() override
+    {
+        file_id = page_buffer_man.RegisterFile("test.db", 10);
+    }
 
     // Helper: Create a page with integer data in slots
     Page CreatePageWithIntegers(const std::vector<int>& values)
     {
-        page_id_t page_id = page_buffer_man.AllocatePage();
-        Page page = page_buffer_man.GetPage(page_id);
+        page_id_t page_id = page_buffer_man.AllocatePage(file_id);
+        file_page_id_t fp_id{file_id, page_id};
+        Page page = page_buffer_man.GetPage(fp_id);
         std::lock_guard<Page> lg(page);
         InitPage(page.GetMutView(), PageType::Data);
 
@@ -63,8 +70,9 @@ protected:
 
 TEST_F(ExternalSortTest, SortEmptyPage)
 {
-    page_id_t page_id = page_buffer_man.AllocatePage();
-    Page page = page_buffer_man.GetPage(page_id);
+    page_id_t page_id = page_buffer_man.AllocatePage(file_id);
+    file_page_id_t fp_id{file_id, page_id};
+    Page page = page_buffer_man.GetPage(fp_id);
     std::lock_guard<Page> lg(page);
     InitPage(page.GetMutView(), PageType::Data);
 
@@ -221,8 +229,9 @@ TEST_F(ExternalSortTest, ShiftSlotsLeftNoDeleted)
 
 TEST_F(ExternalSortTest, ShiftSlotsLeftWithDeleted)
 {
-    page_id_t page_id = page_buffer_man.AllocatePage();
-    Page page = page_buffer_man.GetPage(page_id);
+    page_id_t page_id = page_buffer_man.AllocatePage(file_id);
+    file_page_id_t fp_id{file_id, page_id};
+    Page page = page_buffer_man.GetPage(fp_id);
     std::lock_guard<Page> lg(page);
     InitPage(page.GetMutView(), PageType::Data);
 
@@ -254,8 +263,9 @@ TEST_F(ExternalSortTest, ShiftSlotsLeftWithDeleted)
 
 TEST_F(ExternalSortTest, ShiftSlotsLeftDeletedAtBeginning)
 {
-    page_id_t page_id = page_buffer_man.AllocatePage();
-    Page page = page_buffer_man.GetPage(page_id);
+    page_id_t page_id = page_buffer_man.AllocatePage(file_id);
+    file_page_id_t fp_id{file_id, page_id};
+    Page page = page_buffer_man.GetPage(fp_id);
     std::lock_guard<Page> lg(page);
     InitPage(page.GetMutView(), PageType::Data);
 
