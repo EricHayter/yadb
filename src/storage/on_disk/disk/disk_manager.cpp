@@ -62,7 +62,7 @@ file_id_t DiskManager::RegisterFile(const std::filesystem::path& file_path, std:
 
 file_id_t DiskManager::GenerateFileId()
 {
-    std::lock_guard<std::mutex> lg(mut_m);
+    // NOTE: Caller must hold mut_m lock
     return next_file_id_m++;
 }
 
@@ -76,7 +76,7 @@ bool DiskManager::WritePage(const file_page_id_t& fp_id, FullPage page)
     std::lock_guard<std::mutex> lg(db_file.mut);
     YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
     std::size_t offset = GetOffset(fp_id.page_id);
-    db_file.file_stream.seekg(offset);
+    db_file.file_stream.seekp(offset);
 
     db_file.file_stream.write(reinterpret_cast<const char*>(page.data()), page.size());
     db_file.file_stream.flush();
@@ -140,7 +140,7 @@ page_id_t DiskManager::AllocatePage(file_id_t file_id)
         } else {
             db_file.page_capacity *= 2;
         }
-        std::filesystem::resize_file(db_file.path, GetDatabaseFileSize(file_id));
+        std::filesystem::resize_file(db_file.path, db_file.page_capacity * PAGE_SIZE);
 
         // populate free page list with new pages
         for (int id = page_id + 1; id < db_file.page_capacity; id++)
