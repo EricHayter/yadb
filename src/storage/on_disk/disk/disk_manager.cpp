@@ -76,7 +76,7 @@ bool DiskManager::WritePage(const file_page_id_t& fp_id, FullPage page)
     std::lock_guard<std::mutex> lg(db_file.mut);
     YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
     std::size_t offset = GetOffset(fp_id.page_id);
-    db_file.file_stream.seekp(offset);
+    db_file.file_stream.seekp(static_cast<std::streamoff>(offset));
 
     db_file.file_stream.write(reinterpret_cast<const char*>(page.data()), page.size());
     db_file.file_stream.flush();
@@ -99,7 +99,7 @@ bool DiskManager::ReadPage(const file_page_id_t& fp_id, MutFullPage page)
     YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
 
     size_t offset = GetOffset(fp_id.page_id);
-    db_file.file_stream.seekg(offset);
+    db_file.file_stream.seekg(static_cast<std::streamoff>(offset));
     db_file.file_stream.read(reinterpret_cast<char*>(page.data()), page.size());
     if (!db_file.file_stream.good()) {
         logger_m->warn("Failed to read data from page id {}", fp_id.page_id);
@@ -143,7 +143,7 @@ page_id_t DiskManager::AllocatePage(file_id_t file_id)
         std::filesystem::resize_file(db_file.path, db_file.page_capacity * PAGE_SIZE);
 
         // populate free page list with new pages
-        for (int id = page_id + 1; id < db_file.page_capacity; id++)
+        for (page_id_t id = page_id + 1; id < db_file.page_capacity; id++)
             db_file.free_pages.insert(id);
     }
     return page_id;

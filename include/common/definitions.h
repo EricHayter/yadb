@@ -13,7 +13,7 @@ using offset_t = uint16_t;
 using page_id_t = uint32_t;
 using file_id_t = uint32_t;
 
-constexpr page_id_t NULL_PAGE_ID = -1;
+constexpr page_id_t NULL_PAGE_ID = UINT32_MAX;
 
 struct file_page_id_t {
     file_id_t file_id;

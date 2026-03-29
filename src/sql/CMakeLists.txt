@@ -34,3 +34,5 @@ target_include_directories(sql_parser PUBLIC
 target_link_libraries(sql_parser
     PUBLIC yadb_common
 )
+
+# NOTE: sql_parser does NOT link to lib_strict_warnings because it's generated code

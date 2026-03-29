@@ -21,7 +21,7 @@ using frame_id_t = uint32_t;
  *    view can be created for the frame.
  */
 struct Frame {
-    Frame(frame_id_t id, MutFullPage data_view);
+    Frame(frame_id_t frame_id, MutFullPage data_view);
 
     Frame(Frame& other) = delete;
     Frame& operator=(Frame& other) = delete;

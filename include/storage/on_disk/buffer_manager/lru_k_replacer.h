@@ -32,12 +32,12 @@ class LRUKReplacer {
     /* History of an individual frame */
     struct LRUFrameHistory {
         LRUFrameHistory() = default;
-        LRUFrameHistory(frame_id_t frame_id);
+        LRUFrameHistory(frame_id_t id);
 
         frame_id_t frame_id { frame_id_t(-1) };
 
-        /* history of accesses */
-        std::deque<std::time_t> history;
+        /* history of accesses (logical timestamps) */
+        std::deque<std::size_t> history;
 
         /* can the frame evict the page inside of it */
         bool is_evictable { true };

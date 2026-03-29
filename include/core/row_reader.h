@@ -52,6 +52,6 @@ type_for<T> RowReader::Get(std::size_t pos)
         string_length_t str_len;
         std::memcpy(&str_len, data_m.data() + offset, sizeof(string_length_t));
         offset += sizeof(string_length_t);
-        return std::string((char*)(data_m.data() + offset), str_len);
+        return std::string(reinterpret_cast<const char*>(data_m.data() + offset), str_len);
     }
 }

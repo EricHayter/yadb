@@ -9,7 +9,7 @@ void InitPage(MutFullPage page)
 {
     page::InitPage(page, page::PageType::Data);
 
-    page::SetEndFreeSpace(page, page::GetEndFreeSpace(FullPage(page)) - sizeof(page_id_t) * 2);
+    page::SetEndFreeSpace(page, static_cast<offset_t>(page::GetEndFreeSpace(FullPage(page)) - sizeof(page_id_t) * 2));
     SetNextPage(page, NULL_PAGE_ID);
     SetPrevPage(page, NULL_PAGE_ID);
 }

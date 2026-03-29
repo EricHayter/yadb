@@ -84,7 +84,7 @@ void SwapSlots(Page& page, slot_id_t slot1, slot_id_t slot2)
 {
     using namespace page;
     offset_t temp_offset = GetSlotOffset(page.GetView(), slot1);
-    size_t temp_size = GetSlotSize(page.GetView(), slot1);
+    uint16_t temp_size = GetSlotSize(page.GetView(), slot1);
     bool temp_is_deleted = IsSlotDeleted(page.GetView(), slot1);
 
     SetSlotOffset(page.GetMutView(), slot1, GetSlotOffset(page.GetView(), slot2));

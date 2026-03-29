@@ -38,7 +38,7 @@ void Catalog::LoadTableSchemas()
 
         TableInfo table_info {
             .type = static_cast<TableType>(table_type_int),
-            .schema = std::vector<RelationAttribute>(num_attributes)
+            .schema = std::vector<RelationAttribute>(static_cast<std::size_t>(num_attributes))
         };
 
         table_info_m[table_name] = table_info;
@@ -59,8 +59,8 @@ void Catalog::LoadColumnSchemas()
         DataType attribute_type = static_cast<DataType>(rr.Get<DataType::INTEGER>(2));
         std::int32_t position = rr.Get<DataType::INTEGER>(3);
 
-        table_info_m[relation_name].schema[position].name = attribute_name;
-        table_info_m[relation_name].schema[position].type = attribute_type;
+        table_info_m[relation_name].schema[static_cast<std::size_t>(position)].name = attribute_name;
+        table_info_m[relation_name].schema[static_cast<std::size_t>(position)].type = attribute_type;
 
         row = iter->next();
     }

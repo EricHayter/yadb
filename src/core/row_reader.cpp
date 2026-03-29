@@ -5,8 +5,8 @@
 #include <cstring>
 
 RowReader::RowReader(std::span<const std::byte> data, const Schema& schema)
-    : data_m { data }
-    , schema_m { schema }
+    : schema_m { schema }
+    , data_m { data }
 {
 }
 

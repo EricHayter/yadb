@@ -53,7 +53,7 @@ TEST_F(PageBufferManagerTest, TestAllocateSlot)
     EXPECT_GT(GetFreeSpaceSize(page.GetView()), 0);
 
     constexpr int data_size = 4;
-    auto slot = AllocateSlot(page.GetMutView(), data_size);
+    [[maybe_unused]] auto slot = AllocateSlot(page.GetMutView(), data_size);
 
     EXPECT_EQ(GetNumTuples(page.GetView()), 1);
 }
@@ -238,7 +238,6 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
 
     /* Should regain all of the space made from the previous allocations of
      * 10 slots of size 10. Note we NEVER reclaim slots. */
-    constexpr int reclaimed_space = num_slots * data_size;
     {
         Page page = page_buffer_man.GetPage(fp_id);
         std::shared_lock<Page> sl(page);
@@ -298,7 +297,7 @@ TEST_F(PageBufferManagerTest, TestVacuumPageMiddleInnerSlot)
     /* delete slots in the center */
     constexpr int deleted_slots = 4;
     for (int i = 0; i < deleted_slots; i++) {
-        DeleteSlot(page.GetMutView(), slots[2 + i]);
+        DeleteSlot(page.GetMutView(), slots[static_cast<std::size_t>(2 + i)]);
     }
 
     ASSERT_EQ(GetNumTuples(page.GetView()), num_slots - deleted_slots);
@@ -319,7 +318,7 @@ TEST_F(PageBufferManagerTest, TestVacuumPageMiddleInnerSlotIntegrity)
     std::lock_guard<Page> lg(page);
 
     /* allocate slots in page */
-    constexpr int num_slots = 3;
+    [[maybe_unused]] constexpr int num_slots = 3;
     constexpr int data_size = 4;
     const std::vector<PageData> slot1_data(data_size, PageData { 'a' });
     const std::vector<PageData> slot3_data(data_size, PageData { 'b' });
@@ -385,7 +384,7 @@ TEST_F(PageBufferManagerTest, MultipleConccurentReaders)
     auto start_time = std::chrono::steady_clock::now();
 
     int num_readers = 8;
-    std::vector<std::thread> threads(num_readers);
+    std::vector<std::thread> threads(static_cast<std::size_t>(num_readers));
     for (int i = 0; i < num_readers; i++) {
         threads.push_back(std::thread([&]() {
             std::this_thread::sleep_for(ms(3));

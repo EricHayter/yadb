@@ -29,4 +29,5 @@ target_link_libraries(yadb_storage_on_disk
     PUBLIC yadb_table
     PRIVATE yadb_core
     INTERFACE lib_compile_flags
+    INTERFACE lib_strict_warnings
 )

@@ -10,5 +10,6 @@ target_include_directories(yadb_storage_in_memory
 
 target_link_libraries(yadb_storage_in_memory
     INTERFACE lib_compile_flags
+    INTERFACE lib_strict_warnings
     PUBLIC yadb_table
 )

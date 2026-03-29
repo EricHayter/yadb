@@ -26,10 +26,10 @@ PageBufferManager::PageBufferManager(std::size_t num_frames)
 }
 
 PageBufferManager::PageBufferManager(const DatabaseConfig& config, std::size_t num_frames)
-    : disk_manager_m(config)
-    , logger_m(config.page_buffer_manager_logger)
+    : logger_m(config.page_buffer_manager_logger)
     , replacer_m()
-    , buffer_m((char*)malloc(num_frames * PAGE_SIZE))
+    , disk_manager_m(config)
+    , buffer_m(static_cast<char*>(malloc(num_frames * PAGE_SIZE)))
 {
     assert(buffer_m != nullptr);
     for (frame_id_t id = 0; id < num_frames; id++) {

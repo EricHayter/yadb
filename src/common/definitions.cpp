@@ -11,4 +11,5 @@ std::string ToString(DataType dataType)
         return "TEXT";
     }
     YADB_ASSERT(false, "DataType doesn't have a string representation");
+    __builtin_unreachable();
 }

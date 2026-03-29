@@ -340,11 +340,11 @@ table_name:
 
 %%
 
-void yyerror(const char *s) {
+void yyerror(const char* /*s*/) {
     // Silently ignore parse errors
 }
 
-void yy::parser::error(const std::string& msg) {
+void yy::parser::error(const std::string& /*msg*/) {
     // Silently ignore parse errors
 }
 

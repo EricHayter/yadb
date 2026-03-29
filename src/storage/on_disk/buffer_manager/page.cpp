@@ -10,14 +10,14 @@ Page::~Page()
 }
 
 Page::Page(PageBufferManager* page_buffer_manager, Frame* frame)
-    : frame_m { frame }
-    , page_buffer_manager_m { page_buffer_manager }
+    : page_buffer_manager_m { page_buffer_manager }
+    , frame_m { frame }
 {
 }
 
 Page::Page(Page&& other)
-    : frame_m { other.frame_m }
-    , page_buffer_manager_m { other.page_buffer_manager_m }
+    : page_buffer_manager_m { other.page_buffer_manager_m }
+    , frame_m { other.frame_m }
 {
     other.frame_m = nullptr;
     other.page_buffer_manager_m = nullptr;

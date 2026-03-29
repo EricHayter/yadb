@@ -52,7 +52,7 @@ void RowBuilder::Push(auto data)
         static_assert(std::is_convertible_v<decltype(data), std::string_view>,
             "Push<DataType::TEXT> requires data convertible to std::string_view");
         std::string_view string_data = static_cast<std::string_view>(data);
-        string_length_t string_length = string_data.size();
+        string_length_t string_length = static_cast<string_length_t>(string_data.size());
         std::size_t required_size = size_m + string_length + sizeof(string_length);
         if (capacity_m < required_size)
             AllocateSpace(required_size);

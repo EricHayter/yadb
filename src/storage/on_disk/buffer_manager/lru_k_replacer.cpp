@@ -1,8 +1,8 @@
 #include "storage/on_disk/buffer_manager/lru_k_replacer.h"
 #include "storage/on_disk/buffer_manager/frame.h"
 
-LRUKReplacer::LRUFrameHistory::LRUFrameHistory(frame_id_t frame_id)
-    : frame_id(frame_id)
+LRUKReplacer::LRUFrameHistory::LRUFrameHistory(frame_id_t id)
+    : frame_id(id)
 {
 }
 

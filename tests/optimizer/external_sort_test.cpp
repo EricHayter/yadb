@@ -134,7 +134,7 @@ TEST_F(ExternalSortTest, SortAlreadySorted)
     auto values = ReadIntegersFromPage(page);
     ASSERT_EQ(values.size(), 5);
     for (int i = 0; i < 5; i++) {
-        EXPECT_EQ(values[i], i + 1);
+        EXPECT_EQ(values[static_cast<std::size_t>(i)], i + 1);
     }
 }
 
@@ -149,7 +149,7 @@ TEST_F(ExternalSortTest, SortReverseSorted)
     auto values = ReadIntegersFromPage(page);
     ASSERT_EQ(values.size(), 5);
     for (int i = 0; i < 5; i++) {
-        EXPECT_EQ(values[i], i + 1);
+        EXPECT_EQ(values[static_cast<std::size_t>(i)], i + 1);
     }
 }
 
@@ -223,7 +223,7 @@ TEST_F(ExternalSortTest, ShiftSlotsLeftNoDeleted)
     auto values = ReadIntegersFromPage(page);
     ASSERT_EQ(values.size(), 5);
     for (int i = 0; i < 5; i++) {
-        EXPECT_EQ(values[i], i + 1);
+        EXPECT_EQ(values[static_cast<std::size_t>(i)], i + 1);
     }
 }
 

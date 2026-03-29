@@ -170,7 +170,7 @@ void ResultPrinter::print_row(
 {
     out << "│";
     for (size_t i = 0; i < row.size(); ++i) {
-        out << " " << std::left << std::setw(widths[i]) << row[i] << " ";
+        out << " " << std::left << std::setw(static_cast<int>(widths[i])) << row[i] << " ";
         out << "│";
     }
     out << "\n";

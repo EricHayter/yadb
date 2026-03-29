@@ -46,14 +46,14 @@ void RowBuilder::AllocateSpace()
         new_data = malloc(DEFAULT_ALLOC_SIZE);
         capacity_m = DEFAULT_ALLOC_SIZE;
     } else {
-        capacity_m = capacity_m * GROWTH_RATE;
+        capacity_m = static_cast<std::size_t>(static_cast<float>(capacity_m) * GROWTH_RATE);
         new_data = realloc(data_m, capacity_m);
     }
 
     if (!new_data)
         throw std::bad_alloc();
 
-    data_m = (std::byte*)new_data;
+    data_m = static_cast<std::byte*>(new_data);
 }
 
 void RowBuilder::AllocateSpace(std::size_t size)
@@ -72,5 +72,5 @@ void RowBuilder::AllocateSpace(std::size_t size)
     if (!new_data)
         throw std::bad_alloc();
 
-    data_m = (std::byte*)new_data;
+    data_m = static_cast<std::byte*>(new_data);
 }
