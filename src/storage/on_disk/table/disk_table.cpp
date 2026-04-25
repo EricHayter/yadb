@@ -1,9 +1,40 @@
 #include "storage/on_disk/disk_table.h"
+#include "storage/on_disk/heap/heap_page.h"
+#include "storage/on_disk/page/page_format.h"
 #include <stdexcept>
 
-DiskTable::DiskTable(const Schema& schema)
-    : Table(schema)
+bool DiskTable::CreateTable(std::string_view table_name, PageBufferManager& page_buffer_manager)
 {
+    std::filesystem::path database_file_name = GetTableFileName(table_name);
+
+    // TODO save it into some sort of heap file containing all of the entries
+    (void) page_buffer_manager.CreateFile();
+    return true;
+}
+
+std::shared_ptr<DiskTable> DiskTable::GetTable(std::string_view table_name, const Schema& schema, PageBufferManager& page_buffer_manager)
+{
+    return std::shared_ptr<DiskTable>(new DiskTable(table_name, schema, page_buffer_manager));
+}
+
+
+DiskTable::DiskTable(std::string_view table_name, const Schema& schema, PageBufferManager& page_buffer_manager)
+    : Table(schema)
+    , page_buffer_manager_m(page_buffer_manager)
+{
+    std::filesystem::path database_file_name = GetTableFileName(table_name);
+
+    // TODO should pull from a static map I guess? might be good to have manager here
+    // file_id_m = page_buffer_manager.RegisterFile(database_file_name);
+    file_id_m = 42;
+
+    // initalize our pages.
+    Page page = page_buffer_manager_m.GetPage({ file_id_m, 0 });
+    {
+        std::lock_guard<Page> pg_lg(page);
+        MutFullPage page_data = page.GetMutView();
+        heap_page::InitPage(page_data);
+    }
 }
 
 std::unique_ptr<TableIterator> DiskTable::iter()
@@ -11,22 +42,74 @@ std::unique_ptr<TableIterator> DiskTable::iter()
     throw std::runtime_error("DiskTable::iter not yet implemented");
 }
 
-row_id_t DiskTable::insert_row_impl(std::span<const std::byte> /*row*/)
+row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
 {
-    throw std::runtime_error("DiskTable::insert_row_impl not yet implemented");
+    constexpr page_id_t ROOT_PAGE_ID = 0;
+    page_id_t current_page_id = ROOT_PAGE_ID;
+    page_id_t next_page_id = NULL_PAGE_ID;
+
+    Page page = page_buffer_manager_m.GetPage({ file_id_m, ROOT_PAGE_ID });
+    std::unique_lock<Page> lk(page);
+    next_page_id = heap_page::GetPartialPagesHead(page.GetView());
+
+    // Finding a place for insert
+    while (next_page_id != NULL_PAGE_ID) {
+        Page next_page = page_buffer_manager_m.GetPage({ file_id_m, next_page_id });
+        std::unique_lock<Page> new_lk(next_page);
+        std::swap(new_lk, lk);
+        std::swap(page, next_page);
+        std::optional<slot_id_t> insert_loc = page::AllocateSlot(page.GetMutView(), row.size());
+        if (insert_loc) {
+            auto slot_span = page::WriteRecord(page.GetMutView(), *insert_loc);
+            std::copy(row.begin(), row.end(), slot_span.begin());
+            return { .page_id = page.GetFilePageId().page_id, .slot_id = *insert_loc };
+        }
+
+        current_page_id = next_page_id;
+        next_page_id = heap_page::GetNextPage(page.GetView());
+    }
+
+    row_id_t inserted_row_id;
+    page_id_t new_page_id = page_buffer_manager_m.AllocatePage(file_id_m);
+    // create new node in the linked list
+    {
+        Page new_page = page_buffer_manager_m.GetPage({ file_id_m, new_page_id });
+        std::lock_guard<Page> lg(new_page);
+        heap_page::InitPage(new_page.GetMutView());
+        heap_page::SetPrevPage(new_page.GetMutView(), current_page_id);
+
+        std::optional<slot_id_t> insert_loc = page::AllocateSlot(new_page.GetMutView(), row.size());
+        auto slot_span = page::WriteRecord(new_page.GetMutView(), *insert_loc);
+        std::copy(row.begin(), row.end(), slot_span.begin());
+        inserted_row_id = { .page_id = new_page_id, .slot_id = *insert_loc };
+    }
+
+    // update pointers
+    heap_page::SetNextPage(page.GetMutView(), new_page_id);
+
+    return inserted_row_id;
 }
 
-void DiskTable::update_row(Row /*row*/)
+row_id_t DiskTable::update_row(const row_id_t& rid, std::span<const std::byte> data)
 {
-    throw std::runtime_error("DiskTable::update_row not yet implemented");
+    delete_row(rid);
+    return insert_row_impl(data);
 }
 
-void DiskTable::delete_row(const row_id_t& /*rid*/)
+void DiskTable::delete_row(const row_id_t& rid)
 {
-    throw std::runtime_error("DiskTable::delete_row not yet implemented");
+    Page page = page_buffer_manager_m.GetPage({ file_id_m, rid.page_id });
+    std::lock_guard<Page> lg(page);
+    page::DeleteSlot(page.GetMutView(), rid.slot_id);
 }
 
 TableType DiskTable::GetType() const
 {
     return TableType::Disk;
+}
+
+
+std::filesystem::path DiskTable::GetTableFileName(std::string_view table_name)
+{
+    return std::string(table_name) + ".db";
 }

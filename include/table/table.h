@@ -15,7 +15,7 @@ public:
 
     // Public type-safe CRUD operations
     row_id_t insert_row(const std::vector<Value>& values);
-    virtual void update_row(Row row) = 0;
+    virtual row_id_t update_row(const row_id_t& rid, std::span<const std::byte> data) = 0;
     virtual void delete_row(const row_id_t& rid) = 0;
 
     // Schema accessor

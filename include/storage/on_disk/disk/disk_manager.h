@@ -28,7 +28,10 @@ public:
     DiskManager(const DatabaseConfig& config);
     ~DiskManager();
 
-    file_id_t RegisterFile(const std::filesystem::path& file_path, std::size_t page_capacity);
+    /*
+     * Creates a new file and returns the corresponding file_id_t.
+     */
+    file_id_t CreateFile();
 
     /*
      * Allocated a new page in the database file for writing to
@@ -62,12 +65,8 @@ public:
     void DeletePage(const file_page_id_t& fp_id);
 
 private:
-    file_id_t GenerateFileId();
-    std::size_t GetOffset(page_id_t page_id) const;
-    std::size_t GetDatabaseFileSize(file_id_t file_id) const;
-
     struct DatabaseFile {
-        mutable std::mutex mut;
+        mutable std::unique_ptr<std::mutex> mut;
         std::filesystem::path path;
 
         /* iostream to write to database file */
@@ -78,11 +77,14 @@ private:
         std::size_t page_capacity = 1;
     };
 
-    mutable std::mutex mut_m;
-    std::unordered_map<std::filesystem::path, file_id_t> path_map_m;
     std::unordered_map<file_id_t, DatabaseFile> id_map_m;
+    DatabaseFile& OpenFile(file_id_t file_id);
 
-    file_id_t next_file_id_m = 0;
+    static std::filesystem::path GetFilePath(file_id_t file_id);
+    std::size_t GetOffset(page_id_t page_id) const;
+    std::size_t GetDatabaseFileSize(file_id_t file_id);
+
+    mutable std::mutex mut_m;
 
     std::shared_ptr<spdlog::logger> logger_m;
 };

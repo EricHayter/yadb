@@ -54,17 +54,10 @@ row_id_t InMemoryTable::insert_row_impl(std::span<const std::byte> row)
     return rid;
 }
 
-void InMemoryTable::update_row(Row row)
+row_id_t InMemoryTable::update_row(const row_id_t& rid, std::span<const std::byte> data)
 {
-    const auto& [row_id, row_data] = row;
-
-    auto it = table_data_m.find(row_id);
-    if (it == table_data_m.end()) {
-        throw std::invalid_argument("Invalid row_id in update_row");
-    }
-
-    // Update the row data
-    it->second.assign(row_data.begin(), row_data.end());
+    delete_row(rid);
+    return insert_row_impl(data);
 }
 
 void InMemoryTable::delete_row(const row_id_t& rid)

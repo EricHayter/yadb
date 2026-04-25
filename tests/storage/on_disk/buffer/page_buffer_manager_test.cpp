@@ -24,7 +24,7 @@ protected:
 
     void SetUp() override
     {
-        file_id_t file_id = page_buffer_man.RegisterFile("test.db", 10);
+        file_id_t file_id = page_buffer_man.CreateFile();
         page_id_t page_id = page_buffer_man.AllocatePage(file_id);
         fp_id = {file_id, page_id};
         Page page = page_buffer_man.GetPage(fp_id);

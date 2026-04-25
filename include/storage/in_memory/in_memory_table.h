@@ -17,7 +17,7 @@ public:
     std::unique_ptr<TableIterator> iter() override;
 
     // CRUD operations
-    void update_row(Row row) override;
+    row_id_t update_row(const row_id_t& rid, std::span<const std::byte> data) override;
     void delete_row(const row_id_t& rid) override;
 
     // Table type

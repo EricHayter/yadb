@@ -55,14 +55,7 @@ public:
     PageBufferManager(const DatabaseConfig& config, std::size_t num_frames);
     ~PageBufferManager();
 
-    /**
-     * Register a database file with the disk manager
-     *
-     * @param file_path Path to the database file
-     * @param page_capacity Initial capacity in pages
-     * @return file_id_t The file ID for the registered file
-     */
-    file_id_t RegisterFile(const std::filesystem::path& file_path, std::size_t page_capacity);
+    file_id_t CreateFile();
 
     /**
      * Creates a new page by signalling to the disk manager

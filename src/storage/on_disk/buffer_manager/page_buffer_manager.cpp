@@ -48,9 +48,9 @@ PageBufferManager::~PageBufferManager()
     logger_m->info("Closed page buffer manager");
 }
 
-file_id_t PageBufferManager::RegisterFile(const std::filesystem::path& file_path, std::size_t page_capacity)
+file_id_t PageBufferManager::CreateFile()
 {
-    return disk_manager_m.RegisterFile(file_path, page_capacity);
+    return disk_manager_m.CreateFile();
 }
 
 page_id_t PageBufferManager::AllocatePage(file_id_t file_id)
