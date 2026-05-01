@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "common/definitions.h"
+#include "storage/on_disk/types.h"
 
 class PageBufferManager;
 class Frame;

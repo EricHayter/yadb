@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/definitions.h"
+#include "storage/on_disk/types.h"
 #include "core/shared_spinlock.h"
 #include <atomic>
 #include <stdint.h>

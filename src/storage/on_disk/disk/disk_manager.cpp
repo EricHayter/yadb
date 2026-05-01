@@ -1,5 +1,6 @@
 #include "storage/on_disk/disk/disk_manager.h"
-#include "common/definitions.h"
+#include "storage/on_disk/constants.h"
+#include "storage/on_disk/types.h"
 #include "config/config.h"
 #include "spdlog/fmt/bundled/base.h"
 #include "spdlog/fmt/bundled/format.h"
@@ -7,6 +8,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <mutex>
+#include <ctime>
 #include <filesystem>
 #include "core/assert.h"
 
@@ -88,9 +90,17 @@ void DiskManager::DeletePage(const file_page_id_t& fp_id)
 file_id_t DiskManager::CreateFile()
 {
     std::lock_guard<std::mutex> lg(mut_m);
-    constexpr int MAX_RETRIES = 10;
-    for (int i = 0; i < MAX_RETRIES; i++) {
+
+    // seed std::rand
+    std::srand(static_cast<unsigned int>(std::time({})));
+    for (uint32_t i = 0; i < MAX_FILE_ID_RETRIES; i++) {
         file_id_t file_id = static_cast<file_id_t>(std::rand());
+
+        // Skip reserved catalog file ID
+        if (file_id == CATALOG_FILE_ID) {
+            continue;
+        }
+
         std::filesystem::path file_path = GetFilePath(file_id);
 
         // file doesn't exist so this file id is unique!
@@ -101,6 +111,19 @@ file_id_t DiskManager::CreateFile()
         }
     }
     throw std::runtime_error("Couldn't generate a unique file id");
+}
+
+void DiskManager::CreateFile(file_id_t file_id)
+{
+    std::lock_guard<std::mutex> lg(mut_m);
+    std::filesystem::path file_path = GetFilePath(file_id);
+
+    if (std::filesystem::exists(file_path)) {
+        throw std::runtime_error("File with id " + std::to_string(file_id) + " already exists");
+    }
+
+    // create the file
+    std::ofstream fstream(file_path);
 }
 
 DiskManager::DatabaseFile& DiskManager::OpenFile(file_id_t  file_id)

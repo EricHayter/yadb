@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/definitions.h"
+#include "storage/on_disk/types.h"
 
 /* Heap Page
  * Pages in the heap file will have a slightly tweaked version of the slotted

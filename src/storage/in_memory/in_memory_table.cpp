@@ -1,5 +1,6 @@
 #include "storage/in_memory/in_memory_table.h"
 #include "storage/in_memory/in_memory_table_iterator.h"
+#include "storage/on_disk/types.h"
 #include <stdexcept>
 
 // Define the static registry
@@ -27,7 +28,8 @@ InMemoryTable::InMemoryTable(const Schema& schema)
 
 row_id_t InMemoryTable::GenerateRowId()
 {
-    row_id_t rid { next_page_id_m, next_slot_id_m };
+    page_id_t page_id = next_page_id_m;
+    slot_id_t slot_id = next_slot_id_m;
 
     // Simple auto-increment logic
     next_slot_id_m++;
@@ -35,7 +37,7 @@ row_id_t InMemoryTable::GenerateRowId()
         next_page_id_m++;
     }
 
-    return rid;
+    return MakeRowId(page_id, slot_id);
 }
 
 std::unique_ptr<TableIterator> InMemoryTable::iter()

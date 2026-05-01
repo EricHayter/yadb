@@ -1,18 +1,20 @@
 #include "storage/on_disk/table/disk_table_manager.h"
+#include "storage/on_disk/constants.h"
+#include "core/assert.h"
 #include "storage/on_disk/page/page_format.h"
 #include <memory>
 
 DiskTableManager::MappingManager::MappingManager()
 {
     // Open the metadata file for reading and writing in binary mode
-    fstream_m.open(MAPPING_FILE_NAME, std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
+    fstream_m.open(DISK_TABLE_MAPPING_FILE.data(), std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
 
     // If file doesn't exist, create it
     if (!fstream_m.is_open()) {
         fstream_m.clear();
-        fstream_m.open(MAPPING_FILE_NAME, std::ios::out | std::ios::binary);
+        fstream_m.open(DISK_TABLE_MAPPING_FILE.data(), std::ios::out | std::ios::binary);
         fstream_m.close();
-        fstream_m.open(MAPPING_FILE_NAME, std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
+        fstream_m.open(DISK_TABLE_MAPPING_FILE.data(), std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
     }
 
     // Read existing mappings from the beginning of the file
@@ -44,15 +46,27 @@ DiskTableManager::MappingManager::MappingManager()
     fstream_m.seekp(0, std::ios::end);
 }
 
-DiskTableManager::DiskTableManager(PageBufferManager& page_buffer_manager, Catalog& catalog)
+void DiskTableManager::SetCatalog(const Catalog& catalog)
+{
+    catalog_m = catalog;
+}
+
+DiskTableManager::DiskTableManager(PageBufferManager& page_buffer_manager)
     : page_buffer_manager_m(page_buffer_manager)
-    , catalog_m(catalog)
     , mapping_manager_m()
 {
 }
 
 bool DiskTableManager::CreateTable(std::string_view table_name, const Schema& schema)
 {
+    // haven't set the catalog yet
+    if (!catalog_m) {
+        YADB_ASSERT(table_name == CATALOG_TABLE_NAME,
+            std::format("Trying to create non-catalog table '%s' without registering a catalog", table_name)
+        );
+        // TODO set this up creating the table...
+    }
+
     if (catalog_m.TableExists(table_name)) {
         return false;
     }

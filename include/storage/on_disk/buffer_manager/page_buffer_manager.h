@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/definitions.h"
+#include "storage/on_disk/types.h"
 #include "storage/on_disk/buffer_manager/frame.h"
 #include "storage/on_disk/buffer_manager/lru_k_replacer.h"
 #include "storage/on_disk/buffer_manager/page.h"
@@ -56,6 +56,11 @@ public:
     ~PageBufferManager();
 
     file_id_t CreateFile();
+
+    /**
+     * Creates a new file with the specified file_id.
+     */
+    void CreateFile(file_id_t file_id);
 
     /**
      * Creates a new page by signalling to the disk manager

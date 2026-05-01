@@ -1,5 +1,5 @@
 #include "storage/on_disk/heap/heap_page.h"
-#include "common/definitions.h"
+#include "storage/on_disk/constants.h"
 #include "storage/on_disk/page/page_format.h"
 #include <cstring>
 

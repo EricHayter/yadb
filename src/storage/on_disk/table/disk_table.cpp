@@ -1,6 +1,8 @@
 #include "storage/on_disk/table/disk_table.h"
 #include "storage/on_disk/heap/heap_page.h"
 #include "storage/on_disk/page/page_format.h"
+#include "storage/on_disk/types.h"
+#include "storage/on_disk/constants.h"
 #include <stdexcept>
 
 bool DiskTable::CreateTable(std::string_view table_name, PageBufferManager& page_buffer_manager)
@@ -10,11 +12,6 @@ bool DiskTable::CreateTable(std::string_view table_name, PageBufferManager& page
     // TODO save it into some sort of heap file containing all of the entries
     (void) page_buffer_manager.CreateFile();
     return true;
-}
-
-std::shared_ptr<DiskTable> DiskTable::GetTable(std::string_view table_name, const Schema& schema, PageBufferManager& page_buffer_manager)
-{
-    return std::shared_ptr<DiskTable>(new DiskTable(table_name, schema, page_buffer_manager));
 }
 
 DiskTable::DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager)
@@ -31,7 +28,6 @@ std::unique_ptr<TableIterator> DiskTable::iter()
 
 row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
 {
-    constexpr page_id_t ROOT_PAGE_ID = 0;
     page_id_t current_page_id = ROOT_PAGE_ID;
     page_id_t next_page_id = NULL_PAGE_ID;
 
@@ -49,7 +45,7 @@ row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
         if (insert_loc) {
             auto slot_span = page::WriteRecord(page.GetMutView(), *insert_loc);
             std::copy(row.begin(), row.end(), slot_span.begin());
-            return { .page_id = page.GetFilePageId().page_id, .slot_id = *insert_loc };
+            return MakeRowId(page.GetFilePageId().page_id, *insert_loc);
         }
 
         current_page_id = next_page_id;
@@ -68,7 +64,7 @@ row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
         std::optional<slot_id_t> insert_loc = page::AllocateSlot(new_page.GetMutView(), row.size());
         auto slot_span = page::WriteRecord(new_page.GetMutView(), *insert_loc);
         std::copy(row.begin(), row.end(), slot_span.begin());
-        inserted_row_id = { .page_id = new_page_id, .slot_id = *insert_loc };
+        inserted_row_id = MakeRowId(new_page_id, *insert_loc);
     }
 
     // update pointers
@@ -85,9 +81,12 @@ row_id_t DiskTable::update_row(const row_id_t& rid, std::span<const std::byte> d
 
 void DiskTable::delete_row(const row_id_t& rid)
 {
-    Page page = page_buffer_manager_m.GetPage({ file_id_m, rid.page_id });
+    page_id_t page_id = GetPageIdFromRowId(rid);
+    slot_id_t slot_id = GetSlotIdFromRowId(rid);
+
+    Page page = page_buffer_manager_m.GetPage({ file_id_m, page_id });
     std::lock_guard<Page> lg(page);
-    page::DeleteSlot(page.GetMutView(), rid.slot_id);
+    page::DeleteSlot(page.GetMutView(), slot_id);
 }
 
 TableType DiskTable::GetType() const

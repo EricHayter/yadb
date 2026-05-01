@@ -1,6 +1,7 @@
 #pragma once
 
 #include "table/table.h"
+#include "storage/on_disk/types.h"
 #include "storage/on_disk/buffer_manager/page_buffer_manager.h"
 #include <filesystem>
 
@@ -9,7 +10,6 @@ class DiskTable : public Table {
 
 public:
     static bool CreateTable(std::string_view table_name, PageBufferManager& page_buffer_manager);
-    static std::shared_ptr<DiskTable> GetTable(std::string_view table_name, const Schema& schema, PageBufferManager& page_buffer_manager);
 
     ~DiskTable() override = default;
 

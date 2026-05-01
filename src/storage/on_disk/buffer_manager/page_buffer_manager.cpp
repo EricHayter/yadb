@@ -1,4 +1,5 @@
 #include "storage/on_disk/buffer_manager/page_buffer_manager.h"
+#include "storage/on_disk/constants.h"
 #include "config/config.h"
 #include "spdlog/fmt/bundled/base.h"
 #include "spdlog/fmt/bundled/format.h"
@@ -51,6 +52,11 @@ PageBufferManager::~PageBufferManager()
 file_id_t PageBufferManager::CreateFile()
 {
     return disk_manager_m.CreateFile();
+}
+
+void PageBufferManager::CreateFile(file_id_t file_id)
+{
+    disk_manager_m.CreateFile(file_id);
 }
 
 page_id_t PageBufferManager::AllocatePage(file_id_t file_id)

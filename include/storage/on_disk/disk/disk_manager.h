@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/definitions.h"
+#include "storage/on_disk/types.h"
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -32,6 +32,11 @@ public:
      * Creates a new file and returns the corresponding file_id_t.
      */
     file_id_t CreateFile();
+
+    /*
+     * Creates a new file with the specified file_id.
+     */
+    void CreateFile(file_id_t file_id);
 
     /*
      * Allocated a new page in the database file for writing to
