@@ -5,6 +5,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <fstream>
+#include "catalog/catalog.h"
 #include "storage/on_disk/table/disk_table.h"
 #include "storage/on_disk/buffer_manager/page_buffer_manager.h"
 
@@ -27,8 +28,8 @@
 
 class DiskTableManager {
     public:
-    DiskTableManager(PageBufferManager& page_buffer_manager);
-    bool CreateTable(std::string_view table_name);
+    DiskTableManager(PageBufferManager& page_buffer_manager, Catalog& catalog);
+    bool CreateTable(std::string_view table_name, const Schema& schema);
     std::shared_ptr<DiskTable> GetTable(std::string_view table_name);
 
     private:
@@ -47,5 +48,7 @@ class DiskTableManager {
         std::unordered_map<std::string, file_id_t> file_id_map_m;
     };
 
+    PageBufferManager& page_buffer_manager_m;
+    Catalog& catalog_m;
     MappingManager mapping_manager_m;
 };

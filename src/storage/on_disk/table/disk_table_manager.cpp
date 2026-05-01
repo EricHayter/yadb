@@ -1,5 +1,6 @@
 #include "storage/on_disk/table/disk_table_manager.h"
-#include <iostream>
+#include "storage/on_disk/page/page_format.h"
+#include <memory>
 
 DiskTableManager::MappingManager::MappingManager()
 {
@@ -41,6 +42,47 @@ DiskTableManager::MappingManager::MappingManager()
     // Clear any error flags and seek to end for appending
     fstream_m.clear();
     fstream_m.seekp(0, std::ios::end);
+}
+
+DiskTableManager::DiskTableManager(PageBufferManager& page_buffer_manager, Catalog& catalog)
+    : page_buffer_manager_m(page_buffer_manager)
+    , catalog_m(catalog)
+    , mapping_manager_m()
+{
+}
+
+bool DiskTableManager::CreateTable(std::string_view table_name, const Schema& schema)
+{
+    if (catalog_m.TableExists(table_name)) {
+        return false;
+    }
+
+    file_id_t file_id = page_buffer_manager_m.CreateFile();
+    mapping_manager_m.SaveMapping(table_name, file_id);
+    Page page = page_buffer_manager_m.GetPage({ file_id, 0 });
+    std::lock_guard<Page> lk(page);
+    page::InitPage(page.GetMutView(), page::PageType::Data);
+
+    return catalog_m.AddTable(table_name, TableType::Disk, schema);
+}
+
+std::shared_ptr<DiskTable> DiskTableManager::GetTable(std::string_view table_name)
+{
+    if (!catalog_m.TableExists(table_name)) {
+        return nullptr;
+    }
+
+    auto file_id = mapping_manager_m.GetFileId(table_name);
+    if (!file_id) {
+        return nullptr;
+    }
+
+    Schema schema = catalog_m.GetSchema(table_name);
+    return std::shared_ptr<DiskTable>(new DiskTable(
+        *file_id,
+        schema,
+        page_buffer_manager_m
+    ));
 }
 
 std::optional<file_id_t> DiskTableManager::MappingManager::GetFileId(std::string_view table_name) const

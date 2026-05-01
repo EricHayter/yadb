@@ -1,4 +1,4 @@
-#include "storage/on_disk/disk_table.h"
+#include "storage/on_disk/table/disk_table.h"
 #include "storage/on_disk/heap/heap_page.h"
 #include "storage/on_disk/page/page_format.h"
 #include <stdexcept>
@@ -17,24 +17,11 @@ std::shared_ptr<DiskTable> DiskTable::GetTable(std::string_view table_name, cons
     return std::shared_ptr<DiskTable>(new DiskTable(table_name, schema, page_buffer_manager));
 }
 
-
-DiskTable::DiskTable(std::string_view table_name, const Schema& schema, PageBufferManager& page_buffer_manager)
+DiskTable::DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager)
     : Table(schema)
+    , file_id_m (file_id)
     , page_buffer_manager_m(page_buffer_manager)
 {
-    std::filesystem::path database_file_name = GetTableFileName(table_name);
-
-    // TODO should pull from a static map I guess? might be good to have manager here
-    // file_id_m = page_buffer_manager.RegisterFile(database_file_name);
-    file_id_m = 42;
-
-    // initalize our pages.
-    Page page = page_buffer_manager_m.GetPage({ file_id_m, 0 });
-    {
-        std::lock_guard<Page> pg_lg(page);
-        MutFullPage page_data = page.GetMutView();
-        heap_page::InitPage(page_data);
-    }
 }
 
 std::unique_ptr<TableIterator> DiskTable::iter()

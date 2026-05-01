@@ -5,6 +5,8 @@
 #include <filesystem>
 
 class DiskTable : public Table {
+    friend class DiskTableManager;
+
 public:
     static bool CreateTable(std::string_view table_name, PageBufferManager& page_buffer_manager);
     static std::shared_ptr<DiskTable> GetTable(std::string_view table_name, const Schema& schema, PageBufferManager& page_buffer_manager);
@@ -24,7 +26,7 @@ private:
     static std::filesystem::path GetTableFileName(std::string_view table_name);
 
 private:
-    DiskTable(std::string_view table_name, const Schema& schema, PageBufferManager& page_buffer_manager);
+    DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager);
     file_id_t file_id_m;
     PageBufferManager& page_buffer_manager_m;
 };

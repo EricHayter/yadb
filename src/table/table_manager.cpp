@@ -1,7 +1,7 @@
 #include "table/table_manager.h"
 #include "core/assert.h"
 #include "storage/in_memory/in_memory_table.h"
-#include "storage/on_disk/disk_table.h"
+#include "storage/on_disk/table/disk_table.h"
 #include <stdexcept>
 
 TableManager::TableManager()
