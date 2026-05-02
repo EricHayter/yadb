@@ -1,11 +1,11 @@
-#include "storage/on_disk/table/disk_table_manager.h"
+#include "storage/on_disk/table/disk_table_factory.h"
 #include "storage/on_disk/constants.h"
 #include "core/assert.h"
 #include "storage/on_disk/page/page_format.h"
 #include <memory>
 #include <shared_mutex>
 
-DiskTableManager::MappingManager::MappingManager()
+DiskTableFactory::MappingManager::MappingManager()
 {
     // Open the metadata file for reading and writing in binary mode
     fstream_m.open(DISK_TABLE_MAPPING_FILE.data(), std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
@@ -47,16 +47,16 @@ DiskTableManager::MappingManager::MappingManager()
     fstream_m.seekp(0, std::ios::end);
 }
 
-void DiskTableManager::SetCatalog(Catalog& catalog)
+void DiskTableFactory::SetCatalog(Catalog& catalog)
 {
     catalog_m = catalog;
 }
 
-bool DiskTableManager::TableExists(std::string_view table_name) const
+bool DiskTableFactory::TableExists(std::string_view table_name) const
 {
     // Special case for catalog tables - check file mapping directly
     // since they exist before the catalog is set up
-    if (table_name == TABLE_CATALOG_TABLE_NAME || table_name == COLUMN_CATALOG_TABLE_NAME) {
+    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
         return mapping_manager_m.GetFileId(table_name).has_value();
     }
 
@@ -69,7 +69,7 @@ bool DiskTableManager::TableExists(std::string_view table_name) const
     return mapping_manager_m.GetFileId(table_name).has_value();
 }
 
-bool DiskTableManager::CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id)
+bool DiskTableFactory::CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id)
 {
     file_id_t actual_file_id;
 
@@ -92,20 +92,20 @@ bool DiskTableManager::CreateTableFile(std::string_view table_name, std::optiona
     return true;
 }
 
-DiskTableManager::DiskTableManager(PageBufferManager& page_buffer_manager)
+DiskTableFactory::DiskTableFactory(PageBufferManager& page_buffer_manager)
     : page_buffer_manager_m(page_buffer_manager)
     , mapping_manager_m()
 {
 }
 
-bool DiskTableManager::CreateTable(std::string_view table_name, const Schema& schema)
+bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& schema)
 {
     // Check if this is a catalog table
-    if (table_name == TABLE_CATALOG_TABLE_NAME || table_name == COLUMN_CATALOG_TABLE_NAME) {
+    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
         YADB_ASSERT(!catalog_m, "Cannot create catalog tables after catalog has been set");
 
         // Create catalog table with reserved file ID
-        file_id_t reserved_id = (table_name == TABLE_CATALOG_TABLE_NAME)
+        file_id_t reserved_id = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
             ? TABLE_CATALOG_FILE_ID
             : COLUMN_CATALOG_FILE_ID;
 
@@ -115,7 +115,7 @@ bool DiskTableManager::CreateTable(std::string_view table_name, const Schema& sc
 
         // Create table object directly and initialize it with catalog metadata
         std::shared_ptr<DiskTable> table(new DiskTable(reserved_id, schema, page_buffer_manager_m));
-        if (table_name == TABLE_CATALOG_TABLE_NAME) {
+        if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME) {
             Catalog::InitializeTableCatalogTable(*table);
         } else {
             Catalog::InitializeColumnCatalogTable(*table);
@@ -139,7 +139,7 @@ bool DiskTableManager::CreateTable(std::string_view table_name, const Schema& sc
     return catalog_m->AddTable(table_name, TableType::Disk, schema);
 }
 
-std::shared_ptr<DiskTable> DiskTableManager::GetTable(std::string_view table_name)
+std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
 {
     if (!catalog_m->TableExists(table_name)) {
         return nullptr;
@@ -151,14 +151,34 @@ std::shared_ptr<DiskTable> DiskTableManager::GetTable(std::string_view table_nam
     }
 
     Schema schema = catalog_m->GetSchema(table_name);
-    return std::shared_ptr<DiskTable>(new DiskTable(
+    return std::shared_ptr<Table>(new DiskTable(
         *file_id,
         schema,
         page_buffer_manager_m
     ));
 }
 
-std::optional<file_id_t> DiskTableManager::MappingManager::GetFileId(std::string_view table_name) const
+bool DiskTableFactory::DeleteTable(std::string_view table_name)
+{
+    if (!TableExists(table_name)) {
+        return false;
+    }
+
+    // Remove from catalog
+    if (catalog_m && !catalog_m->RemoveTable(table_name)) {
+        return false;
+    }
+
+    // TODO: Delete the actual disk file and clean up mappings
+    // This would involve:
+    // 1. Removing the file mapping
+    // 2. Deleting the physical file
+    // 3. Cleaning up page buffers
+
+    return true;
+}
+
+std::optional<file_id_t> DiskTableFactory::MappingManager::GetFileId(std::string_view table_name) const
 {
     std::string table_name_str = std::string(table_name);
     std::shared_lock<std::shared_mutex> lk(mut_m);
@@ -167,7 +187,7 @@ std::optional<file_id_t> DiskTableManager::MappingManager::GetFileId(std::string
     return file_id_map_m.at(table_name_str);
 }
 
-bool DiskTableManager::MappingManager::SaveMapping(std::string_view table_name, file_id_t file_id)
+bool DiskTableFactory::MappingManager::SaveMapping(std::string_view table_name, file_id_t file_id)
 {
     std::lock_guard<std::shared_mutex> lg(mut_m);
 

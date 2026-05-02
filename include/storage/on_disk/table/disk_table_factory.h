@@ -11,6 +11,7 @@
 #include "storage/on_disk/constants.h"
 #include "storage/on_disk/table/disk_table.h"
 #include "storage/on_disk/buffer_manager/page_buffer_manager.h"
+#include "table/table_factory_interface.h"
 
 /*
  * Disk table manager
@@ -29,13 +30,14 @@
  * name to file_id.
  */
 
-class DiskTableManager {
+class DiskTableFactory : public ITableFactory {
     public:
-    DiskTableManager(PageBufferManager& page_buffer_manager);
+    DiskTableFactory(PageBufferManager& page_buffer_manager);
     void SetCatalog(Catalog& catalog);
     bool TableExists(std::string_view table_name) const;
     bool CreateTable(std::string_view table_name, const Schema& schema);
-    std::shared_ptr<DiskTable> GetTable(std::string_view table_name);
+    std::shared_ptr<Table> GetTable(std::string_view table_name);
+    bool DeleteTable(std::string_view table_name);
 
     private:
     /* Class to manage the mapping of table names to file_ids */
