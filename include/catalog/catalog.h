@@ -26,6 +26,12 @@ public:
     static const Schema table_catalog_schema;
     static const Schema column_catalog_schema;
 
+    // Initialize the table_catalog table (includes only itself)
+    static void InitializeTableCatalogTable(Table& table_catalog);
+
+    // Initialize the column_catalog table (includes entries for both catalog tables)
+    static void InitializeColumnCatalogTable(Table& column_catalog);
+
 private:
     void LoadTableSchemas();
     void LoadColumnSchemas();

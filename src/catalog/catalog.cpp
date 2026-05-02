@@ -1,7 +1,6 @@
 #include "catalog/catalog.h"
 #include "common/definitions.h"
 #include "core/assert.h"
-#include "core/row_builder.h"
 #include "core/row_reader.h"
 
 const Schema Catalog::table_catalog_schema = {
@@ -152,4 +151,48 @@ TableType Catalog::GetTableType(std::string_view table_name) const
     YADB_ASSERT(table_info_m.contains(table_name_str), "Table does not exist");
 
     return table_info_m.at(table_name_str).type;
+}
+
+void Catalog::InitializeTableCatalogTable(Table& table_catalog)
+{
+    // Add entry for table_catalog in the table_catalog table itself
+    table_catalog.insert_row({
+        Value(std::string("table_catalog")),
+        Value(static_cast<std::int32_t>(TableType::InMemory)),
+        Value(static_cast<std::int32_t>(table_catalog_schema.size()))
+    });
+
+    // Add entry for column_catalog in the table_catalog table
+    table_catalog.insert_row({
+        Value(std::string("column_catalog")),
+        Value(static_cast<std::int32_t>(TableType::InMemory)),
+        Value(static_cast<std::int32_t>(column_catalog_schema.size()))
+    });
+}
+
+void Catalog::InitializeColumnCatalogTable(Table& column_catalog)
+{
+    // Add column entries for table_catalog
+    std::int32_t position = 0;
+    for (const auto& attribute : table_catalog_schema) {
+        column_catalog.insert_row({
+            Value(std::string(attribute.name)),
+            Value(std::string("table_catalog")),
+            Value(static_cast<std::int32_t>(attribute.type)),
+            Value(position)
+        });
+        position++;
+    }
+
+    // Add column entries for column_catalog
+    position = 0;
+    for (const auto& attribute : column_catalog_schema) {
+        column_catalog.insert_row({
+            Value(std::string(attribute.name)),
+            Value(std::string("column_catalog")),
+            Value(static_cast<std::int32_t>(attribute.type)),
+            Value(position)
+        });
+        position++;
+    }
 }
