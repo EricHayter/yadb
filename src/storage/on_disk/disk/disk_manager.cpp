@@ -96,8 +96,8 @@ file_id_t DiskManager::CreateFile()
     for (uint32_t i = 0; i < MAX_FILE_ID_RETRIES; i++) {
         file_id_t file_id = static_cast<file_id_t>(std::rand());
 
-        // Skip reserved catalog file ID
-        if (file_id == CATALOG_FILE_ID) {
+        // Skip reserved catalog file IDs
+        if (IsReservedFileId(file_id)) {
             continue;
         }
 

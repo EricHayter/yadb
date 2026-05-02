@@ -61,7 +61,7 @@ bool DiskTableManager::CreateTable(std::string_view table_name, const Schema& sc
 {
     // haven't set the catalog yet
     if (!catalog_m) {
-        YADB_ASSERT(table_name == CATALOG_TABLE_NAME,
+        YADB_ASSERT(table_name == TABLE_CATALOG_TABLE_NAME || table_name == COLUMN_CATALOG_TABLE_NAME,
             std::format("Trying to create non-catalog table '%s' without registering a catalog", table_name)
         );
         // TODO set this up creating the table...
