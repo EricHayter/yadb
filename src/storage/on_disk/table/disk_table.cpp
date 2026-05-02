@@ -5,15 +5,6 @@
 #include "storage/on_disk/constants.h"
 #include <stdexcept>
 
-bool DiskTable::CreateTable(std::string_view table_name, PageBufferManager& page_buffer_manager)
-{
-    std::filesystem::path database_file_name = GetTableFileName(table_name);
-
-    // TODO save it into some sort of heap file containing all of the entries
-    (void) page_buffer_manager.CreateFile();
-    return true;
-}
-
 DiskTable::DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager)
     : Table(schema)
     , file_id_m (file_id)

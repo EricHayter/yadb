@@ -9,8 +9,6 @@ class DiskTable : public Table {
     friend class DiskTableFactory;
 
 public:
-    static bool CreateTable(std::string_view table_name, PageBufferManager& page_buffer_manager);
-
     ~DiskTable() override = default;
 
     std::unique_ptr<TableIterator> iter() override;
