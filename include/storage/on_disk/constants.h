@@ -12,8 +12,6 @@ constexpr file_id_t TABLE_CATALOG_FILE_ID = 0;
 constexpr file_id_t COLUMN_CATALOG_FILE_ID = 1;
 
 // File name constants
-constexpr std::string_view TABLE_CATALOG_TABLE_NAME = "table_catalog";
-constexpr std::string_view COLUMN_CATALOG_TABLE_NAME = "column_catalog";
 constexpr std::string_view DISK_TABLE_MAPPING_FILE = "disk_table_mapping";
 constexpr std::string_view DATABASE_FILE_EXTENSION = ".yadb";
 constexpr std::string_view TABLE_FILE_EXTENSION = ".db";

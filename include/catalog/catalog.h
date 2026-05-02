@@ -26,6 +26,10 @@ public:
     static const Schema table_catalog_schema;
     static const Schema column_catalog_schema;
 
+    // Catalog table name constants
+    static constexpr std::string_view TABLE_CATALOG_TABLE_NAME = "table_catalog";
+    static constexpr std::string_view COLUMN_CATALOG_TABLE_NAME = "column_catalog";
+
     // Initialize the table_catalog table (includes only itself)
     static void InitializeTableCatalogTable(Table& table_catalog);
 
