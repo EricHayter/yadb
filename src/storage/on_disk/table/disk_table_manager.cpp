@@ -3,6 +3,7 @@
 #include "core/assert.h"
 #include "storage/on_disk/page/page_format.h"
 #include <memory>
+#include <shared_mutex>
 
 DiskTableManager::MappingManager::MappingManager()
 {
@@ -46,9 +47,49 @@ DiskTableManager::MappingManager::MappingManager()
     fstream_m.seekp(0, std::ios::end);
 }
 
-void DiskTableManager::SetCatalog(const Catalog& catalog)
+void DiskTableManager::SetCatalog(Catalog& catalog)
 {
     catalog_m = catalog;
+}
+
+bool DiskTableManager::TableExists(std::string_view table_name) const
+{
+    // Special case for catalog tables - check file mapping directly
+    // since they exist before the catalog is set up
+    if (table_name == TABLE_CATALOG_TABLE_NAME || table_name == COLUMN_CATALOG_TABLE_NAME) {
+        return mapping_manager_m.GetFileId(table_name).has_value();
+    }
+
+    // For regular tables, use catalog if available
+    if (catalog_m) {
+        return catalog_m->TableExists(table_name);
+    }
+
+    // Fallback: check if file mapping exists (table was created but catalog not set yet)
+    return mapping_manager_m.GetFileId(table_name).has_value();
+}
+
+bool DiskTableManager::CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id)
+{
+    file_id_t actual_file_id;
+
+    if (file_id) {
+        // Use the provided file ID (for catalog tables)
+        actual_file_id = *file_id;
+        page_buffer_manager_m.CreateFile(actual_file_id);
+    } else {
+        // Generate a new file ID (for regular tables)
+        actual_file_id = page_buffer_manager_m.CreateFile();
+    }
+
+    mapping_manager_m.SaveMapping(table_name, actual_file_id);
+
+    // Initialize first page as data page
+    Page page = page_buffer_manager_m.GetPage({ actual_file_id, 0 });
+    std::lock_guard<Page> lk(page);
+    page::InitPage(page.GetMutView(), page::PageType::Data);
+
+    return true;
 }
 
 DiskTableManager::DiskTableManager(PageBufferManager& page_buffer_manager)
@@ -59,30 +100,48 @@ DiskTableManager::DiskTableManager(PageBufferManager& page_buffer_manager)
 
 bool DiskTableManager::CreateTable(std::string_view table_name, const Schema& schema)
 {
-    // haven't set the catalog yet
-    if (!catalog_m) {
-        YADB_ASSERT(table_name == TABLE_CATALOG_TABLE_NAME || table_name == COLUMN_CATALOG_TABLE_NAME,
-            std::format("Trying to create non-catalog table '%s' without registering a catalog", table_name)
-        );
-        // TODO set this up creating the table...
+    // Check if this is a catalog table
+    if (table_name == TABLE_CATALOG_TABLE_NAME || table_name == COLUMN_CATALOG_TABLE_NAME) {
+        YADB_ASSERT(!catalog_m, "Cannot create catalog tables after catalog has been set");
+
+        // Create catalog table with reserved file ID
+        file_id_t reserved_id = (table_name == TABLE_CATALOG_TABLE_NAME)
+            ? TABLE_CATALOG_FILE_ID
+            : COLUMN_CATALOG_FILE_ID;
+
+        if (!CreateTableFile(table_name, reserved_id)) {
+            return false;
+        }
+
+        // Create table object directly and initialize it with catalog metadata
+        std::shared_ptr<DiskTable> table(new DiskTable(reserved_id, schema, page_buffer_manager_m));
+        if (table_name == TABLE_CATALOG_TABLE_NAME) {
+            Catalog::InitializeTableCatalogTable(*table);
+        } else {
+            Catalog::InitializeColumnCatalogTable(*table);
+        }
+
+        return true;
     }
 
-    if (catalog_m.TableExists(table_name)) {
+    // Regular table creation - requires catalog to be set
+    YADB_ASSERT(catalog_m, "Cannot create regular tables before catalog is set");
+
+    if (catalog_m->TableExists(table_name)) {
         return false;
     }
 
-    file_id_t file_id = page_buffer_manager_m.CreateFile();
-    mapping_manager_m.SaveMapping(table_name, file_id);
-    Page page = page_buffer_manager_m.GetPage({ file_id, 0 });
-    std::lock_guard<Page> lk(page);
-    page::InitPage(page.GetMutView(), page::PageType::Data);
+    // Create regular table with dynamic file ID
+    if (!CreateTableFile(table_name)) {
+        return false;
+    }
 
-    return catalog_m.AddTable(table_name, TableType::Disk, schema);
+    return catalog_m->AddTable(table_name, TableType::Disk, schema);
 }
 
 std::shared_ptr<DiskTable> DiskTableManager::GetTable(std::string_view table_name)
 {
-    if (!catalog_m.TableExists(table_name)) {
+    if (!catalog_m->TableExists(table_name)) {
         return nullptr;
     }
 
@@ -91,7 +150,7 @@ std::shared_ptr<DiskTable> DiskTableManager::GetTable(std::string_view table_nam
         return nullptr;
     }
 
-    Schema schema = catalog_m.GetSchema(table_name);
+    Schema schema = catalog_m->GetSchema(table_name);
     return std::shared_ptr<DiskTable>(new DiskTable(
         *file_id,
         schema,

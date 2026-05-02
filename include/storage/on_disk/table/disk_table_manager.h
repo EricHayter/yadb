@@ -32,7 +32,8 @@
 class DiskTableManager {
     public:
     DiskTableManager(PageBufferManager& page_buffer_manager);
-    void SetCatalog(const Catalog& catalog);
+    void SetCatalog(Catalog& catalog);
+    bool TableExists(std::string_view table_name) const;
     bool CreateTable(std::string_view table_name, const Schema& schema);
     std::shared_ptr<DiskTable> GetTable(std::string_view table_name);
 
@@ -45,10 +46,12 @@ class DiskTableManager {
         bool SaveMapping(std::string_view table_name, file_id_t file_id);
 
         private:
-        std::shared_mutex mut_m;
+        mutable std::shared_mutex mut_m;
         std::fstream fstream_m;
         std::unordered_map<std::string, file_id_t> file_id_map_m;
     };
+
+    bool CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id = {});
 
     PageBufferManager& page_buffer_manager_m;
     std::optional<Catalog> catalog_m;
