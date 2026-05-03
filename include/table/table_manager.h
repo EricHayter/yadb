@@ -3,6 +3,7 @@
 #include "catalog/catalog.h"
 #include "common/definitions.h"
 #include "table/table.h"
+#include "storage/ephemeral/ephemeral_table_factory.h"
 #include <memory>
 #include <string_view>
 
@@ -20,5 +21,6 @@ public:
 
     bool TableExists(std::string_view name) const;
 private:
+    std::unique_ptr<EphemeralTableFactory> ephemeral_factory_m;
     Catalog catalog_m;
 };

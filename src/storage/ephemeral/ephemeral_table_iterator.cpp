@@ -1,21 +1,21 @@
-#include "storage/in_memory/in_memory_table_iterator.h"
+#include "storage/ephemeral/ephemeral_table_iterator.h"
 #include <stdexcept>
 
-InMemoryTableIterator::InMemoryTableIterator(std::map<row_id_t, std::vector<std::byte>>& data)
+EphemeralTableIterator::EphemeralTableIterator(std::map<row_id_t, std::vector<std::byte>>& data)
     : data_m(data)
     , iterator_m(data.begin())
     , closed_m(false)
 {
 }
 
-InMemoryTableIterator::~InMemoryTableIterator()
+EphemeralTableIterator::~EphemeralTableIterator()
 {
     if (!closed_m) {
         close();
     }
 }
 
-std::optional<Row> InMemoryTableIterator::next()
+std::optional<Row> EphemeralTableIterator::next()
 {
     if (closed_m) {
         return std::nullopt;
@@ -33,7 +33,7 @@ std::optional<Row> InMemoryTableIterator::next()
     return row;
 }
 
-void InMemoryTableIterator::seek(row_id_t rid)
+void EphemeralTableIterator::seek(row_id_t rid)
 {
     if (closed_m) {
         throw std::runtime_error("Cannot seek on closed iterator");
@@ -45,7 +45,7 @@ void InMemoryTableIterator::seek(row_id_t rid)
     }
 }
 
-void InMemoryTableIterator::close()
+void EphemeralTableIterator::close()
 {
     if (closed_m) {
         return;

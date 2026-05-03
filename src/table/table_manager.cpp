@@ -1,30 +1,32 @@
 #include "table/table_manager.h"
 #include "core/assert.h"
-#include "storage/in_memory/in_memory_table.h"
 #include "storage/on_disk/table/disk_table.h"
 #include <stdexcept>
 
 TableManager::TableManager()
-    : catalog_m([]() {
+    : ephemeral_factory_m(std::make_unique<EphemeralTableFactory>())
+    , catalog_m([this]() {
         // Bootstrap catalog tables
         constexpr std::string_view table_catalog_name = "table_catalog";
         constexpr std::string_view column_catalog_name = "column_catalog";
 
         // Create catalog tables if they don't exist
-        if (!InMemoryTable::GetTable(table_catalog_name)) {
-            InMemoryTable::CreateTable(table_catalog_name, Catalog::table_catalog_schema);
+        if (!ephemeral_factory_m->TableExists(table_catalog_name)) {
+            ephemeral_factory_m->CreateTable(table_catalog_name, Catalog::table_catalog_schema);
         }
-        if (!InMemoryTable::GetTable(column_catalog_name)) {
-            InMemoryTable::CreateTable(column_catalog_name, Catalog::column_catalog_schema);
+        if (!ephemeral_factory_m->TableExists(column_catalog_name)) {
+            ephemeral_factory_m->CreateTable(column_catalog_name, Catalog::column_catalog_schema);
         }
 
         // Get handles
-        auto table_catalog = InMemoryTable::GetTable(table_catalog_name);
-        auto column_catalog = InMemoryTable::GetTable(column_catalog_name);
+        auto table_catalog = ephemeral_factory_m->GetTable(table_catalog_name);
+        auto column_catalog = ephemeral_factory_m->GetTable(column_catalog_name);
 
         return Catalog(table_catalog, column_catalog);
     }())
 {
+    // Set the catalog on the factory after it's created
+    ephemeral_factory_m->SetCatalog(catalog_m);
 }
 
 // Explicit template instantiation for common cases
@@ -40,7 +42,7 @@ bool TableManager::CreateTable(std::string_view name, TableType type, const Sche
     bool created_table = false;
     switch (type) {
     case TableType::InMemory:
-        created_table = InMemoryTable::CreateTable(name, schema);
+        created_table = ephemeral_factory_m->CreateTable(name, schema);
         break;
     case TableType::Disk:
         throw std::runtime_error("DiskTable::CreateTable not implemented yet");
@@ -68,9 +70,9 @@ bool TableManager::DeleteTable(std::string_view name)
     // Delete actual table based on type
     switch (type) {
     case TableType::InMemory:
-        // InMemoryTable doesn't have a DeleteTable method yet
-        // The static registry keeps the table alive
-        // TODO: Add static DeleteTable method to InMemoryTable
+        if (!ephemeral_factory_m->DeleteTable(name)) {
+            return false;
+        }
         break;
     case TableType::Disk:
         throw std::runtime_error("DiskTable::DeleteTable not implemented yet");
@@ -99,7 +101,7 @@ std::shared_ptr<Table> TableManager::GetTable(std::string_view name, const Args&
 
     switch (table_type) {
     case TableType::InMemory:
-        return InMemoryTable::GetTable(name);
+        return ephemeral_factory_m->GetTable(name);
     case TableType::Disk:
         throw std::runtime_error("DiskTable::CreateTable not implemented yet");
     default:

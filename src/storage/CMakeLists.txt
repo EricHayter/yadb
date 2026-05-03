@@ -1,2 +1,2 @@
 add_subdirectory(on_disk)
-add_subdirectory(in_memory)
+add_subdirectory(ephemeral)

@@ -2,16 +2,14 @@
 
 #include "table/table.h"
 #include <map>
-#include <unordered_map>
 #include <span>
 #include <vector>
 
-class InMemoryTable : public Table {
-public:
-    static bool CreateTable(std::string_view table_name, const Schema& schema);
-    static std::shared_ptr<InMemoryTable> GetTable(std::string_view table_name);
+class EphemeralTableFactory;
 
-    ~InMemoryTable() override = default;
+class EphemeralTable : public Table {
+public:
+    ~EphemeralTable() override = default;
 
     // Iterator interface
     std::unique_ptr<TableIterator> iter() override;
@@ -31,9 +29,9 @@ private:
     // Simple std::map storage (sorted by row_id)
     using TableData = std::map<row_id_t, std::vector<std::byte>>;
 
-    InMemoryTable(const Schema& schema);
+    EphemeralTable(const Schema& schema);
 
-    static std::unordered_map<std::string, std::shared_ptr<InMemoryTable>> tables_m;
+    friend class EphemeralTableFactory;
 
     TableData table_data_m;
 

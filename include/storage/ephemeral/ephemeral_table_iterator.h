@@ -4,10 +4,10 @@
 #include <map>
 #include <vector>
 
-class InMemoryTableIterator : public TableIterator {
+class EphemeralTableIterator : public TableIterator {
 public:
-    InMemoryTableIterator(std::map<row_id_t, std::vector<std::byte>>& data);
-    ~InMemoryTableIterator() override;
+    EphemeralTableIterator(std::map<row_id_t, std::vector<std::byte>>& data);
+    ~EphemeralTableIterator() override;
 
     std::optional<Row> next() override;
     void seek(row_id_t rid) override;
