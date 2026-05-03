@@ -6,10 +6,7 @@
 #include <shared_mutex>
 #include <fstream>
 #include <optional>
-#include "catalog/catalog.h"
 #include "storage/on_disk/types.h"
-#include "storage/on_disk/constants.h"
-#include "storage/on_disk/table/disk_table.h"
 #include "storage/on_disk/buffer_manager/page_buffer_manager.h"
 #include "table/table_factory_interface.h"
 
@@ -33,11 +30,10 @@
 class DiskTableFactory : public ITableFactory {
     public:
     DiskTableFactory(PageBufferManager& page_buffer_manager);
-    void SetCatalog(Catalog& catalog);
-    bool TableExists(std::string_view table_name) const;
-    bool CreateTable(std::string_view table_name, const Schema& schema);
-    std::shared_ptr<Table> GetTable(std::string_view table_name);
-    bool DeleteTable(std::string_view table_name);
+    bool TableExists(std::string_view table_name) const override;
+    bool CreateTable(std::string_view table_name, const Schema& schema) override;
+    std::shared_ptr<Table> GetTable(std::string_view table_name) override;
+    bool DeleteTable(std::string_view table_name) override;
 
     private:
     /* Class to manage the mapping of table names to file_ids */
@@ -56,6 +52,5 @@ class DiskTableFactory : public ITableFactory {
     bool CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id = {});
 
     PageBufferManager& page_buffer_manager_m;
-    std::optional<Catalog> catalog_m;
     MappingManager mapping_manager_m;
 };

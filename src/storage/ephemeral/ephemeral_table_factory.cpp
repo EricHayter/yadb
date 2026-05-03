@@ -1,15 +1,6 @@
 #include "storage/ephemeral/ephemeral_table_factory.h"
 #include <mutex>
 
-EphemeralTableFactory::EphemeralTableFactory()
-{
-}
-
-void EphemeralTableFactory::SetCatalog(Catalog& catalog)
-{
-    catalog_m = catalog;
-}
-
 bool EphemeralTableFactory::TableExists(std::string_view table_name) const
 {
     std::shared_lock<std::shared_mutex> lock(registry_mutex_m);
@@ -27,10 +18,6 @@ bool EphemeralTableFactory::CreateTable(std::string_view table_name, const Schem
 
     std::unique_lock<std::shared_mutex> lock(registry_mutex_m);
     tables_m[std::string(table_name)] = std::shared_ptr<EphemeralTable>(new EphemeralTable(schema));
-
-    if (catalog_m.has_value()) {
-        catalog_m->AddTable(table_name, TableType::InMemory, schema);
-    }
 
     return true;
 }
@@ -53,10 +40,6 @@ bool EphemeralTableFactory::DeleteTable(std::string_view table_name)
         return false;
     }
     tables_m.erase(it);
-
-    if (catalog_m.has_value()) {
-        catalog_m->RemoveTable(table_name);
-    }
 
     return true;
 }

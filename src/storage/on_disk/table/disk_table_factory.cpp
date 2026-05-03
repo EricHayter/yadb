@@ -2,6 +2,7 @@
 #include "storage/on_disk/constants.h"
 #include "core/assert.h"
 #include "storage/on_disk/page/page_format.h"
+#include "storage/on_disk/table/disk_table.h"
 #include <memory>
 #include <shared_mutex>
 
@@ -47,11 +48,6 @@ DiskTableFactory::MappingManager::MappingManager()
     fstream_m.seekp(0, std::ios::end);
 }
 
-void DiskTableFactory::SetCatalog(Catalog& catalog)
-{
-    catalog_m = catalog;
-}
-
 bool DiskTableFactory::TableExists(std::string_view table_name) const
 {
     // Special case for catalog tables - check file mapping directly
@@ -61,8 +57,9 @@ bool DiskTableFactory::TableExists(std::string_view table_name) const
     }
 
     // For regular tables, use catalog if available
-    if (catalog_m) {
-        return catalog_m->TableExists(table_name);
+    auto catalog = GetCatalog();
+    if (catalog.has_value()) {
+        return catalog->TableExists(table_name);
     }
 
     // Fallback: check if file mapping exists (table was created but catalog not set yet)
@@ -102,7 +99,7 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
 {
     // Check if this is a catalog table
     if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
-        YADB_ASSERT(!catalog_m, "Cannot create catalog tables after catalog has been set");
+        YADB_ASSERT(!catalog_m.has_value(), "Cannot create catalog tables after catalog has been set");
 
         // Create catalog table with reserved file ID
         file_id_t reserved_id = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
@@ -125,9 +122,9 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
     }
 
     // Regular table creation - requires catalog to be set
-    YADB_ASSERT(catalog_m, "Cannot create regular tables before catalog is set");
+    YADB_ASSERT(catalog_m.has_value(), "Cannot create regular tables before catalog is set");
 
-    if (catalog_m->TableExists(table_name)) {
+    if ((*catalog_m)->TableExists(table_name)) {
         return false;
     }
 
@@ -136,12 +133,13 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
         return false;
     }
 
-    return catalog_m->AddTable(table_name, TableType::Disk, schema);
+    return true;
 }
 
 std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
 {
-    if (!catalog_m->TableExists(table_name)) {
+    auto catalog = GetCatalog();
+    if (catalog->TableExists(table_name)) {
         return nullptr;
     }
 
@@ -150,7 +148,7 @@ std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
         return nullptr;
     }
 
-    Schema schema = catalog_m->GetSchema(table_name);
+    Schema schema = catalog->GetSchema(table_name);
     return std::shared_ptr<Table>(new DiskTable(
         *file_id,
         schema,
@@ -161,11 +159,6 @@ std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
 bool DiskTableFactory::DeleteTable(std::string_view table_name)
 {
     if (!TableExists(table_name)) {
-        return false;
-    }
-
-    // Remove from catalog
-    if (catalog_m && !catalog_m->RemoveTable(table_name)) {
         return false;
     }
 

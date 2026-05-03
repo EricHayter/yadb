@@ -14,7 +14,7 @@ public:
 
     // Set the catalog for this table factory.
     // The catalog contains metadata about all tables.
-    virtual void SetCatalog(Catalog& catalog) = 0;
+    void SetCatalog(const Catalog& catalog) { catalog_m = catalog; };
 
     // Check if a table exists.
     virtual bool TableExists(std::string_view table_name) const = 0;
@@ -27,4 +27,17 @@ public:
 
     // Delete a table by name.
     virtual bool DeleteTable(std::string_view table_name) = 0;
+
+// Table factories should be able to read from the catalog to read schema
+// information from tables but I don't want them to be responsible for
+// adding and deleting entries from the catalog itself.
+//
+// I want optional semantics on a read-only version of the catalog.
+// I think that this is the only option as far as I'm aware
+// std::optional<const Catalog> will not allow for reassigning the optional...
+protected:
+std::optional<const Catalog> GetCatalog() const { return catalog_m; }
+
+private:
+std::optional<Catalog> catalog_m;
 };
