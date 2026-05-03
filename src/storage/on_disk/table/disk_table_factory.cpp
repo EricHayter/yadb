@@ -95,11 +95,17 @@ DiskTableFactory::DiskTableFactory(PageBufferManager& page_buffer_manager)
 {
 }
 
+DiskTableFactory::DiskTableFactory(PageBufferManager& page_buffer_manager, const Catalog& catalog)
+    : DiskTableFactory(page_buffer_manager)
+{
+    SetCatalog(catalog);
+}
+
 bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& schema)
 {
     // Check if this is a catalog table
     if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
-        YADB_ASSERT(!catalog_m.has_value(), "Cannot create catalog tables after catalog has been set");
+        YADB_ASSERT(!GetCatalog().has_value(), "Cannot create catalog tables after catalog has been set");
 
         // Create catalog table with reserved file ID
         file_id_t reserved_id = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
@@ -122,9 +128,9 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
     }
 
     // Regular table creation - requires catalog to be set
-    YADB_ASSERT(catalog_m.has_value(), "Cannot create regular tables before catalog is set");
+    YADB_ASSERT(GetCatalog().has_value(), "Cannot create regular tables before catalog is set");
 
-    if ((*catalog_m)->TableExists(table_name)) {
+    if (GetCatalog()->TableExists(table_name)) {
         return false;
     }
 
@@ -139,7 +145,7 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
 std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
 {
     auto catalog = GetCatalog();
-    if (catalog->TableExists(table_name)) {
+    if (!catalog || !catalog->TableExists(table_name)) {
         return nullptr;
     }
 
