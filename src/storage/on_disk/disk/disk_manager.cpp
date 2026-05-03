@@ -8,7 +8,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <mutex>
-#include <ctime>
+#include <random>
 #include <filesystem>
 #include "core/assert.h"
 
@@ -91,10 +91,13 @@ file_id_t DiskManager::CreateFile()
 {
     std::lock_guard<std::mutex> lg(mut_m);
 
-    // seed std::rand
-    std::srand(static_cast<unsigned int>(std::time({})));
+    // Use std::random_device for better seeding instead of time-based seeding
+    static thread_local std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<file_id_t> dis(0, std::numeric_limits<file_id_t>::max());
+
     for (uint32_t i = 0; i < MAX_FILE_ID_RETRIES; i++) {
-        file_id_t file_id = static_cast<file_id_t>(std::rand());
+        file_id_t file_id = dis(gen);
 
         // Skip reserved catalog file IDs
         if (IsReservedFileId(file_id)) {
