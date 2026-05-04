@@ -73,30 +73,30 @@ bool DiskTableFactory::CreateTableFile(std::string_view table_name, std::optiona
     if (file_id) {
         // Use the provided file ID (for catalog tables)
         actual_file_id = *file_id;
-        page_buffer_manager_m.CreateFile(actual_file_id);
+        page_buffer_manager_m->CreateFile(actual_file_id);
     } else {
         // Generate a new file ID (for regular tables)
-        actual_file_id = page_buffer_manager_m.CreateFile();
+        actual_file_id = page_buffer_manager_m->CreateFile();
     }
 
     mapping_manager_m.SaveMapping(table_name, actual_file_id);
 
     // Initialize first page as data page
-    Page page = page_buffer_manager_m.GetPage({ actual_file_id, 0 });
+    Page page = page_buffer_manager_m->GetPage({ actual_file_id, 0 });
     std::lock_guard<Page> lk(page);
     page::InitPage(page.GetMutView(), page::PageType::Data);
 
     return true;
 }
 
-DiskTableFactory::DiskTableFactory(PageBufferManager& page_buffer_manager)
-    : page_buffer_manager_m(page_buffer_manager)
+DiskTableFactory::DiskTableFactory()
+    : page_buffer_manager_m(std::make_unique<PageBufferManager>())
     , mapping_manager_m()
 {
 }
 
-DiskTableFactory::DiskTableFactory(PageBufferManager& page_buffer_manager, const Catalog& catalog)
-    : DiskTableFactory(page_buffer_manager)
+DiskTableFactory::DiskTableFactory(const Catalog& catalog)
+    : DiskTableFactory()
 {
     SetCatalog(catalog);
 }
@@ -117,7 +117,7 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
         }
 
         // Create table object directly and initialize it with catalog metadata
-        std::shared_ptr<DiskTable> table(new DiskTable(reserved_id, schema, page_buffer_manager_m));
+        std::shared_ptr<DiskTable> table(new DiskTable(reserved_id, schema, *page_buffer_manager_m));
         if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME) {
             Catalog::InitializeTableCatalogTable(*table);
         } else {
@@ -158,7 +158,7 @@ std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
     return std::shared_ptr<Table>(new DiskTable(
         *file_id,
         schema,
-        page_buffer_manager_m
+        *page_buffer_manager_m
     ));
 }
 

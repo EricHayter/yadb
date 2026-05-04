@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 class TableManager;
+class ITableFactory;
 
 class Catalog {
 public:
@@ -16,7 +17,7 @@ public:
         Schema schema;
     };
 
-    Catalog(std::shared_ptr<Table> table_catalog, std::shared_ptr<Table> column_catalog);
+    Catalog(ITableFactory& table_factory);
     bool AddTable(std::string_view table_name, TableType table_type, const Schema& schema);
     bool RemoveTable(std::string_view table_name);
     bool TableExists(std::string_view table_name) const;
@@ -37,10 +38,22 @@ public:
     static void InitializeColumnCatalogTable(Table& column_catalog);
 
 private:
+    // helper function in the catalog constructor that builds the required
+    // tables for the catalog (if they don't already exist) with the provided
+    // table factory.
+    void InitTables(ITableFactory& table_factory);
+
+    // populates the list of tables in table_info_m (with no schema info!)
     void LoadTableSchemas();
+
+    // populates the schemas for each of the tables added to table_info_m
+    // created by LoadTableSchemas
     void LoadColumnSchemas();
 
+    // mappings from table names to infromation about tables, e.g. table type
+    // and schema
     std::unordered_map<std::string, TableInfo> table_info_m;
+
     std::shared_ptr<Table> table_catalog_table_m;
     std::shared_ptr<Table> column_catalog_table_m;
 };

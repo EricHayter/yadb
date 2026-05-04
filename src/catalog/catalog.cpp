@@ -2,6 +2,7 @@
 #include "common/definitions.h"
 #include "core/assert.h"
 #include "core/row_reader.h"
+#include "table/table_factory_interface.h"
 
 const Schema Catalog::table_catalog_schema = {
     { "table_name", DataType::TEXT },
@@ -16,12 +17,26 @@ const Schema Catalog::column_catalog_schema = {
     { "position", DataType::INTEGER },
 };
 
-Catalog::Catalog(std::shared_ptr<Table> table_catalog, std::shared_ptr<Table> column_catalog)
-    : table_catalog_table_m(table_catalog)
-    , column_catalog_table_m(column_catalog)
+Catalog::Catalog(ITableFactory& table_factory)
 {
+    InitTables(table_factory);
     LoadTableSchemas();
     LoadColumnSchemas();
+}
+
+void Catalog::InitTables(ITableFactory& table_factory)
+{
+    // Create catalog tables if they don't exist
+    if (!table_factory.TableExists(TABLE_CATALOG_TABLE_NAME)) {
+        table_factory.CreateTable(TABLE_CATALOG_TABLE_NAME, Catalog::table_catalog_schema);
+    }
+    if (!table_factory.TableExists(COLUMN_CATALOG_TABLE_NAME)) {
+        table_factory.CreateTable(COLUMN_CATALOG_TABLE_NAME, Catalog::column_catalog_schema);
+    }
+
+    // set handles
+    table_catalog_table_m = table_factory.GetTable(TABLE_CATALOG_TABLE_NAME);
+    column_catalog_table_m = table_factory.GetTable(COLUMN_CATALOG_TABLE_NAME);
 }
 
 void Catalog::LoadTableSchemas()

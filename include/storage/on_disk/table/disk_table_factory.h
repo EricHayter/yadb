@@ -29,13 +29,13 @@
 
 class DiskTableFactory : public ITableFactory {
     public:
-    // Default constructor - use SetCatalog() to attach a catalog later.
-    // Use this when the catalog is not available at factory construction time.
-    DiskTableFactory(PageBufferManager& page_buffer_manager);
+    // Default constructor - creates an internal buffer manager.
+    // Use SetCatalog() to attach a catalog later.
+    DiskTableFactory();
 
-    // Constructor with catalog - attaches the catalog immediately.
+    // Constructor with catalog - creates an internal buffer manager and attaches the catalog.
     // Use this when the catalog is available at factory construction time.
-    DiskTableFactory(PageBufferManager& page_buffer_manager, const Catalog& catalog);
+    DiskTableFactory(const Catalog& catalog);
 
     bool TableExists(std::string_view table_name) const override;
     bool CreateTable(std::string_view table_name, const Schema& schema) override;
@@ -58,6 +58,6 @@ class DiskTableFactory : public ITableFactory {
 
     bool CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id = {});
 
-    PageBufferManager& page_buffer_manager_m;
+    std::unique_ptr<PageBufferManager> page_buffer_manager_m;
     MappingManager mapping_manager_m;
 };

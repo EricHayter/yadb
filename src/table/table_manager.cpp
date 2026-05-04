@@ -5,25 +5,7 @@
 
 TableManager::TableManager()
     : ephemeral_factory_m(std::make_unique<EphemeralTableFactory>())
-    , catalog_m([this]() {
-        // Bootstrap catalog tables
-        constexpr std::string_view table_catalog_name = "table_catalog";
-        constexpr std::string_view column_catalog_name = "column_catalog";
-
-        // Create catalog tables if they don't exist
-        if (!ephemeral_factory_m->TableExists(table_catalog_name)) {
-            ephemeral_factory_m->CreateTable(table_catalog_name, Catalog::table_catalog_schema);
-        }
-        if (!ephemeral_factory_m->TableExists(column_catalog_name)) {
-            ephemeral_factory_m->CreateTable(column_catalog_name, Catalog::column_catalog_schema);
-        }
-
-        // Get handles
-        auto table_catalog = ephemeral_factory_m->GetTable(table_catalog_name);
-        auto column_catalog = ephemeral_factory_m->GetTable(column_catalog_name);
-
-        return Catalog(table_catalog, column_catalog);
-    }())
+    , catalog_m(*ephemeral_factory_m)
 {
     // Set the catalog on the factory after it's created
     ephemeral_factory_m->SetCatalog(catalog_m);
