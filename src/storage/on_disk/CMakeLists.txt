@@ -15,6 +15,7 @@ add_library(yadb_storage_on_disk
 
     # Table implementation
     table/disk_table.cpp
+    table/disk_table_factory.cpp
 
     # Heap Files
     heap/heap_page.cpp

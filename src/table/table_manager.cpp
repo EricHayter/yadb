@@ -1,92 +1,100 @@
 #include "table/table_manager.h"
 #include "core/assert.h"
-#include "storage/on_disk/table/disk_table.h"
+#include "storage/ephemeral/ephemeral_table_factory.h"
+#include "storage/on_disk/table/disk_table_factory.h"
 #include <stdexcept>
 
-TableManager::TableManager()
-    : ephemeral_factory_m(std::make_unique<EphemeralTableFactory>())
-    , catalog_m(*ephemeral_factory_m)
+TableManager::TableManager(TableType default_storage_engine)
 {
-    // Set the catalog on the factory after it's created
-    ephemeral_factory_m->SetCatalog(catalog_m);
-}
-
-// Explicit template instantiation for common cases
-template bool TableManager::CreateTable<>(std::string_view name, TableType type, const Schema& schema);
-
-template<typename... Args>
-bool TableManager::CreateTable(std::string_view name, TableType type, const Schema& schema, const Args&... args)
-{
-    std::string table_name(name);
-    if (catalog_m.TableExists(name))
-        return false;
-
-    bool created_table = false;
-    switch (type) {
+    // Create default factory based on specified storage engine
+    std::shared_ptr<ITableFactory> default_factory;
+    switch (default_storage_engine) {
     case TableType::InMemory:
-        created_table = ephemeral_factory_m->CreateTable(name, schema);
+        default_factory = std::make_shared<EphemeralTableFactory>();
         break;
     case TableType::Disk:
-        throw std::runtime_error("DiskTable::CreateTable not implemented yet");
+        default_factory = std::make_shared<DiskTableFactory>();
+        break;
+    default:
+        throw std::runtime_error("Unknown default storage engine type");
+    }
+
+    factories_m[default_storage_engine] = default_factory;
+
+    // Initialize catalog using the default factory
+    catalog_m = std::make_unique<Catalog>(*default_factory);
+}
+
+ITableFactory& TableManager::GetFactory(TableType type)
+{
+    // If factory exists, return it
+    if (factories_m.contains(type)) {
+        return *factories_m.at(type);
+    }
+
+    // Lazily create factory based on type
+    std::shared_ptr<ITableFactory> factory;
+    switch (type) {
+    case TableType::InMemory:
+        factory = std::make_shared<EphemeralTableFactory>();
+        break;
+    case TableType::Disk:
+        factory = std::make_shared<DiskTableFactory>();
+        break;
     default:
         throw std::runtime_error("Unknown table type");
     }
+
+    // Set catalog on newly created factory
+    factory->SetCatalog(*catalog_m);
+
+    factories_m[type] = factory;
+    return *factory;
+}
+
+bool TableManager::CreateTable(std::string_view name, TableType type, const Schema& schema)
+{
+    std::string table_name(name);
+    if (catalog_m->TableExists(name))
+        return false;
+
+    ITableFactory& factory = GetFactory(type);
+    bool created_table = factory.CreateTable(name, schema);
 
     if (!created_table)
         return false;
 
-    return catalog_m.AddTable(name, type, schema);
+    return catalog_m->AddTable(name, type, schema);
 }
 
 bool TableManager::DeleteTable(std::string_view name)
 {
-    if (!catalog_m.TableExists(name))
+    if (!catalog_m->TableExists(name))
         return false;
 
-    TableType type = catalog_m.GetTableType(name);
+    TableType type = catalog_m->GetTableType(name);
 
     // Remove from catalog first
-    if (!catalog_m.RemoveTable(name))
+    if (!catalog_m->RemoveTable(name))
         return false;
 
-    // Delete actual table based on type
-    switch (type) {
-    case TableType::InMemory:
-        if (!ephemeral_factory_m->DeleteTable(name)) {
-            return false;
-        }
-        break;
-    case TableType::Disk:
-        throw std::runtime_error("DiskTable::DeleteTable not implemented yet");
-    default:
-        throw std::runtime_error("Unknown table type");
-    }
-
-    return true;
+    // Delete actual table through factory
+    ITableFactory& factory = GetFactory(type);
+    return factory.DeleteTable(name);
 }
 
 bool TableManager::TableExists(std::string_view name) const
 {
-    return catalog_m.TableExists(name);
+    return catalog_m->TableExists(name);
 }
 
-// Explicit template instantiation for common cases
-template std::shared_ptr<Table> TableManager::GetTable<>(std::string_view name) const;
-
-template<typename... Args>
-std::shared_ptr<Table> TableManager::GetTable(std::string_view name, const Args&... args) const
+std::shared_ptr<Table> TableManager::GetTable(std::string_view name) const
 {
     YADB_ASSERT(TableExists(name), "Table does not exist");
 
     std::string table_name(name);
-    TableType table_type = catalog_m.GetTableType(name);
+    TableType table_type = catalog_m->GetTableType(name);
 
-    switch (table_type) {
-    case TableType::InMemory:
-        return ephemeral_factory_m->GetTable(name);
-    case TableType::Disk:
-        throw std::runtime_error("DiskTable::CreateTable not implemented yet");
-    default:
-        throw std::runtime_error("Unknown table type");
-    }
+    ITableFactory& factory = const_cast<TableManager*>(this)->GetFactory(table_type);
+    return factory.GetTable(name);
 }
