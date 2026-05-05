@@ -1,52 +1,10 @@
 #include "storage/on_disk/table/disk_table_factory.h"
 #include "storage/on_disk/constants.h"
 #include "core/assert.h"
+#include "core/row_reader.h"
 #include "storage/on_disk/page/page_format.h"
 #include "storage/on_disk/table/disk_table.h"
 #include <memory>
-#include <shared_mutex>
-
-DiskTableFactory::MappingManager::MappingManager()
-{
-    // Open the metadata file for reading and writing in binary mode
-    fstream_m.open(DISK_TABLE_MAPPING_FILE.data(), std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
-
-    // If file doesn't exist, create it
-    if (!fstream_m.is_open()) {
-        fstream_m.clear();
-        fstream_m.open(DISK_TABLE_MAPPING_FILE.data(), std::ios::out | std::ios::binary);
-        fstream_m.close();
-        fstream_m.open(DISK_TABLE_MAPPING_FILE.data(), std::ios::in | std::ios::out | std::ios::binary | std::ios::app);
-    }
-
-    // Read existing mappings from the beginning of the file
-    fstream_m.seekg(0, std::ios::beg);
-
-    while (fstream_m.peek() != EOF) {
-        file_id_t file_id;
-        uint32_t name_length;
-
-        // Read file_id
-        fstream_m.read(reinterpret_cast<char*>(&file_id), sizeof(file_id));
-        if (!fstream_m) break;
-
-        // Read table name length
-        fstream_m.read(reinterpret_cast<char*>(&name_length), sizeof(name_length));
-        if (!fstream_m) break;
-
-        // Read table name
-        std::string table_name(name_length, '\0');
-        fstream_m.read(table_name.data(), name_length);
-        if (!fstream_m) break;
-
-        // Add to in-memory map
-        file_id_map_m[table_name] = file_id;
-    }
-
-    // Clear any error flags and seek to end for appending
-    fstream_m.clear();
-    fstream_m.seekp(0, std::ios::end);
-}
 
 bool DiskTableFactory::TableExists(std::string_view table_name) const
 {
@@ -177,34 +135,63 @@ bool DiskTableFactory::DeleteTable(std::string_view table_name)
     return true;
 }
 
+std::optional<file_id_t> DiskTableFactory::MappingManager::GetReservedFileId(std::string_view table_name)
+{
+    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
+        return TABLE_CATALOG_FILE_ID;
+    if (table_name == Catalog::COLUMN_CATALOG_TABLE_NAME)
+        return COLUMN_CATALOG_FILE_ID;
+    return {};
+}
+
 std::optional<file_id_t> DiskTableFactory::MappingManager::GetFileId(std::string_view table_name) const
 {
-    std::string table_name_str = std::string(table_name);
-    std::shared_lock<std::shared_mutex> lk(mut_m);
-    if (!file_id_map_m.contains(table_name_str))
-        return {};
-    return file_id_map_m.at(table_name_str);
+    if (auto reserved = GetReservedFileId(table_name))
+        return reserved;
+
+    YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before looking up non-reserved table names");
+
+    auto iter = mapping_table_m->iter();
+    while (auto row = iter->next()) {
+        auto& [row_id, data] = *row;
+        RowReader rr(data, MAPPING_SCHEMA);
+        if (rr.Get<DataType::TEXT>(0) == table_name) {
+            iter->close();
+            return static_cast<file_id_t>(rr.Get<DataType::INTEGER>(1));
+        }
+    }
+    iter->close();
+    return {};
 }
 
 bool DiskTableFactory::MappingManager::SaveMapping(std::string_view table_name, file_id_t file_id)
 {
-    std::lock_guard<std::shared_mutex> lg(mut_m);
+    YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before saving non-reserved table mappings");
 
-    // Write file_id (4 bytes)
-    fstream_m.write(reinterpret_cast<const char*>(&file_id), sizeof(file_id));
+    mapping_table_m->insert_row({
+        Value(std::string(table_name)),
+        Value(static_cast<std::int32_t>(file_id)),
+    });
+    return true;
+}
 
-    // Write table name length (4 bytes)
-    uint32_t name_length = static_cast<uint32_t>(table_name.length());
-    fstream_m.write(reinterpret_cast<const char*>(&name_length), sizeof(name_length));
+bool DiskTableFactory::MappingManager::DeleteMapping(std::string_view table_name)
+{
+    YADB_ASSERT(!GetReservedFileId(table_name).has_value(),
+        "Cannot delete mappings for reserved catalog tables");
 
-    // Write table name (variable bytes)
-    fstream_m.write(table_name.data(), name_length);
+    YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before deleting non-reserved table mappings");
 
-    // Flush to ensure data is written to disk
-    fstream_m.flush();
-
-    // Update in-memory map
-    file_id_map_m[std::string(table_name)] = file_id;
-
-    return fstream_m.good();
+    auto iter = mapping_table_m->iter();
+    while (auto row = iter->next()) {
+        auto& [row_id, data] = *row;
+        RowReader rr(data, MAPPING_SCHEMA);
+        if (rr.Get<DataType::TEXT>(0) == table_name) {
+            iter->close();
+            mapping_table_m->delete_row(row_id);
+            return true;
+        }
+    }
+    iter->close();
+    return false;
 }

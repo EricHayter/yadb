@@ -1,14 +1,13 @@
 #pragma once
 
-#include <string>
-#include <string_view>
 #include <memory>
-#include <shared_mutex>
-#include <fstream>
 #include <optional>
+#include <string_view>
 #include "storage/on_disk/types.h"
 #include "storage/on_disk/buffer_manager/page_buffer_manager.h"
 #include "table/table_factory_interface.h"
+
+class DiskTable;
 
 /*
  * Disk table manager
@@ -46,14 +45,20 @@ class DiskTableFactory : public ITableFactory {
     /* Class to manage the mapping of table names to file_ids */
     class MappingManager {
         public:
-        MappingManager();
+        static inline const Schema MAPPING_SCHEMA = {
+            { "file_name", DataType::TEXT },
+            { "file_id",   DataType::INTEGER },
+        };
+
+        MappingManager() = default;
         std::optional<file_id_t> GetFileId(std::string_view table_name) const;
         bool SaveMapping(std::string_view table_name, file_id_t file_id);
+        bool DeleteMapping(std::string_view table_name);
 
         private:
-        mutable std::shared_mutex mut_m;
-        std::fstream fstream_m;
-        std::unordered_map<std::string, file_id_t> file_id_map_m;
+        static std::optional<file_id_t> GetReservedFileId(std::string_view table_name);
+
+        std::shared_ptr<DiskTable> mapping_table_m;
     };
 
     bool CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id = {});
