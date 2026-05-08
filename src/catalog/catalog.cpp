@@ -36,7 +36,12 @@ void Catalog::InitTables(ITableFactory& table_factory)
 
     // set handles
     table_catalog_table_m = table_factory.GetTable(TABLE_CATALOG_TABLE_NAME);
+    if (!table_catalog_table_m)
+        throw std::runtime_error("Catalog initialization failed: could not get table_catalog table");
+
     column_catalog_table_m = table_factory.GetTable(COLUMN_CATALOG_TABLE_NAME);
+    if (!column_catalog_table_m)
+        throw std::runtime_error("Catalog initialization failed: could not get column_catalog table");
 }
 
 void Catalog::LoadTableSchemas()

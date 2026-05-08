@@ -102,6 +102,17 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
 
 std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
 {
+    // Bootstrap case: catalog tables must be retrievable before the catalog is set.
+    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
+        auto file_id = mapping_manager_m.GetFileId(table_name);
+        if (!file_id)
+            return nullptr;
+        const Schema& schema = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
+            ? Catalog::table_catalog_schema
+            : Catalog::column_catalog_schema;
+        return std::shared_ptr<Table>(new DiskTable(*file_id, schema, *page_buffer_manager_m));
+    }
+
     auto catalog = GetCatalog();
     if (!catalog || !catalog->TableExists(table_name)) {
         return nullptr;

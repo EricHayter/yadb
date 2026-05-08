@@ -23,6 +23,7 @@ TableManager::TableManager(TableType default_storage_engine)
 
     // Initialize catalog using the default factory
     catalog_m = std::make_unique<Catalog>(*default_factory);
+    default_factory->SetCatalog(*catalog_m);
 }
 
 ITableFactory& TableManager::GetFactory(TableType type)
