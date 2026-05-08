@@ -129,6 +129,18 @@ void DiskManager::CreateFile(file_id_t file_id)
     std::ofstream fstream(file_path);
 }
 
+void DiskManager::DeleteFile(file_id_t file_id)
+{
+    std::lock_guard<std::mutex> lg(mut_m);
+
+    if (id_map_m.contains(file_id)) {
+        id_map_m[file_id].file_stream.close();
+        id_map_m.erase(file_id);
+    }
+
+    std::filesystem::remove(GetFilePath(file_id));
+}
+
 DiskManager::DatabaseFile& DiskManager::OpenFile(file_id_t  file_id)
 {
 

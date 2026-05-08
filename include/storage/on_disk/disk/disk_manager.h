@@ -69,6 +69,11 @@ public:
      */
     void DeletePage(const file_page_id_t& fp_id);
 
+    /*
+     * Closes and removes the physical file for the given file_id.
+     */
+    void DeleteFile(file_id_t file_id);
+
 private:
     struct DatabaseFile {
         mutable std::unique_ptr<std::mutex> mut;

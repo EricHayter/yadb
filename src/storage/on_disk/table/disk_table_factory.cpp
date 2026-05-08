@@ -122,15 +122,13 @@ std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
 
 bool DiskTableFactory::DeleteTable(std::string_view table_name)
 {
-    if (!TableExists(table_name)) {
+    auto file_id = mapping_manager_m.GetFileId(table_name);
+    if (!file_id) {
         return false;
     }
 
-    // TODO: Delete the actual disk file and clean up mappings
-    // This would involve:
-    // 1. Removing the file mapping
-    // 2. Deleting the physical file
-    // 3. Cleaning up page buffers
+    page_buffer_manager_m->DeleteFile(*file_id);
+    mapping_manager_m.DeleteMapping(table_name);
 
     return true;
 }

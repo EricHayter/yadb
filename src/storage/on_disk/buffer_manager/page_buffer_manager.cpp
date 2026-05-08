@@ -10,6 +10,7 @@
 #include "storage/on_disk/disk/disk_manager.h"
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -57,6 +58,33 @@ file_id_t PageBufferManager::CreateFile()
 void PageBufferManager::CreateFile(file_id_t file_id)
 {
     disk_manager_m.CreateFile(file_id);
+}
+
+void PageBufferManager::DeleteFile(file_id_t file_id)
+{
+    std::unique_lock<std::mutex> lk(mut_m);
+
+    bool released = available_frame_m.wait_for(lk, std::chrono::seconds(5),
+        [this, file_id]() { return !FileHasPinnedPages(file_id); });
+
+    if (!released)
+        throw std::runtime_error(std::format("Timed out waiting for file {} pages to be unpinned for deletion", file_id));
+
+    std::vector<file_page_id_t> to_evict;
+    for (const auto& [fp_id, frame_id] : page_map_m) {
+        if (fp_id.file_id == file_id)
+            to_evict.push_back(fp_id);
+    }
+
+    for (const auto& fp_id : to_evict) {
+        Frame* frame = frames_m[page_map_m.at(fp_id)].get();
+        frame->is_dirty = false;
+        page_map_m.erase(fp_id);
+        replacer_m.SetEvictable(frame->id, true);
+    }
+
+    available_frame_m.notify_all();
+    disk_manager_m.DeleteFile(file_id);
 }
 
 page_id_t PageBufferManager::AllocatePage(file_id_t file_id)
@@ -139,6 +167,15 @@ PageBufferManager::LoadPageStatus PageBufferManager::LoadPage(const file_page_id
     frame->is_dirty = false;
     frame->pin_count = 0;
     return LoadPageStatus::Success;
+}
+
+bool PageBufferManager::FileHasPinnedPages(file_id_t file_id) const
+{
+    for (const auto& [fp_id, frame_id] : page_map_m) {
+        if (fp_id.file_id == file_id && frames_m[frame_id]->pin_count.load(std::memory_order_acquire) > 0)
+            return true;
+    }
+    return false;
 }
 
 PageBufferManager::FlushPageStatus PageBufferManager::FlushPage(const file_page_id_t& fp_id)

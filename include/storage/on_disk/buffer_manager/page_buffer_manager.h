@@ -63,6 +63,13 @@ public:
     void CreateFile(file_id_t file_id);
 
     /**
+     * Evicts all cached pages belonging to file_id and deletes the physical
+     * file. Blocks until all pinned pages are released, up to a 5-second
+     * timeout. Throws std::runtime_error if the timeout expires.
+     */
+    void DeleteFile(file_id_t file_id);
+
+    /**
      * Creates a new page by signalling to the disk manager
      */
     page_id_t AllocatePage(file_id_t file_id);
@@ -83,6 +90,9 @@ private:
     };
 
     LoadPageStatus LoadPage(const file_page_id_t& fp_id);
+
+    /* Returns true if any cached frame belonging to file_id has a non-zero pin count. */
+    bool FileHasPinnedPages(file_id_t file_id) const;
 
     enum class FlushPageStatus {
         Success,
