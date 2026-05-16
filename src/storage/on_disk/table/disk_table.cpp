@@ -1,9 +1,9 @@
 #include "storage/on_disk/table/disk_table.h"
+#include "storage/on_disk/table/disk_table_iterator.h"
 #include "storage/on_disk/heap/heap_page.h"
 #include "storage/on_disk/page/page_format.h"
 #include "storage/on_disk/types.h"
 #include "storage/on_disk/constants.h"
-#include <stdexcept>
 
 DiskTable::DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager)
     : Table(schema)
@@ -14,7 +14,7 @@ DiskTable::DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager&
 
 std::unique_ptr<TableIterator> DiskTable::iter()
 {
-    throw std::runtime_error("DiskTable::iter not yet implemented");
+    return std::make_unique<DiskTableIterator>(file_id_m, page_buffer_manager_m);
 }
 
 row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
