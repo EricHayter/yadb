@@ -47,31 +47,23 @@ void Catalog::InitTables(ITableFactory& table_factory)
 void Catalog::LoadTableSchemas()
 {
     auto iter = table_catalog_table_m->iter();
-    auto row = iter->next();
-    while (row) {
-        auto& [row_id, row_data] = row.value();
+    for (const auto& [row_id, row_data] : *iter) {
         RowReader rr(row_data, table_catalog_schema);
         std::string table_name = rr.Get<DataType::TEXT>(0);
         std::int32_t table_type_int = rr.Get<DataType::INTEGER>(1);
         std::int32_t num_attributes = rr.Get<DataType::INTEGER>(2);
 
-        TableInfo table_info {
+        table_info_m[table_name] = TableInfo {
             .type = static_cast<TableType>(table_type_int),
             .schema = std::vector<RelationAttribute>(static_cast<std::size_t>(num_attributes))
         };
-
-        table_info_m[table_name] = table_info;
-        row = iter->next();
     }
-    iter->close();
 }
 
 void Catalog::LoadColumnSchemas()
 {
     auto iter = column_catalog_table_m->iter();
-    auto row = iter->next();
-    while (row) {
-        auto& [row_id, row_data] = row.value();
+    for (const auto& [row_id, row_data] : *iter) {
         RowReader rr(row_data, column_catalog_schema);
         std::string attribute_name = rr.Get<DataType::TEXT>(0);
         std::string relation_name = rr.Get<DataType::TEXT>(1);
@@ -80,10 +72,7 @@ void Catalog::LoadColumnSchemas()
 
         table_info_m[relation_name].schema[static_cast<std::size_t>(position)].name = attribute_name;
         table_info_m[relation_name].schema[static_cast<std::size_t>(position)].type = attribute_type;
-
-        row = iter->next();
     }
-    iter->close();
 }
 
 bool Catalog::AddTable(std::string_view table_name, TableType table_type, const Schema& schema)
@@ -117,34 +106,34 @@ bool Catalog::RemoveTable(std::string_view table_name)
     if (!table_info_m.contains(std::string(table_name)))
         return false;
 
-    // Delete all column entries from column_catalog
-    auto column_iter = column_catalog_table_m->iter();
-    auto row = column_iter->next();
-    while (row) {
-        auto& [row_id, row_data] = row.value();
-        RowReader rr(row_data, column_catalog_schema);
-        std::string relation_name = rr.Get<DataType::TEXT>(1);
-        if (relation_name == table_name) {
-            column_catalog_table_m->delete_row(row_id);
+    // Collect column row IDs to delete, then delete after iteration to avoid
+    // invalidating the iterator while traversing.
+    {
+        std::vector<row_id_t> to_delete;
+        auto column_iter = column_catalog_table_m->iter();
+        for (const auto& [row_id, row_data] : *column_iter) {
+            RowReader rr(row_data, column_catalog_schema);
+            if (rr.Get<DataType::TEXT>(1) == table_name)
+                to_delete.push_back(row_id);
         }
-        row = column_iter->next();
+        for (row_id_t rid : to_delete)
+            column_catalog_table_m->delete_row(rid);
     }
-    column_iter->close();
 
-    // Delete table entry from table_catalog
-    auto table_iter = table_catalog_table_m->iter();
-    row = table_iter->next();
-    while (row) {
-        auto& [row_id, row_data] = row.value();
-        RowReader rr(row_data, table_catalog_schema);
-        std::string catalog_table_name = rr.Get<DataType::TEXT>(0);
-        if (catalog_table_name == table_name) {
-            table_catalog_table_m->delete_row(row_id);
-            break;
+    // Find and delete the table's entry from table_catalog.
+    {
+        std::optional<row_id_t> table_rid;
+        auto table_iter = table_catalog_table_m->iter();
+        for (const auto& [row_id, row_data] : *table_iter) {
+            RowReader rr(row_data, table_catalog_schema);
+            if (rr.Get<DataType::TEXT>(0) == table_name) {
+                table_rid = row_id;
+                break;
+            }
         }
-        row = table_iter->next();
+        if (table_rid)
+            table_catalog_table_m->delete_row(*table_rid);
     }
-    table_iter->close();
 
     // Remove from in-memory cache
     table_info_m.erase(std::string(table_name));

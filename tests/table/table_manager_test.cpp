@@ -150,8 +150,7 @@ TEST_P(TableManagerTest, DeleteAndRecreate)
     ASSERT_NE(table, nullptr);
 
     auto iter = table->iter();
-    EXPECT_FALSE(iter->next().has_value()); // empty after recreation
-    iter->close();
+    EXPECT_TRUE(*iter == std::default_sentinel_t {}); // empty after recreation
 }
 
 // --- Data round-trips ---
@@ -171,21 +170,19 @@ TEST_P(TableManagerTest, DataRoundTrip)
     // Read back through a fresh handle to verify persistence
     auto handle = table_manager->GetTable(name);
     auto iter = handle->iter();
-
-    auto r1 = iter->next();
-    ASSERT_TRUE(r1.has_value());
-    RowReader rr1(r1->second, schema);
+    ASSERT_FALSE(*iter == std::default_sentinel_t {});
+    RowReader rr1((**iter).second, schema);
     EXPECT_EQ(rr1.Get<DataType::INTEGER>(0), 1);
     EXPECT_EQ(rr1.Get<DataType::TEXT>(1), "alpha");
 
-    auto r2 = iter->next();
-    ASSERT_TRUE(r2.has_value());
-    RowReader rr2(r2->second, schema);
+    ++(*iter);
+    ASSERT_FALSE(*iter == std::default_sentinel_t {});
+    RowReader rr2((**iter).second, schema);
     EXPECT_EQ(rr2.Get<DataType::INTEGER>(0), 2);
     EXPECT_EQ(rr2.Get<DataType::TEXT>(1), "beta");
 
-    EXPECT_FALSE(iter->next().has_value());
-    iter->close();
+    ++(*iter);
+    EXPECT_TRUE(*iter == std::default_sentinel_t {});
 }
 
 TEST_P(TableManagerTest, MultipleRowsRoundTrip)
@@ -209,8 +206,8 @@ TEST_P(TableManagerTest, MultipleRowsRoundTrip)
 
     auto iter = table->iter();
     int count = 0;
-    while (auto row = iter->next()) {
-        RowReader rr(row->second, schema);
+    for (const auto& [row_id, row_data] : *iter) {
+        RowReader rr(row_data, schema);
         EXPECT_EQ(rr.Get<DataType::INTEGER>(0), count);
         EXPECT_EQ(rr.Get<DataType::TEXT>(1), std::string("name_") + std::to_string(count));
         EXPECT_EQ(rr.Get<DataType::INTEGER>(2), count * 10);
@@ -218,7 +215,6 @@ TEST_P(TableManagerTest, MultipleRowsRoundTrip)
         ++count;
     }
     EXPECT_EQ(count, ROW_COUNT);
-    iter->close();
 }
 
 // --- Multi-table ---

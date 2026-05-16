@@ -7,14 +7,13 @@
 class EphemeralTableIterator : public TableIterator {
 public:
     EphemeralTableIterator(std::map<row_id_t, std::vector<std::byte>>& data);
-    ~EphemeralTableIterator() override;
 
-    std::optional<Row> next() override;
+    TableIterator& operator++() override;
     void seek(row_id_t rid) override;
-    void close() override;
 
 private:
+    void load_current();
+
     std::map<row_id_t, std::vector<std::byte>>& data_m;
     std::map<row_id_t, std::vector<std::byte>>::iterator iterator_m;
-    bool closed_m = false;
 };

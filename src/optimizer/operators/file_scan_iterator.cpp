@@ -1,27 +1,24 @@
 #include "optimizer/operators/file_scan_iterator.h"
-#include <optional>
 
-FileScanIterator::~FileScanIterator()
+FileScanIterator::FileScanIterator(std::unique_ptr<TableIterator> table_iter)
+    : table_iter_m(std::move(table_iter))
 {
-    if (!is_closed_m) {
-        table_iter_m->close();
-    }
+    load_current();
 }
 
-std::optional<std::vector<std::byte>> FileScanIterator::next()
+Iterator& FileScanIterator::operator++()
 {
-    auto row = table_iter_m->next();
-    if (!row.has_value())
-        return std::nullopt;
-    auto [rid, row_data] = row.value();
-    std::vector<std::byte> res(row_data.begin(), row_data.end());
-    return res;
+    ++(*table_iter_m);
+    load_current();
+    return *this;
 }
 
-void FileScanIterator::close()
+void FileScanIterator::load_current()
 {
-    if (!is_closed_m) {
-        table_iter_m->close();
-        is_closed_m = true;
+    if (*table_iter_m == std::default_sentinel_t {}) {
+        current_m = std::nullopt;
+        return;
     }
+    const auto& [row_id, row_data] = **table_iter_m;
+    current_m = std::vector<std::byte>(row_data.begin(), row_data.end());
 }

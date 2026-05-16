@@ -1,7 +1,6 @@
 #include "optimizer/operators/selection_iterator.h"
 #include "Parser.h"
 #include "core/row_reader.h"
-#include <optional>
 #include <type_traits>
 #include <variant>
 
@@ -10,23 +9,26 @@ SelectionIterator::SelectionIterator(std::unique_ptr<Iterator> in, const Schema&
     , schema_m(schema)
     , condition_m(condition)
 {
+    find_next_match();
 }
 
-SelectionIterator::~SelectionIterator()
+Iterator& SelectionIterator::operator++()
 {
-    if (!closed_m)
-        in_m->close();
+    ++(*in_m);
+    find_next_match();
+    return *this;
 }
 
-std::optional<std::vector<std::byte>> SelectionIterator::next()
+void SelectionIterator::find_next_match()
 {
-    auto data = in_m->next();
-    if (!data.has_value())
-        return std::nullopt;
-    while (data && !evaluate_condition(condition_m, *data)) {
-        data = in_m->next();
+    while (!(*in_m == std::default_sentinel_t {})) {
+        if (evaluate_condition(condition_m, **in_m)) {
+            current_m = **in_m;
+            return;
+        }
+        ++(*in_m);
     }
-    return data;
+    current_m = std::nullopt;
 }
 
 bool SelectionIterator::evaluate_condition(const Condition& cond, std::span<const std::byte> tuple) const
@@ -38,7 +40,7 @@ bool SelectionIterator::evaluate_condition(const Condition& cond, std::span<cons
         } else if constexpr (std::is_same_v<T, LogicalCondition>) {
             return evaluate_logical_condition(expr, tuple);
         }
-        return false; // Should never reach here
+        return false;
     },
         cond.expr);
 }
@@ -47,7 +49,6 @@ bool SelectionIterator::evaluate_logical_condition(const LogicalCondition& cond,
 {
     bool left_result = evaluate_condition(*cond.left, tuple);
 
-    // Short-circuit evaluation
     if (cond.op == LogicalOp::AND && !left_result)
         return false;
     if (cond.op == LogicalOp::OR && left_result)
@@ -57,7 +58,7 @@ bool SelectionIterator::evaluate_logical_condition(const LogicalCondition& cond,
 
     if (cond.op == LogicalOp::AND)
         return left_result && right_result;
-    else // LogicalOp::OR
+    else
         return left_result || right_result;
 }
 
@@ -70,14 +71,11 @@ bool SelectionIterator::evaluate_comparison(const Comparison& cmp, std::span<con
 
 Value SelectionIterator::resolve_value(const Value& val, std::span<const std::byte> tuple) const
 {
-    // If it's a string, it might be a column name - try to resolve it
     if (std::holds_alternative<std::string>(val)) {
         const std::string& str = std::get<std::string>(val);
 
-        // Try to find column in schema
         for (std::size_t i = 0; i < schema_m.size(); ++i) {
             if (schema_m[i].name == str) {
-                // Found the column - read its value from the tuple
                 RowReader reader(tuple, schema_m);
 
                 if (schema_m[i].type == DataType::INTEGER) {
@@ -87,11 +85,9 @@ Value SelectionIterator::resolve_value(const Value& val, std::span<const std::by
                 }
             }
         }
-        // Column not found - it's a literal string value
         return val;
     }
 
-    // It's an integer - just return it
     return val;
 }
 
@@ -101,11 +97,9 @@ bool SelectionIterator::compare_values(const Value& left, ComparisonOp op, const
         using L = std::decay_t<decltype(lhs)>;
         using R = std::decay_t<decltype(rhs)>;
 
-        // Type mismatch - return false
         if constexpr (!std::is_same_v<L, R>) {
             return false;
         } else {
-            // Same types - perform the comparison
             switch (op) {
             case ComparisonOp::EQ:
                 return lhs == rhs;
@@ -120,14 +114,8 @@ bool SelectionIterator::compare_values(const Value& left, ComparisonOp op, const
             case ComparisonOp::GE:
                 return lhs >= rhs;
             }
-            return false; // Should never reach here
+            return false;
         }
     },
         left, right);
-}
-
-void SelectionIterator::close()
-{
-    closed_m = true;
-    in_m->close();
 }

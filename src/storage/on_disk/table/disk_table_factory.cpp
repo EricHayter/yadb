@@ -161,15 +161,11 @@ std::optional<file_id_t> DiskTableFactory::MappingManager::GetFileId(std::string
     YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before looking up non-reserved table names");
 
     auto iter = mapping_table_m->iter();
-    while (auto row = iter->next()) {
-        auto& [row_id, data] = *row;
+    for (const auto& [row_id, data] : *iter) {
         RowReader rr(data, MAPPING_SCHEMA);
-        if (rr.Get<DataType::TEXT>(0) == table_name) {
-            iter->close();
+        if (rr.Get<DataType::TEXT>(0) == table_name)
             return static_cast<file_id_t>(rr.Get<DataType::INTEGER>(1));
-        }
     }
-    iter->close();
     return {};
 }
 
@@ -191,16 +187,20 @@ bool DiskTableFactory::MappingManager::DeleteMapping(std::string_view table_name
 
     YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before deleting non-reserved table mappings");
 
-    auto iter = mapping_table_m->iter();
-    while (auto row = iter->next()) {
-        auto& [row_id, data] = *row;
-        RowReader rr(data, MAPPING_SCHEMA);
-        if (rr.Get<DataType::TEXT>(0) == table_name) {
-            iter->close();
-            mapping_table_m->delete_row(row_id);
-            return true;
+    std::optional<row_id_t> found_rid;
+    {
+        auto iter = mapping_table_m->iter();
+        for (const auto& [row_id, data] : *iter) {
+            RowReader rr(data, MAPPING_SCHEMA);
+            if (rr.Get<DataType::TEXT>(0) == table_name) {
+                found_rid = row_id;
+                break;
+            }
         }
     }
-    iter->close();
+    if (found_rid) {
+        mapping_table_m->delete_row(*found_rid);
+        return true;
+    }
     return false;
 }

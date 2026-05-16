@@ -35,16 +35,9 @@ Executor::ExecutionResult Executor::execute(const SelectStmt& stmt)
 
         // Collect all rows
         std::vector<std::vector<std::byte>> result_rows;
-        while (true) {
-            auto row = iter->next();
-            if (!row.has_value()) {
-                break;
-            }
-            result_rows.push_back(std::move(row.value()));
+        for (const auto& row : *iter) {
+            result_rows.push_back(row);
         }
-
-        // Close iterator
-        iter->close();
 
         // Get schema from table for result metadata
         auto table = table_manager_m->GetTable(stmt.table_name);

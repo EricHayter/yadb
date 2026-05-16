@@ -4,16 +4,17 @@
 #include "optimizer/operators/iterator.h"
 #include <memory>
 
-/* This is just the default projection iterator it WILL NOT remove duplicates.
- * likely going to create a separate operator for that. */
 class ProjectionIterator : public Iterator {
 public:
     ProjectionIterator(std::unique_ptr<Iterator> iter, Schema schema, std::vector<std::size_t> selected_fields);
-    std::optional<std::vector<std::byte>> next() override;
-    void close() override;
+
+    Iterator& operator++() override;
     const Schema& GetSchema() const { return output_schema_m; }
 
 private:
+    void load_current();
+    std::vector<std::byte> project(const std::vector<std::byte>& row) const;
+
     std::unique_ptr<Iterator> iter_m;
     Schema schema_m;
     std::vector<std::size_t> selected_fields_m;

@@ -1,5 +1,4 @@
 add_library(yadb_optimizer_operators
-    iterator.cpp
     file_scan_iterator.cpp
     projection_iterator.cpp
     selection_iterator.cpp
