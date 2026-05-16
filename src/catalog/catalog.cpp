@@ -3,6 +3,7 @@
 #include "core/assert.h"
 #include "core/row_reader.h"
 #include "table/table_factory_interface.h"
+#include <stdexcept>
 
 const Schema Catalog::table_catalog_schema = {
     { "table_name", DataType::TEXT },
@@ -28,10 +29,12 @@ void Catalog::InitTables(ITableFactory& table_factory)
 {
     // Create catalog tables if they don't exist
     if (!table_factory.TableExists(TABLE_CATALOG_TABLE_NAME)) {
-        table_factory.CreateTable(TABLE_CATALOG_TABLE_NAME, Catalog::table_catalog_schema);
+        if (!table_factory.CreateTable(TABLE_CATALOG_TABLE_NAME, Catalog::table_catalog_schema))
+            throw std::runtime_error("Catalog initialization failed: could not create table_catalog table");
     }
     if (!table_factory.TableExists(COLUMN_CATALOG_TABLE_NAME)) {
-        table_factory.CreateTable(COLUMN_CATALOG_TABLE_NAME, Catalog::column_catalog_schema);
+        if (!table_factory.CreateTable(COLUMN_CATALOG_TABLE_NAME, Catalog::column_catalog_schema))
+            throw std::runtime_error("Catalog initialization failed: could not create column_catalog table");
     }
 
     // set handles
