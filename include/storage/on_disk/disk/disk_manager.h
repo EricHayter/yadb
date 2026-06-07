@@ -1,18 +1,16 @@
 #pragma once
 
+#include "core/error.h"
 #include "storage/on_disk/types.h"
 #include <cstddef>
+#include <expected>
 #include <filesystem>
 #include <fstream>
 #include <memory>
-#include <unordered_set>
-#include <unordered_map>
 #include <mutex>
-
-namespace spdlog {
-class logger;
-}
-struct DatabaseConfig;
+#include <optional>
+#include <unordered_map>
+#include <unordered_set>
 
 /*
  * Disk manager class to handle the database file
@@ -24,41 +22,36 @@ struct DatabaseConfig;
  */
 class DiskManager {
 public:
-    DiskManager();
-    DiskManager(const DatabaseConfig& config);
+    DiskManager() = default;
     ~DiskManager();
 
     /*
      * Creates a new file and returns the corresponding file_id_t.
      */
-    file_id_t CreateFile();
+    std::expected<file_id_t, yadb::Error::Ptr> CreateFile();
 
     /*
      * Creates a new file with the specified file_id.
      */
-    void CreateFile(file_id_t file_id);
+    std::optional<yadb::Error::Ptr> CreateFile(file_id_t file_id);
 
     /*
-     * Allocated a new page in the database file for writing to
+     * Allocates a new page in the database file for writing to.
      *
      * This function will either a) use a "free" page already existing in the
      * database file or b) increase the capacity of the database file.
      */
-    page_id_t AllocatePage(file_id_t file_id);
+    std::expected<page_id_t, yadb::Error::Ptr> AllocatePage(file_id_t file_id);
 
     /*
-     * Write page data to disk
-     *
-     * return true on success false otherwise.
+     * Write page data to disk.
      */
-    bool WritePage(const file_page_id_t& fp_id, FullPage page);
+    std::optional<yadb::Error::Ptr> WritePage(const file_page_id_t& fp_id, FullPage page);
 
     /*
-     * Read data from disk
-     *
-     * return true on success false otherwise.
+     * Read data from disk.
      */
-    bool ReadPage(const file_page_id_t& fp_id, MutFullPage page);
+    std::optional<yadb::Error::Ptr> ReadPage(const file_page_id_t& fp_id, MutFullPage page);
 
     /*
      * Deletes a page from the database file
@@ -67,12 +60,12 @@ public:
      * data is in fact still there and there is no shrinkage of the database
      * file itself. The page may then reused when allocating new pages.
      */
-    void DeletePage(const file_page_id_t& fp_id);
+    std::optional<yadb::Error::Ptr> DeletePage(const file_page_id_t& fp_id);
 
     /*
      * Closes and removes the physical file for the given file_id.
      */
-    void DeleteFile(file_id_t file_id);
+    std::optional<yadb::Error::Ptr> DeleteFile(file_id_t file_id);
 
 private:
     struct DatabaseFile {
@@ -95,6 +88,4 @@ private:
     std::size_t GetDatabaseFileSize(file_id_t file_id);
 
     mutable std::mutex mut_m;
-
-    std::shared_ptr<spdlog::logger> logger_m;
 };

@@ -1,26 +1,12 @@
 #include "storage/on_disk/disk/disk_manager.h"
 #include "storage/on_disk/constants.h"
+#include "storage/on_disk/disk/disk_manager_error.h"
 #include "storage/on_disk/types.h"
-#include "config/config.h"
-#include "spdlog/fmt/bundled/base.h"
-#include "spdlog/fmt/bundled/format.h"
-#include "spdlog/logger.h"
-#include <cassert>
+#include "core/assert.h"
 #include <cstdlib>
+#include <filesystem>
 #include <mutex>
 #include <random>
-#include <filesystem>
-#include "core/assert.h"
-
-DiskManager::DiskManager()
-    : DiskManager(DatabaseConfig::CreateNull())
-{
-}
-
-DiskManager::DiskManager(const DatabaseConfig& config)
-    : logger_m(config.disk_manager_logger)
-{
-}
 
 DiskManager::~DiskManager()
 {
@@ -36,7 +22,7 @@ std::filesystem::path DiskManager::GetFilePath(file_id_t file_id)
     return std::to_string(file_id) + ".yadb";
 }
 
-bool DiskManager::WritePage(const file_page_id_t& fp_id, FullPage page)
+std::optional<yadb::Error::Ptr> DiskManager::WritePage(const file_page_id_t& fp_id, FullPage page)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     DatabaseFile& db_file = OpenFile(fp_id.file_id);
@@ -46,18 +32,14 @@ bool DiskManager::WritePage(const file_page_id_t& fp_id, FullPage page)
     YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
     std::size_t offset = GetOffset(fp_id.page_id);
     db_file.file_stream.seekp(static_cast<std::streamoff>(offset));
-
     db_file.file_stream.write(reinterpret_cast<const char*>(page.data()), page.size());
     db_file.file_stream.flush();
-    if (!db_file.file_stream.good()) {
-        logger_m->warn("Failed to write data to page id {}", fp_id.page_id);
-        return false;
-    }
-    return true;
+    if (!db_file.file_stream.good())
+        return std::make_shared<yadb::PageWriteError>(fp_id, "stream failure");
+    return std::nullopt;
 }
 
-// Read the contents of page data into page_data
-bool DiskManager::ReadPage(const file_page_id_t& fp_id, MutFullPage page)
+std::optional<yadb::Error::Ptr> DiskManager::ReadPage(const file_page_id_t& fp_id, MutFullPage page)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     DatabaseFile& db_file = OpenFile(fp_id.file_id);
@@ -65,18 +47,15 @@ bool DiskManager::ReadPage(const file_page_id_t& fp_id, MutFullPage page)
 
     std::lock_guard<std::mutex> lg(*db_file.mut);
     YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
-
     size_t offset = GetOffset(fp_id.page_id);
     db_file.file_stream.seekg(static_cast<std::streamoff>(offset));
     db_file.file_stream.read(reinterpret_cast<char*>(page.data()), page.size());
-    if (!db_file.file_stream.good()) {
-        logger_m->warn("Failed to read data from page id {}", fp_id.page_id);
-        return false;
-    }
-    return true;
+    if (!db_file.file_stream.good())
+        return std::make_shared<yadb::PageReadError>(fp_id, "stream failure");
+    return std::nullopt;
 }
 
-void DiskManager::DeletePage(const file_page_id_t& fp_id)
+std::optional<yadb::Error::Ptr> DiskManager::DeletePage(const file_page_id_t& fp_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     DatabaseFile& db_file = OpenFile(fp_id.file_id);
@@ -85,51 +64,41 @@ void DiskManager::DeletePage(const file_page_id_t& fp_id)
     std::lock_guard<std::mutex> lg(*db_file.mut);
     YADB_ASSERT(fp_id.page_id < db_file.page_capacity && !db_file.free_pages.contains(fp_id.page_id), "Out of index page");
     db_file.free_pages.insert(fp_id.page_id);
+    return std::nullopt;
 }
 
-file_id_t DiskManager::CreateFile()
+std::expected<file_id_t, yadb::Error::Ptr> DiskManager::CreateFile()
 {
     std::lock_guard<std::mutex> lg(mut_m);
 
-    // Use std::random_device for better seeding instead of time-based seeding
     static thread_local std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<file_id_t> dis(0, std::numeric_limits<file_id_t>::max());
 
     for (uint32_t i = 0; i < MAX_FILE_ID_RETRIES; i++) {
         file_id_t file_id = dis(gen);
-
-        // Skip reserved catalog file IDs
-        if (IsReservedFileId(file_id)) {
+        if (IsReservedFileId(file_id))
             continue;
-        }
-
         std::filesystem::path file_path = GetFilePath(file_id);
-
-        // file doesn't exist so this file id is unique!
         if (!std::filesystem::exists(file_path)) {
-            // create the file
             std::ofstream fstream(file_path);
             return file_id;
         }
     }
-    throw std::runtime_error("Couldn't generate a unique file id");
+    return std::unexpected(std::make_shared<yadb::CreateFileError>(INVALID_FILE_ID, "exhausted retries generating unique file id"));
 }
 
-void DiskManager::CreateFile(file_id_t file_id)
+std::optional<yadb::Error::Ptr> DiskManager::CreateFile(file_id_t file_id)
 {
     std::lock_guard<std::mutex> lg(mut_m);
     std::filesystem::path file_path = GetFilePath(file_id);
-
-    if (std::filesystem::exists(file_path)) {
-        throw std::runtime_error("File with id " + std::to_string(file_id) + " already exists");
-    }
-
-    // create the file
+    if (std::filesystem::exists(file_path))
+        return std::make_shared<yadb::CreateFileError>(file_id, "file already exists");
     std::ofstream fstream(file_path);
+    return std::nullopt;
 }
 
-void DiskManager::DeleteFile(file_id_t file_id)
+std::optional<yadb::Error::Ptr> DiskManager::DeleteFile(file_id_t file_id)
 {
     std::lock_guard<std::mutex> lg(mut_m);
 
@@ -138,18 +107,18 @@ void DiskManager::DeleteFile(file_id_t file_id)
         id_map_m.erase(file_id);
     }
 
-    std::filesystem::remove(GetFilePath(file_id));
+    std::error_code ec;
+    std::filesystem::remove(GetFilePath(file_id), ec);
+    if (ec)
+        return std::make_shared<yadb::DeleteFileError>(file_id, ec.message());
+    return std::nullopt;
 }
 
-DiskManager::DatabaseFile& DiskManager::OpenFile(file_id_t  file_id)
+DiskManager::DatabaseFile& DiskManager::OpenFile(file_id_t file_id)
 {
-
-    // fast path: already have the file cached.
-    if (id_map_m.contains(file_id)) {
+    if (id_map_m.contains(file_id))
         return id_map_m[file_id];
-    }
 
-    // This will fail if we have a bunch of files open...
     std::filesystem::path file_path = GetFilePath(file_id);
     id_map_m.emplace(file_id,
         DatabaseFile{
@@ -158,13 +127,12 @@ DiskManager::DatabaseFile& DiskManager::OpenFile(file_id_t  file_id)
             .file_stream = std::fstream(file_path),
             .free_pages = std::unordered_set<page_id_t>(),
             .page_capacity = 1 // TODO this isn't correct...
-        }
-    );
+        });
 
     return id_map_m[file_id];
 }
 
-page_id_t DiskManager::AllocatePage(file_id_t file_id)
+std::expected<page_id_t, yadb::Error::Ptr> DiskManager::AllocatePage(file_id_t file_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);
     DatabaseFile& db_file = OpenFile(file_id);
@@ -183,9 +151,11 @@ page_id_t DiskManager::AllocatePage(file_id_t file_id)
         } else {
             db_file.page_capacity *= 2;
         }
-        std::filesystem::resize_file(db_file.path, db_file.page_capacity * PAGE_SIZE);
+        std::error_code ec;
+        std::filesystem::resize_file(db_file.path, db_file.page_capacity * PAGE_SIZE, ec);
+        if (ec)
+            return std::unexpected(std::make_shared<yadb::AllocatePageError>(file_id, ec.message()));
 
-        // populate free page list with new pages
         for (page_id_t id = page_id + 1; id < db_file.page_capacity; id++)
             db_file.free_pages.insert(id);
     }
