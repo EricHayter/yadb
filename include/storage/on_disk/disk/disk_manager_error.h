@@ -110,6 +110,26 @@ private:
     std::string reason_m;
 };
 
+class OpenFileError : public Error {
+public:
+    OpenFileError(file_id_t file_id, std::string_view reason)
+        : file_id_m(file_id)
+        , reason_m(reason)
+    {
+    }
+
+    std::string what() const override
+    {
+        return std::format("failed to open file {}: {}", file_id_m, reason_m);
+    }
+
+    file_id_t FileId() const noexcept { return file_id_m; }
+
+private:
+    file_id_t file_id_m;
+    std::string reason_m;
+};
+
 class DeleteFileError : public Error {
 public:
     DeleteFileError(file_id_t file_id, std::string_view reason)

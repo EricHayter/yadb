@@ -69,6 +69,8 @@ public:
 
 private:
     struct DatabaseFile {
+        using Ptr = std::shared_ptr<DatabaseFile>;
+
         mutable std::unique_ptr<std::mutex> mut;
         std::filesystem::path path;
 
@@ -77,15 +79,18 @@ private:
 
         /* list of pages that are considered free */
         std::unordered_set<page_id_t> free_pages;
-        std::size_t page_capacity = 1;
+
+        std::size_t PageCapacity() const
+        {
+            return std::filesystem::file_size(path) / PAGE_SIZE;
+        }
     };
 
-    std::unordered_map<file_id_t, DatabaseFile> id_map_m;
-    DatabaseFile& OpenFile(file_id_t file_id);
+    std::unordered_map<file_id_t, DatabaseFile::Ptr> id_map_m;
+    std::expected<DatabaseFile::Ptr, yadb::Error::Ptr> GetFileHandle(file_id_t file_id);
 
     static std::filesystem::path GetFilePath(file_id_t file_id);
     std::size_t GetOffset(page_id_t page_id) const;
-    std::size_t GetDatabaseFileSize(file_id_t file_id);
 
     mutable std::mutex mut_m;
 };
