@@ -3,9 +3,8 @@
 #include "storage/on_disk/types.h"
 #include <stdexcept>
 
-EphemeralTable::EphemeralTable(const Schema& schema)
-    : Table(schema)
-    , next_page_id_m(0)
+EphemeralTable::EphemeralTable()
+    : next_page_id_m(0)
     , next_slot_id_m(0)
 {
 }
@@ -29,7 +28,7 @@ std::unique_ptr<TableIterator> EphemeralTable::iter()
     return std::make_unique<EphemeralTableIterator>(table_data_m);
 }
 
-row_id_t EphemeralTable::insert_row_impl(std::span<const std::byte> row)
+row_id_t EphemeralTable::insert_row(std::span<const std::byte> row)
 {
     row_id_t rid = GenerateRowId();
 
@@ -43,7 +42,7 @@ row_id_t EphemeralTable::insert_row_impl(std::span<const std::byte> row)
 row_id_t EphemeralTable::update_row(const row_id_t& rid, std::span<const std::byte> data)
 {
     delete_row(rid);
-    return insert_row_impl(data);
+    return insert_row(data);
 }
 
 void EphemeralTable::delete_row(const row_id_t& rid)

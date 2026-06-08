@@ -1,9 +1,11 @@
 #include "storage/on_disk/table/disk_table_factory.h"
 #include "storage/on_disk/constants.h"
 #include "core/assert.h"
+#include "core/row_builder.h"
 #include "core/row_reader.h"
 #include "storage/on_disk/page/page_format.h"
 #include "storage/on_disk/table/disk_table.h"
+#include "table/table_handle.h"
 #include <memory>
 
 bool DiskTableFactory::TableExists(std::string_view table_name) const
@@ -14,6 +16,7 @@ bool DiskTableFactory::TableExists(std::string_view table_name) const
         return mapping_manager_m.GetFileId(table_name).has_value();
     }
 
+    // TODO this is idiotic
     // For regular tables, use catalog if available
     auto catalog = GetCatalog();
     if (catalog.has_value()) {
@@ -61,7 +64,7 @@ DiskTableFactory::DiskTableFactory(const Catalog& catalog)
     SetCatalog(catalog);
 }
 
-bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& schema)
+bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& /*schema*/)
 {
     // Check if this is a catalog table
     if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
@@ -76,12 +79,15 @@ bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& sc
             return false;
         }
 
-        // Create table object directly and initialize it with catalog metadata
-        std::shared_ptr<DiskTable> table(new DiskTable(reserved_id, schema, *page_buffer_manager_m));
+        const Schema& schema = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
+            ? Catalog::table_catalog_schema
+            : Catalog::column_catalog_schema;
+        std::shared_ptr<DiskTable> storage(new DiskTable(reserved_id, *page_buffer_manager_m));
+        TableHandle handle(storage, schema);
         if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME) {
-            Catalog::InitializeTableCatalogTable(*table);
+            Catalog::InitializeTableCatalogTable(handle);
         } else {
-            Catalog::InitializeColumnCatalogTable(*table);
+            Catalog::InitializeColumnCatalogTable(handle);
         }
 
         return true;
@@ -109,10 +115,7 @@ std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
         auto file_id = mapping_manager_m.GetFileId(table_name);
         if (!file_id)
             return nullptr;
-        const Schema& schema = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
-            ? Catalog::table_catalog_schema
-            : Catalog::column_catalog_schema;
-        return std::shared_ptr<Table>(new DiskTable(*file_id, schema, *page_buffer_manager_m));
+        return std::shared_ptr<Table>(new DiskTable(*file_id, *page_buffer_manager_m));
     }
 
     auto catalog = GetCatalog();
@@ -125,12 +128,7 @@ std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
         return nullptr;
     }
 
-    Schema schema = catalog->GetSchema(table_name);
-    return std::shared_ptr<Table>(new DiskTable(
-        *file_id,
-        schema,
-        *page_buffer_manager_m
-    ));
+    return std::shared_ptr<Table>(new DiskTable(*file_id, *page_buffer_manager_m));
 }
 
 bool DiskTableFactory::DeleteTable(std::string_view table_name)
@@ -176,10 +174,10 @@ bool DiskTableFactory::MappingManager::SaveMapping(std::string_view table_name, 
 {
     YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before saving non-reserved table mappings");
 
-    mapping_table_m->insert_row({
-        Value(std::string(table_name)),
-        Value(static_cast<std::int32_t>(file_id)),
-    });
+    RowBuilder rb;
+    rb.Push<DataType::TEXT>(table_name);
+    rb.Push<DataType::INTEGER>(static_cast<std::int32_t>(file_id));
+    mapping_table_m->insert_row(rb.Data());
     return true;
 }
 

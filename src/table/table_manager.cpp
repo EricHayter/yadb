@@ -1,5 +1,4 @@
 #include "table/table_manager.h"
-#include "core/assert.h"
 #include "storage/ephemeral/ephemeral_table_factory.h"
 #include "storage/on_disk/table/disk_table_factory.h"
 #include <stdexcept>
@@ -89,13 +88,18 @@ bool TableManager::TableExists(std::string_view name) const
     return catalog_m->TableExists(name);
 }
 
-std::shared_ptr<Table> TableManager::GetTable(std::string_view name) const
+std::optional<TableHandle> TableManager::GetTable(std::string_view name) const
 {
-    YADB_ASSERT(TableExists(name), "Table does not exist");
+    if (!TableExists(name))
+        return std::nullopt;
 
-    std::string table_name(name);
     TableType table_type = catalog_m->GetTableType(name);
+    Schema schema = catalog_m->GetSchema(name);
 
     ITableFactory& factory = const_cast<TableManager*>(this)->GetFactory(table_type);
-    return factory.GetTable(name);
+    auto storage = factory.GetTable(name);
+    if (!storage)
+        return std::nullopt;
+
+    return TableHandle(std::move(storage), std::move(schema));
 }

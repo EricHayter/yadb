@@ -72,7 +72,7 @@ TEST_P(TableManagerTest, GetTableAfterCreation)
 {
     auto name = GenerateUniqueTableName();
     ASSERT_TRUE(CreateAndTrackTable(name, GetParam(), CreateSimpleSchema()));
-    ASSERT_NE(table_manager->GetTable(name), nullptr);
+    ASSERT_TRUE(table_manager->GetTable(name));
 }
 
 TEST_P(TableManagerTest, TableDoesNotExistInitially)
@@ -110,7 +110,7 @@ TEST_P(TableManagerTest, SchemaVerification)
     ASSERT_TRUE(CreateAndTrackTable(name, GetParam(), schema));
 
     auto table = table_manager->GetTable(name);
-    ASSERT_NE(table, nullptr);
+    ASSERT_TRUE(table);
 
     const auto& retrieved = table->GetSchema();
     ASSERT_EQ(retrieved.size(), schema.size());
@@ -127,7 +127,7 @@ TEST_P(TableManagerTest, CompleteTableLifecycle)
     auto name = GenerateUniqueTableName();
     ASSERT_TRUE(CreateAndTrackTable(name, GetParam(), CreateComplexSchema()));
     ASSERT_TRUE(table_manager->TableExists(name));
-    ASSERT_NE(table_manager->GetTable(name), nullptr);
+    ASSERT_TRUE(table_manager->GetTable(name));
 
     ASSERT_TRUE(table_manager->DeleteTable(name));
     ASSERT_FALSE(table_manager->TableExists(name));
@@ -147,7 +147,7 @@ TEST_P(TableManagerTest, DeleteAndRecreate)
     ASSERT_TRUE(table_manager->TableExists(name));
 
     auto table = table_manager->GetTable(name);
-    ASSERT_NE(table, nullptr);
+    ASSERT_TRUE(table);
 
     auto iter = table->iter();
     EXPECT_TRUE(*iter == std::default_sentinel_t {}); // empty after recreation
@@ -162,13 +162,14 @@ TEST_P(TableManagerTest, DataRoundTrip)
     ASSERT_TRUE(CreateAndTrackTable(name, GetParam(), schema));
 
     auto table = table_manager->GetTable(name);
-    ASSERT_NE(table, nullptr);
+    ASSERT_TRUE(table);
 
     table->insert_row({ Value(1), Value(std::string("alpha")) });
     table->insert_row({ Value(2), Value(std::string("beta")) });
 
     // Read back through a fresh handle to verify persistence
     auto handle = table_manager->GetTable(name);
+    ASSERT_TRUE(handle);
     auto iter = handle->iter();
     ASSERT_FALSE(*iter == std::default_sentinel_t {});
     RowReader rr1((**iter).second, schema);
@@ -192,7 +193,7 @@ TEST_P(TableManagerTest, MultipleRowsRoundTrip)
     ASSERT_TRUE(CreateAndTrackTable(name, GetParam(), schema));
 
     auto table = table_manager->GetTable(name);
-    ASSERT_NE(table, nullptr);
+    ASSERT_TRUE(table);
 
     constexpr int ROW_COUNT = 10;
     for (int i = 0; i < ROW_COUNT; ++i) {
@@ -235,7 +236,7 @@ TEST_P(TableManagerTest, MultipleTablesCoexist)
     ASSERT_TRUE(table_manager->DeleteTable(name1));
     ASSERT_FALSE(table_manager->TableExists(name1));
     ASSERT_TRUE(table_manager->TableExists(name2));
-    ASSERT_NE(table_manager->GetTable(name2), nullptr);
+    ASSERT_TRUE(table_manager->GetTable(name2));
 }
 
 // --- Cross-backend ---
@@ -248,7 +249,7 @@ TEST_P(TableManagerTest, CrossBackendTableCreation)
 
     ASSERT_TRUE(CreateAndTrackTable(name, other, schema));
     ASSERT_TRUE(table_manager->TableExists(name));
-    ASSERT_NE(table_manager->GetTable(name), nullptr);
+    ASSERT_TRUE(table_manager->GetTable(name));
 }
 
 INSTANTIATE_TEST_SUITE_P(

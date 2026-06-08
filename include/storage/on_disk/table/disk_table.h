@@ -12,19 +12,17 @@ public:
     ~DiskTable() override = default;
 
     std::unique_ptr<TableIterator> iter() override;
+    row_id_t insert_row(std::span<const std::byte> row) override;
     row_id_t update_row(const row_id_t& rid, std::span<const std::byte> data) override;
     void delete_row(const row_id_t& rid) override;
 
     TableType GetType() const override;
 
-protected:
-    row_id_t insert_row_impl(std::span<const std::byte> row) override;
-
 private:
     static std::filesystem::path GetTableFileName(std::string_view table_name);
 
 private:
-    DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager);
+    DiskTable(file_id_t file_id, PageBufferManager& page_buffer_manager);
     file_id_t file_id_m;
     PageBufferManager& page_buffer_manager_m;
 };

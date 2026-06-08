@@ -2,9 +2,10 @@
 
 #include "catalog/catalog.h"
 #include "common/definitions.h"
-#include "table/table.h"
+#include "table/table_handle.h"
 #include "table/table_factory_interface.h"
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 
@@ -13,7 +14,7 @@ public:
     explicit TableManager(TableType default_storage_engine = TableType::Disk);
 
     bool CreateTable(std::string_view name, TableType type, const Schema& schema);
-    std::shared_ptr<Table> GetTable(std::string_view name) const;
+    std::optional<TableHandle> GetTable(std::string_view name) const;
     bool DeleteTable(std::string_view name);
     bool TableExists(std::string_view name) const;
 

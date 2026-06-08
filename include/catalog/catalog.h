@@ -2,7 +2,9 @@
 
 #include "common/definitions.h"
 #include "table/table.h"
+#include "table/table_handle.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -31,11 +33,8 @@ public:
     static constexpr std::string_view TABLE_CATALOG_TABLE_NAME = "table_catalog";
     static constexpr std::string_view COLUMN_CATALOG_TABLE_NAME = "column_catalog";
 
-    // Initialize the table_catalog table (includes only itself)
-    static void InitializeTableCatalogTable(Table& table_catalog);
-
-    // Initialize the column_catalog table (includes entries for both catalog tables)
-    static void InitializeColumnCatalogTable(Table& column_catalog);
+    static void InitializeTableCatalogTable(TableHandle& table_catalog);
+    static void InitializeColumnCatalogTable(TableHandle& column_catalog);
 
 private:
     // helper function in the catalog constructor that builds the required
@@ -54,6 +53,6 @@ private:
     // and schema
     std::unordered_map<std::string, TableInfo> table_info_m;
 
-    std::shared_ptr<Table> table_catalog_table_m;
-    std::shared_ptr<Table> column_catalog_table_m;
+    std::optional<TableHandle> table_catalog_table_m;
+    std::optional<TableHandle> column_catalog_table_m;
 };

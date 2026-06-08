@@ -15,9 +15,8 @@ static Page MustGetPage(PageBufferManager& pbm, file_page_id_t fp_id)
     return std::move(*result);
 }
 
-DiskTable::DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager)
-    : Table(schema)
-    , file_id_m (file_id)
+DiskTable::DiskTable(file_id_t file_id, PageBufferManager& page_buffer_manager)
+    : file_id_m(file_id)
     , page_buffer_manager_m(page_buffer_manager)
 {
 }
@@ -27,7 +26,7 @@ std::unique_ptr<TableIterator> DiskTable::iter()
     return std::make_unique<DiskTableIterator>(file_id_m, page_buffer_manager_m);
 }
 
-row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
+row_id_t DiskTable::insert_row(std::span<const std::byte> row)
 {
     page_id_t current_page_id = ROOT_PAGE_ID;
     page_id_t next_page_id = NULL_PAGE_ID;
@@ -79,7 +78,7 @@ row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
 row_id_t DiskTable::update_row(const row_id_t& rid, std::span<const std::byte> data)
 {
     delete_row(rid);
-    return insert_row_impl(data);
+    return insert_row(data);
 }
 
 void DiskTable::delete_row(const row_id_t& rid)

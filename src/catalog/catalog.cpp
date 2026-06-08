@@ -37,14 +37,15 @@ void Catalog::InitTables(ITableFactory& table_factory)
             throw std::runtime_error("Catalog initialization failed: could not create column_catalog table");
     }
 
-    // set handles
-    table_catalog_table_m = table_factory.GetTable(TABLE_CATALOG_TABLE_NAME);
-    if (!table_catalog_table_m)
+    auto table_catalog_storage = table_factory.GetTable(TABLE_CATALOG_TABLE_NAME);
+    if (!table_catalog_storage)
         throw std::runtime_error("Catalog initialization failed: could not get table_catalog table");
+    table_catalog_table_m = TableHandle(table_catalog_storage, table_catalog_schema);
 
-    column_catalog_table_m = table_factory.GetTable(COLUMN_CATALOG_TABLE_NAME);
-    if (!column_catalog_table_m)
+    auto column_catalog_storage = table_factory.GetTable(COLUMN_CATALOG_TABLE_NAME);
+    if (!column_catalog_storage)
         throw std::runtime_error("Catalog initialization failed: could not get column_catalog table");
+    column_catalog_table_m = TableHandle(column_catalog_storage, column_catalog_schema);
 }
 
 void Catalog::LoadTableSchemas()
@@ -83,18 +84,20 @@ bool Catalog::AddTable(std::string_view table_name, TableType table_type, const 
     if (table_info_m.contains(std::string(table_name)))
         return false;
 
-    // Create entry in table catalog using type-safe API
-    table_catalog_table_m->insert_row({ Value(std::string(table_name)),
+    table_catalog_table_m->insert_row({
+        Value(std::string(table_name)),
         Value(static_cast<std::int32_t>(table_type)),
-        Value(static_cast<std::int32_t>(schema.size())) });
+        Value(static_cast<std::int32_t>(schema.size())),
+    });
 
-    // Create entries for column catalog
     std::int32_t position = 0;
     for (const auto& attribute : schema) {
-        column_catalog_table_m->insert_row({ Value(std::string(attribute.name)),
+        column_catalog_table_m->insert_row({
+            Value(std::string(attribute.name)),
             Value(std::string(table_name)),
             Value(static_cast<std::int32_t>(attribute.type)),
-            Value(position) });
+            Value(position),
+        });
         position++;
     }
     table_info_m[std::string(table_name)] = TableInfo {
@@ -165,45 +168,40 @@ TableType Catalog::GetTableType(std::string_view table_name) const
     return table_info_m.at(table_name_str).type;
 }
 
-void Catalog::InitializeTableCatalogTable(Table& table_catalog)
+void Catalog::InitializeTableCatalogTable(TableHandle& table_catalog)
 {
-    // Add entry for table_catalog in the table_catalog table itself
     table_catalog.insert_row({
         Value(std::string("table_catalog")),
         Value(static_cast<std::int32_t>(TableType::InMemory)),
-        Value(static_cast<std::int32_t>(table_catalog_schema.size()))
+        Value(static_cast<std::int32_t>(table_catalog_schema.size())),
     });
-
-    // Add entry for column_catalog in the table_catalog table
     table_catalog.insert_row({
         Value(std::string("column_catalog")),
         Value(static_cast<std::int32_t>(TableType::InMemory)),
-        Value(static_cast<std::int32_t>(column_catalog_schema.size()))
+        Value(static_cast<std::int32_t>(column_catalog_schema.size())),
     });
 }
 
-void Catalog::InitializeColumnCatalogTable(Table& column_catalog)
+void Catalog::InitializeColumnCatalogTable(TableHandle& column_catalog)
 {
-    // Add column entries for table_catalog
     std::int32_t position = 0;
     for (const auto& attribute : table_catalog_schema) {
         column_catalog.insert_row({
             Value(std::string(attribute.name)),
             Value(std::string("table_catalog")),
             Value(static_cast<std::int32_t>(attribute.type)),
-            Value(position)
+            Value(position),
         });
         position++;
     }
 
-    // Add column entries for column_catalog
     position = 0;
     for (const auto& attribute : column_catalog_schema) {
         column_catalog.insert_row({
             Value(std::string(attribute.name)),
             Value(std::string("column_catalog")),
             Value(static_cast<std::int32_t>(attribute.type)),
-            Value(position)
+            Value(position),
         });
         position++;
     }

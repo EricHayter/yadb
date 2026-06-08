@@ -41,6 +41,8 @@ Executor::ExecutionResult Executor::execute(const SelectStmt& stmt)
 
         // Get schema from table for result metadata
         auto table = table_manager_m->GetTable(stmt.table_name);
+        if (!table)
+            return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };
         const Schema& full_schema = table->GetSchema();
 
         // Build result schema based on selected columns
@@ -73,24 +75,14 @@ Executor::ExecutionResult Executor::execute(const SelectStmt& stmt)
 
 Executor::ExecutionResult Executor::execute(const InsertStmt& stmt)
 {
-    // Check table exists
-    if (!table_manager_m->TableExists(stmt.table_name)) {
-        return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };
-    }
-
-    // Get table (contains schema)
     auto table = table_manager_m->GetTable(stmt.table_name);
-    if (!table) {
+    if (!table)
         return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };
-    }
 
-    // Type-safe insert with validation
     try {
         table->insert_row(stmt.values);
         return ExecutionResult { .success = true, .rows = std::nullopt, .schema = std::nullopt };
-    } catch (const std::exception& e) {
-        // TODO: Add error message field to ExecutionResult
-        // For now, just return failure
+    } catch (const std::exception&) {
         return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };
     }
 }
