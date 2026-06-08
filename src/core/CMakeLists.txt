@@ -10,4 +10,5 @@ target_link_libraries(yadb_core
     INTERFACE lib_compile_flags
     INTERFACE lib_strict_warnings
     PRIVATE yadb_common
+    PUBLIC $<$<NOT:$<CONFIG:Release>>:stdc++exp>
 )

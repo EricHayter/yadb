@@ -2,6 +2,9 @@
 
 #include <cstdlib>
 #include <iostream>
+#ifndef NDEBUG
+#include <stacktrace>
+#endif
 
 /**
  * Custom assertion macro for YADB
@@ -47,6 +50,7 @@ namespace yadb::detail {
               << "Message:   " << message << "\n"
               << "Location:  " << file << ":" << line << "\n"
               << "Function:  " << func << "\n"
+              << "Stacktrace:\n" << std::stacktrace::current() << "\n"
               << "========================\n"
               << std::flush;
     std::abort();
