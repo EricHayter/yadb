@@ -1,9 +1,16 @@
 #include "storage/on_disk/table/disk_table_iterator.h"
+#include "core/assert.h"
 #include "storage/on_disk/constants.h"
 #include "storage/on_disk/heap/heap_page.h"
 #include "storage/on_disk/page/page_format.h"
 #include <shared_mutex>
-#include <stdexcept>
+
+static Page MustGetPage(PageBufferManager& pbm, file_page_id_t fp_id)
+{
+    auto result = pbm.GetPage(fp_id);
+    YADB_ASSERT(result.has_value(), result.error()->what().c_str());
+    return std::move(*result);
+}
 
 DiskTableIterator::DiskTableIterator(file_id_t file_id, PageBufferManager& pbm)
     : file_id_m(file_id)
@@ -13,7 +20,7 @@ DiskTableIterator::DiskTableIterator(file_id_t file_id, PageBufferManager& pbm)
     , partial_pages_head_m(NULL_PAGE_ID)
     , in_partial_list_m(false)
 {
-    Page root = page_buffer_manager_m.GetPage({ file_id_m, ROOT_PAGE_ID });
+    Page root = MustGetPage(page_buffer_manager_m,{ file_id_m, ROOT_PAGE_ID });
     std::shared_lock<Page> lk(root);
     page_id_t full_head = heap_page::GetFullPagesHead(root.GetView());
     partial_pages_head_m = heap_page::GetPartialPagesHead(root.GetView());
@@ -41,7 +48,7 @@ void DiskTableIterator::seek(row_id_t rid)
     page_id_t page_id = GetPageIdFromRowId(rid);
     slot_id_t slot_id = GetSlotIdFromRowId(rid);
 
-    Page page = page_buffer_manager_m.GetPage({ file_id_m, page_id });
+    Page page = MustGetPage(page_buffer_manager_m,{ file_id_m, page_id });
     std::shared_lock<Page> lk(page);
     auto view = page.GetView();
 
@@ -61,7 +68,7 @@ void DiskTableIterator::advance_to_next_valid()
         page_id_t next_page_id = NULL_PAGE_ID;
 
         {
-            Page page = page_buffer_manager_m.GetPage({ file_id_m, current_page_id_m });
+            Page page = MustGetPage(page_buffer_manager_m,{ file_id_m, current_page_id_m });
             std::shared_lock<Page> lk(page);
             auto view = page.GetView();
             uint16_t capacity = page::GetPageCapacity(view);

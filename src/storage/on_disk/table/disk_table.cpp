@@ -32,13 +32,13 @@ row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
     page_id_t current_page_id = ROOT_PAGE_ID;
     page_id_t next_page_id = NULL_PAGE_ID;
 
-    Page page = page_buffer_manager_m.GetPage({ file_id_m, ROOT_PAGE_ID });
+    Page page = MustGetPage(page_buffer_manager_m,{ file_id_m, ROOT_PAGE_ID });
     std::unique_lock<Page> lk(page);
     next_page_id = heap_page::GetPartialPagesHead(page.GetView());
 
     // Finding a place for insert
     while (next_page_id != NULL_PAGE_ID) {
-        Page next_page = page_buffer_manager_m.GetPage({ file_id_m, next_page_id });
+        Page next_page = MustGetPage(page_buffer_manager_m,{ file_id_m, next_page_id });
         std::unique_lock<Page> new_lk(next_page);
         std::swap(new_lk, lk);
         std::swap(page, next_page);
@@ -54,10 +54,12 @@ row_id_t DiskTable::insert_row_impl(std::span<const std::byte> row)
     }
 
     row_id_t inserted_row_id;
-    page_id_t new_page_id = page_buffer_manager_m.AllocatePage(file_id_m);
+    auto alloc = page_buffer_manager_m.AllocatePage(file_id_m);
+    YADB_ASSERT(alloc.has_value(), alloc.error()->what().c_str());
+    page_id_t new_page_id = *alloc;
     // create new node in the linked list
     {
-        Page new_page = page_buffer_manager_m.GetPage({ file_id_m, new_page_id });
+        Page new_page = MustGetPage(page_buffer_manager_m,{ file_id_m, new_page_id });
         std::lock_guard<Page> lg(new_page);
         heap_page::InitPage(new_page.GetMutView());
         heap_page::SetPrevPage(new_page.GetMutView(), current_page_id);
@@ -85,7 +87,7 @@ void DiskTable::delete_row(const row_id_t& rid)
     page_id_t page_id = GetPageIdFromRowId(rid);
     slot_id_t slot_id = GetSlotIdFromRowId(rid);
 
-    Page page = page_buffer_manager_m.GetPage({ file_id_m, page_id });
+    Page page = MustGetPage(page_buffer_manager_m,{ file_id_m, page_id });
     std::lock_guard<Page> lg(page);
     page::DeleteSlot(page.GetMutView(), slot_id);
 }

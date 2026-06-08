@@ -29,18 +29,20 @@ bool DiskTableFactory::CreateTableFile(std::string_view table_name, std::optiona
     file_id_t actual_file_id;
 
     if (file_id) {
-        // Use the provided file ID (for catalog tables)
         actual_file_id = *file_id;
-        page_buffer_manager_m->CreateFile(actual_file_id);
+        auto err = page_buffer_manager_m->CreateFile(actual_file_id);
+        YADB_ASSERT(!err.has_value(), (*err)->what().c_str());
     } else {
-        // Generate a new file ID (for regular tables)
-        actual_file_id = page_buffer_manager_m->CreateFile();
+        auto result = page_buffer_manager_m->CreateFile();
+        YADB_ASSERT(result.has_value(), result.error()->what().c_str());
+        actual_file_id = *result;
     }
 
     mapping_manager_m.SaveMapping(table_name, actual_file_id);
 
-    // Initialize first page as data page
-    Page page = page_buffer_manager_m->GetPage({ actual_file_id, 0 });
+    auto page_result = page_buffer_manager_m->GetPage({ actual_file_id, 0 });
+    YADB_ASSERT(page_result.has_value(), page_result.error()->what().c_str());
+    Page page = std::move(*page_result);
     std::lock_guard<Page> lk(page);
     page::InitPage(page.GetMutView(), page::PageType::Data);
 
@@ -138,7 +140,8 @@ bool DiskTableFactory::DeleteTable(std::string_view table_name)
         return false;
     }
 
-    page_buffer_manager_m->DeleteFile(*file_id);
+    auto err = page_buffer_manager_m->DeleteFile(*file_id);
+    YADB_ASSERT(!err.has_value(), (*err)->what().c_str());
     mapping_manager_m.DeleteMapping(table_name);
 
     return true;
