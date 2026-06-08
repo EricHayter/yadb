@@ -24,10 +24,10 @@ protected:
 
     void SetUp() override
     {
-        file_id_t file_id = page_buffer_man.CreateFile();
-        page_id_t page_id = page_buffer_man.AllocatePage(file_id);
+        file_id_t file_id = page_buffer_man.CreateFile().value();
+        page_id_t page_id = page_buffer_man.AllocatePage(file_id).value();
         fp_id = {file_id, page_id};
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         InitPage(page.GetMutView(), PageType::Data);
     }
@@ -35,7 +35,7 @@ protected:
 
 TEST_F(PageBufferManagerTest, TestPageInit)
 {
-    Page page = page_buffer_man.GetPage(fp_id);
+    Page page = page_buffer_man.GetPage(fp_id).value();
     std::shared_lock<Page> sl(page);
 
     ASSERT_EQ(page.GetFilePageId(), fp_id);
@@ -45,7 +45,7 @@ TEST_F(PageBufferManagerTest, TestPageInit)
 
 TEST_F(PageBufferManagerTest, TestAllocateSlot)
 {
-    Page page = page_buffer_man.GetPage(fp_id);
+    Page page = page_buffer_man.GetPage(fp_id).value();
     std::lock_guard<Page> lg(page);
 
     EXPECT_EQ(page.GetFilePageId(), fp_id);
@@ -67,7 +67,7 @@ TEST_F(PageBufferManagerTest, TestPageReadWrite)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
 
         ASSERT_EQ(GetNumTuples(page.GetView()), 0);
@@ -85,7 +85,7 @@ TEST_F(PageBufferManagerTest, TestPageReadWrite)
 
     /* read data */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::shared_lock<Page> sl(page);
         ASSERT_EQ(GetNumTuples(page.GetView()), 1);
 
@@ -103,7 +103,7 @@ TEST_F(PageBufferManagerTest, TestDeleteSlot)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         ASSERT_EQ(GetNumTuples(page.GetView()), 0);
 
@@ -118,7 +118,7 @@ TEST_F(PageBufferManagerTest, TestDeleteSlot)
 
     /* delete the slot */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         DeleteSlot(page.GetMutView(), slot_id);
         ASSERT_EQ(GetNumTuples(page.GetView()), 0);
@@ -133,7 +133,7 @@ TEST_F(PageBufferManagerTest, TestReadDeletedSlot)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         ASSERT_EQ(GetNumTuples(page.GetView()), 0);
 
@@ -148,7 +148,7 @@ TEST_F(PageBufferManagerTest, TestReadDeletedSlot)
 
     /* delete the slot */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         DeleteSlot(page.GetMutView(), slot_id);
         ASSERT_EQ(GetNumTuples(page.GetView()), 0);
@@ -156,7 +156,7 @@ TEST_F(PageBufferManagerTest, TestReadDeletedSlot)
 
     /* attempt to read deleted slot */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::shared_lock<Page> sl(page);
         ASSERT_DEATH(ReadRecord(page.GetView(), slot_id), "");
     }
@@ -171,7 +171,7 @@ TEST_F(PageBufferManagerTest, TestWriteDeletedSlot)
     /* allocate slot in page */
     slot_id_t slot_id;
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         ASSERT_EQ(GetNumTuples(page.GetView()), 0);
 
@@ -186,7 +186,7 @@ TEST_F(PageBufferManagerTest, TestWriteDeletedSlot)
 
     /* delete the slot */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         DeleteSlot(page.GetMutView(), slot_id);
         ASSERT_EQ(GetNumTuples(page.GetView()), 0);
@@ -194,7 +194,7 @@ TEST_F(PageBufferManagerTest, TestWriteDeletedSlot)
 
     /* attempt to write to deleted slot */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         ASSERT_DEATH(WriteRecord(page.GetMutView(), slot_id), "");
     }
@@ -208,7 +208,7 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
     constexpr int data_size = 4;
     std::vector<slot_id_t> slots;
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         for (int i = 0; i < num_slots; i++) {
             ASSERT_EQ(GetNumTuples(page.GetView()), i);
@@ -221,14 +221,14 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
 
     offset_t free_space_size;
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::shared_lock<Page> sl(page);
         free_space_size = GetFreeSpaceSize(page.GetView());
     }
 
     /* delete the slots from the page */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         for (slot_id_t slot_id : slots) {
             DeleteSlot(page.GetMutView(), slot_id);
@@ -239,7 +239,7 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
     /* Should regain all of the space made from the previous allocations of
      * 10 slots of size 10. Note we NEVER reclaim slots. */
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::shared_lock<Page> sl(page);
         ASSERT_EQ(GetFreeSpaceSize(page.GetView()) - num_slots * data_size, free_space_size);
     }
@@ -247,7 +247,7 @@ TEST_F(PageBufferManagerTest, TestFlushPage)
 
 TEST_F(PageBufferManagerTest, TestVacuumPageNoReusableSpace)
 {
-    Page page = page_buffer_man.GetPage(fp_id);
+    Page page = page_buffer_man.GetPage(fp_id).value();
     std::lock_guard<Page> lg(page);
 
     /* allocate slots in page */
@@ -276,7 +276,7 @@ TEST_F(PageBufferManagerTest, TestVacuumPageMiddleInnerSlot)
      * re-acquired. Specifically a slot not at the end or beginning in the
      * slot directory such that edge cases are roughly checked.
      */
-    Page page = page_buffer_man.GetPage(fp_id);
+    Page page = page_buffer_man.GetPage(fp_id).value();
     std::lock_guard<Page> lg(page);
 
     /* allocate slots in page */
@@ -314,7 +314,7 @@ TEST_F(PageBufferManagerTest, TestVacuumPageMiddleInnerSlotIntegrity)
      * the deleted slot will be shifted over to re-acquire the deleted slot's
      * space. This test insures that the data stays intact after being
      * shifted by the vacuum operation. */
-    Page page = page_buffer_man.GetPage(fp_id);
+    Page page = page_buffer_man.GetPage(fp_id).value();
     std::lock_guard<Page> lg(page);
 
     /* allocate slots in page */
@@ -371,7 +371,7 @@ TEST_F(PageBufferManagerTest, MultipleConccurentReaders)
 
     // write some data to the page
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
         slot_id = *AllocateSlot(page.GetMutView(), sizeof(data));
         auto write_span = WriteRecord(page.GetMutView(), slot_id);
@@ -388,7 +388,7 @@ TEST_F(PageBufferManagerTest, MultipleConccurentReaders)
     for (int i = 0; i < num_readers; i++) {
         threads.push_back(std::thread([&]() {
             std::this_thread::sleep_for(ms(3));
-            Page page = page_buffer_man.GetPage(fp_id);
+            Page page = page_buffer_man.GetPage(fp_id).value();
             std::shared_lock<Page> sl(page);
             EXPECT_EQ(*ReadRecord(page.GetView(), slot_id).begin(), PageData { static_cast<unsigned char>(data) });
         }));
@@ -413,7 +413,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
 
     // write some data to the page
     {
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         char starting_data = 'z';
         std::lock_guard<Page> lg(page);
         slot_id = *AllocateSlot(page.GetMutView(), sizeof(starting_data));
@@ -427,7 +427,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
     // try and get a writer page.
     std::thread writer_thread([&]() {
         // acquire exclusive access to page
-        Page page = page_buffer_man.GetPage(fp_id);
+        Page page = page_buffer_man.GetPage(fp_id).value();
         std::lock_guard<Page> lg(page);
 
         // wait for main thread to try and acquire read page
@@ -441,7 +441,7 @@ TEST_F(PageBufferManagerTest, WriterReaderMutualExclusive)
     // wait for writer thread to acquire the write page
     std::this_thread::sleep_for(ms(2));
 
-    Page page_read = page_buffer_man.GetPage(fp_id);
+    Page page_read = page_buffer_man.GetPage(fp_id).value();
     std::shared_lock<Page> sl(page_read);
     EXPECT_EQ(*ReadRecord(page_read.GetView(), slot_id).begin(), PageData { static_cast<unsigned char>(data) });
 
