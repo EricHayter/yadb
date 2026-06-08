@@ -62,7 +62,6 @@ std::optional<frame_id_t> LRUKReplacer::EvictFrame()
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id)
 {
-    // TODO make this an asssert or spdlog it or something??
     if (not frames_m.contains(frame_id))
         return;
     LRUFrameHistory& frame = frames_m[frame_id];
