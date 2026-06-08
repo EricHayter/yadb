@@ -4,6 +4,16 @@
 #include "storage/on_disk/page/page_format.h"
 #include "storage/on_disk/types.h"
 #include "storage/on_disk/constants.h"
+#include "core/assert.h"
+
+// Helper to extract a Page from GetPage, asserting on IO failure.
+// TODO: propagate errors once the Table interface supports it.
+static Page MustGetPage(PageBufferManager& pbm, file_page_id_t fp_id)
+{
+    auto result = pbm.GetPage(fp_id);
+    YADB_ASSERT(result.has_value(), result.error()->what().c_str());
+    return std::move(*result);
+}
 
 DiskTable::DiskTable(file_id_t file_id, const Schema& schema, PageBufferManager& page_buffer_manager)
     : Table(schema)

@@ -1,21 +1,19 @@
 #pragma once
 
-#include "storage/on_disk/types.h"
+#include "core/error.h"
 #include "storage/on_disk/buffer_manager/frame.h"
 #include "storage/on_disk/buffer_manager/lru_k_replacer.h"
 #include "storage/on_disk/buffer_manager/page.h"
 #include "storage/on_disk/disk/disk_manager.h"
+#include "storage/on_disk/types.h"
 #include <condition_variable>
 #include <cstddef>
-#include <filesystem>
+#include <expected>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
-namespace spdlog {
-class logger;
-}
-struct DatabaseConfig;
 
 /**
  * Page Buffer Manager
@@ -39,10 +37,6 @@ struct DatabaseConfig;
  *    the amount of current accessors (pin count) and whether or not the page
  *    has been written to (dirtiness) which may affect flushing page data.
  *
- *
- * Additional information for these classes can be found in their respective
- * header files.
- *
  * All requirements for disk I/O for reading and writing data to and from disk
  * is handled by the disk manager.
  */
@@ -52,92 +46,48 @@ class PageBufferManager {
 public:
     PageBufferManager();
     PageBufferManager(std::size_t num_frames);
-    PageBufferManager(const DatabaseConfig& config, std::size_t num_frames);
     ~PageBufferManager();
 
-    file_id_t CreateFile();
-
-    /**
-     * Creates a new file with the specified file_id.
-     */
-    void CreateFile(file_id_t file_id);
+    std::expected<file_id_t, yadb::Error::Ptr> CreateFile();
+    std::optional<yadb::Error::Ptr> CreateFile(file_id_t file_id);
 
     /**
      * Evicts all cached pages belonging to file_id and deletes the physical
      * file. Blocks until all pinned pages are released, up to a 5-second
-     * timeout. Throws std::runtime_error if the timeout expires.
+     * timeout.
      */
-    void DeleteFile(file_id_t file_id);
+    std::optional<yadb::Error::Ptr> DeleteFile(file_id_t file_id);
+
+    std::expected<page_id_t, yadb::Error::Ptr> AllocatePage(file_id_t file_id);
+
+    std::expected<Page, yadb::Error::Ptr> GetPage(const file_page_id_t& fp_id);
 
     /**
-     * Creates a new page by signalling to the disk manager
+     * Retrieves a page if a buffer frame is immediately available.
+     * Returns success with std::nullopt if no frame is available without waiting.
+     * Returns an error if a frame was available but an IO failure occurred.
      */
-    page_id_t AllocatePage(file_id_t file_id);
-
-    Page GetPage(const file_page_id_t& fp_id);
-
-    /* Retrieves a page if a buffer frame is immediately available.
-     * Returns std::nullopt if the page is not cached and no frames can be evicted.
-     * Will block on disk I/O if the page needs to be loaded from disk.
-     * Will block briefly to acquire the buffer pool lock. */
-    std::optional<Page> GetPageIfFrameAvailable(const file_page_id_t& fp_id);
+    std::expected<std::optional<Page>, yadb::Error::Ptr> GetPageIfFrameAvailable(const file_page_id_t& fp_id);
 
 private:
-    enum class LoadPageStatus {
-        Success,
-        IOError,
-        NoFreeFrameError,
-    };
+    std::optional<yadb::Error::Ptr> LoadPage(const file_page_id_t& fp_id);
+    std::optional<yadb::Error::Ptr> FlushPage(const file_page_id_t& fp_id);
 
-    LoadPageStatus LoadPage(const file_page_id_t& fp_id);
-
-    /* Returns true if any cached frame belonging to file_id has a non-zero pin count. */
     bool FileHasPinnedPages(file_id_t file_id) const;
 
-    enum class FlushPageStatus {
-        Success,
-        IOError,
-    };
-
-    FlushPageStatus FlushPage(const file_page_id_t& fp_id);
-
-    /**
-     * Notify the page buffer manager that an accessor has been dropped
-     * from a frame
-     */
-    void RemoveAccessor(const file_page_id_t& fp_id);
-
-    /*
-     * returns a pointer to the frame header for the frame containing the
-     * page with id page_id
-     *
-     * NOTE: this function WILL throw a runtime exception if the page is
-     * not located inside of a frame. This function should be used to prevent
-     * accidentally creating entries in the page map.
-     */
     Frame* GetFrameForPage(const file_page_id_t& fp_id) const;
 
-    /*
-     * Pins a page that is already loaded in the buffer pool and returns
-     * a Page handle to it. Increments the pin count, records access for
-     * the LRU-K replacer, and marks the frame as non-evictable.
-     */
+    void RemoveAccessor(const file_page_id_t& fp_id);
+
     Page PinAndReturnPage(const file_page_id_t& fp_id);
 
 private:
-    std::shared_ptr<spdlog::logger> logger_m;
-
     LRUKReplacer replacer_m;
-
     DiskManager disk_manager_m;
 
-    /* buffer for the entire page buffer pool */
     char* buffer_m;
 
-    /* the map of page's to their corresponding frame containing their data */
     std::unordered_map<file_page_id_t, frame_id_t> page_map_m;
-
-    /* all frame metadata */
     std::vector<std::unique_ptr<Frame>> frames_m;
 
     std::mutex mut_m;

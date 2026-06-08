@@ -1,106 +1,103 @@
-//#include "common/definitions.h"
-//#include "storage/on_disk/disk/disk_manager.h"
-//#include <array>
-//#include <filesystem>
-//#include <gtest/gtest.h>
-//#include <string>
-//
-///**
-// * \brief RAII class for creating a temporary directory for creating files in
-// */
-//class DiskManagerTest : public testing::Test {
-//protected:
-//    std::filesystem::path temp_dir { "testing_temp" };
-//
-//    DiskManagerTest()
-//    {
-//        std::filesystem::create_directories(temp_dir);
-//    }
-//    ~DiskManagerTest()
-//    {
-//        std::filesystem::remove_all(temp_dir);
-//    }
-//};
-//
-///**
-// * \brief Test to make sure there is no errors with the created files when opening the disk manager again
-// */
-//TEST_F(DiskManagerTest, TestCreateManagerTwice)
-//{
-//    {
-//        DiskManager disk_manager {};
-//    }
-//
-//    {
-//        DiskManager disk_manager {};
-//    }
-//}
-//
-///**
-// * \brief Perform a simple read/write to verify that data integrity
-// */
-//TEST_F(DiskManagerTest, TestSimpleWriteRead)
-//{
-//    std::array<PageData, PAGE_SIZE> page_data_write;
-//    page_data_write.fill(PageData { 'A' });
-//
-//    DiskManager disk_manager {};
-//
-//    // Register a file first
-//    file_id_t file_id = disk_manager.RegisterFile(temp_dir / "test.db", 10);
-//
-//    page_id_t page_id = disk_manager.AllocatePage(file_id);
-//    file_page_id_t fp_id{file_id, page_id};
-//
-//    disk_manager.WritePage(fp_id, page_data_write);
-//
-//    std::array<PageData, PAGE_SIZE> page_data_read;
-//    disk_manager.ReadPage(fp_id, page_data_read);
-//
-//    EXPECT_EQ(page_data_read, page_data_write);
-//}
-//
-///**
-// * \brief Test is free pages are reused and new allocations are not made
-// */
-//TEST_F(DiskManagerTest, TestFreePage)
-//{
-//    std::array<PageData, PAGE_SIZE> page_data_write;
-//    page_data_write.fill(PageData { 'A' });
-//
-//    DiskManager disk_manager {};
-//
-//    // Register a file first
-//    file_id_t file_id = disk_manager.RegisterFile(temp_dir / "test2.db", 1);
-//
-//    page_id_t page_id = disk_manager.AllocatePage(file_id);
-//    file_page_id_t fp_id{file_id, page_id};
-//
-//    disk_manager.WritePage(fp_id, page_data_write);
-//
-//    disk_manager.DeletePage(fp_id);
-//
-//    page_id_t new_page_id = disk_manager.AllocatePage(file_id);
-//    file_page_id_t new_fp_id{file_id, new_page_id};
-//    disk_manager.WritePage(new_fp_id, page_data_write);
-//}
-//
-///**
-// * \brief Ensure that resizing is done in the case that no free pages are
-// * available
-// */
-//TEST_F(DiskManagerTest, TestResizePage)
-//{
-//    std::array<PageData, PAGE_SIZE> page_data_write;
-//    page_data_write.fill(PageData { 'A' });
-//    DiskManager disk_manager {};
-//
-//    // Register a file with initial capacity of 1
-//    file_id_t file_id = disk_manager.RegisterFile(temp_dir / "test3.db", 1);
-//
-//    for (int i = 0; i < 8; i++) {
-//        page_id_t page_id = disk_manager.AllocatePage(file_id);
-//        file_page_id_t fp_id{file_id, page_id};
-//        disk_manager.WritePage(fp_id, page_data_write);
-//    }
-//}
+#include "storage/on_disk/disk/disk_manager.h"
+#include "storage/on_disk/disk/disk_manager_error.h"
+#include "storage/on_disk/types.h"
+#include <array>
+#include <filesystem>
+#include <gtest/gtest.h>
+
+static constexpr file_id_t TEST_FILE_ID = 99999;
+
+static std::filesystem::path TestFilePath()
+{
+    return std::to_string(TEST_FILE_ID) + ".yadb";
+}
+
+class DiskManagerTest : public testing::Test {
+protected:
+    DiskManager disk_manager;
+
+    void SetUp() override
+    {
+        std::filesystem::remove(TestFilePath());
+    }
+
+    void TearDown() override
+    {
+        std::filesystem::remove(TestFilePath());
+    }
+};
+
+TEST_F(DiskManagerTest, CreateFileSucceeds)
+{
+    auto err = disk_manager.CreateFile(TEST_FILE_ID);
+    EXPECT_FALSE(err.has_value());
+    EXPECT_TRUE(std::filesystem::exists(TestFilePath()));
+}
+
+TEST_F(DiskManagerTest, CreateDuplicateFileReturnsError)
+{
+    disk_manager.CreateFile(TEST_FILE_ID);
+    auto err = disk_manager.CreateFile(TEST_FILE_ID);
+    ASSERT_TRUE(err.has_value());
+    EXPECT_NE(dynamic_cast<yadb::CreateFileError*>(err->get()), nullptr);
+}
+
+TEST_F(DiskManagerTest, DeleteFileSucceeds)
+{
+    disk_manager.CreateFile(TEST_FILE_ID);
+    auto err = disk_manager.DeleteFile(TEST_FILE_ID);
+    EXPECT_FALSE(err.has_value());
+    EXPECT_FALSE(std::filesystem::exists(TestFilePath()));
+}
+
+TEST_F(DiskManagerTest, SimpleWriteRead)
+{
+    disk_manager.CreateFile(TEST_FILE_ID);
+
+    auto alloc = disk_manager.AllocatePage(TEST_FILE_ID);
+    ASSERT_TRUE(alloc.has_value());
+    file_page_id_t fp_id { TEST_FILE_ID, alloc.value() };
+
+    std::array<PageData, PAGE_SIZE> write_data;
+    write_data.fill(std::byte { 'A' });
+    auto write_err = disk_manager.WritePage(fp_id, FullPage { write_data });
+    ASSERT_FALSE(write_err.has_value());
+
+    std::array<PageData, PAGE_SIZE> read_data;
+    read_data.fill(std::byte { 0 });
+    auto read_err = disk_manager.ReadPage(fp_id, MutFullPage { read_data });
+    ASSERT_FALSE(read_err.has_value());
+
+    EXPECT_EQ(read_data, write_data);
+}
+
+TEST_F(DiskManagerTest, DeletedPageIsReused)
+{
+    disk_manager.CreateFile(TEST_FILE_ID);
+
+    auto alloc = disk_manager.AllocatePage(TEST_FILE_ID);
+    ASSERT_TRUE(alloc.has_value());
+    file_page_id_t fp_id { TEST_FILE_ID, alloc.value() };
+
+    disk_manager.DeletePage(fp_id);
+
+    auto realloc = disk_manager.AllocatePage(TEST_FILE_ID);
+    ASSERT_TRUE(realloc.has_value());
+    EXPECT_EQ(alloc.value(), realloc.value());
+}
+
+TEST_F(DiskManagerTest, FileGrowsOnAllocation)
+{
+    disk_manager.CreateFile(TEST_FILE_ID);
+
+    std::array<PageData, PAGE_SIZE> write_data;
+    write_data.fill(std::byte { 'B' });
+
+    for (int i = 0; i < 8; i++) {
+        auto alloc = disk_manager.AllocatePage(TEST_FILE_ID);
+        ASSERT_TRUE(alloc.has_value()) << "AllocatePage failed on iteration " << i;
+        file_page_id_t fp_id { TEST_FILE_ID, alloc.value() };
+        auto err = disk_manager.WritePage(fp_id, FullPage { write_data });
+        EXPECT_FALSE(err.has_value()) << "WritePage failed on iteration " << i;
+    }
+}
