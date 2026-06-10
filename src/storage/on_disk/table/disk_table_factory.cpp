@@ -1,29 +1,15 @@
 #include "storage/on_disk/table/disk_table_factory.h"
+#include "catalog/catalog.h"
 #include "storage/on_disk/constants.h"
 #include "core/assert.h"
 #include "core/row_builder.h"
 #include "core/row_reader.h"
 #include "storage/on_disk/page/page_format.h"
 #include "storage/on_disk/table/disk_table.h"
-#include "table/table_handle.h"
 #include <memory>
 
 bool DiskTableFactory::TableExists(std::string_view table_name) const
 {
-    // Special case for catalog tables - check file mapping directly
-    // since they exist before the catalog is set up
-    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
-        return mapping_manager_m.GetFileId(table_name).has_value();
-    }
-
-    // TODO this is idiotic
-    // For regular tables, use catalog if available
-    auto catalog = GetCatalog();
-    if (catalog.has_value()) {
-        return catalog->TableExists(table_name);
-    }
-
-    // Fallback: check if file mapping exists (table was created but catalog not set yet)
     return mapping_manager_m.GetFileId(table_name).has_value();
 }
 
@@ -58,76 +44,23 @@ DiskTableFactory::DiskTableFactory()
 {
 }
 
-DiskTableFactory::DiskTableFactory(const Catalog& catalog)
-    : DiskTableFactory()
+bool DiskTableFactory::CreateTable(std::string_view table_name)
 {
-    SetCatalog(catalog);
-}
-
-bool DiskTableFactory::CreateTable(std::string_view table_name, const Schema& /*schema*/)
-{
-    // Check if this is a catalog table
     if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
-        YADB_ASSERT(!GetCatalog().has_value(), "Cannot create catalog tables after catalog has been set");
-
-        // Create catalog table with reserved file ID
         file_id_t reserved_id = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
             ? TABLE_CATALOG_FILE_ID
             : COLUMN_CATALOG_FILE_ID;
-
-        if (!CreateTableFile(table_name, reserved_id)) {
-            return false;
-        }
-
-        const Schema& schema = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
-            ? Catalog::table_catalog_schema
-            : Catalog::column_catalog_schema;
-        std::shared_ptr<DiskTable> storage(new DiskTable(reserved_id, *page_buffer_manager_m));
-        TableHandle handle(storage, schema);
-        if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME) {
-            Catalog::InitializeTableCatalogTable(handle);
-        } else {
-            Catalog::InitializeColumnCatalogTable(handle);
-        }
-
-        return true;
+        return CreateTableFile(table_name, reserved_id);
     }
 
-    // Regular table creation - requires catalog to be set
-    YADB_ASSERT(GetCatalog().has_value(), "Cannot create regular tables before catalog is set");
-
-    if (GetCatalog()->TableExists(table_name)) {
-        return false;
-    }
-
-    // Create regular table with dynamic file ID
-    if (!CreateTableFile(table_name)) {
-        return false;
-    }
-
-    return true;
+    return CreateTableFile(table_name);
 }
 
 std::shared_ptr<Table> DiskTableFactory::GetTable(std::string_view table_name)
 {
-    // Bootstrap case: catalog tables must be retrievable before the catalog is set.
-    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
-        auto file_id = mapping_manager_m.GetFileId(table_name);
-        if (!file_id)
-            return nullptr;
-        return std::shared_ptr<Table>(new DiskTable(*file_id, *page_buffer_manager_m));
-    }
-
-    auto catalog = GetCatalog();
-    if (!catalog || !catalog->TableExists(table_name)) {
-        return nullptr;
-    }
-
     auto file_id = mapping_manager_m.GetFileId(table_name);
-    if (!file_id) {
+    if (!file_id)
         return nullptr;
-    }
-
     return std::shared_ptr<Table>(new DiskTable(*file_id, *page_buffer_manager_m));
 }
 

@@ -28,16 +28,10 @@ class DiskTable;
 
 class DiskTableFactory : public ITableFactory {
     public:
-    // Default constructor - creates an internal buffer manager.
-    // Use SetCatalog() to attach a catalog later.
     DiskTableFactory();
 
-    // Constructor with catalog - creates an internal buffer manager and attaches the catalog.
-    // Use this when the catalog is available at factory construction time.
-    DiskTableFactory(const Catalog& catalog);
-
     bool TableExists(std::string_view table_name) const override;
-    bool CreateTable(std::string_view table_name, const Schema& schema) override;
+    bool CreateTable(std::string_view table_name) override;
     std::shared_ptr<Table> GetTable(std::string_view table_name) override;
     bool DeleteTable(std::string_view table_name) override;
 

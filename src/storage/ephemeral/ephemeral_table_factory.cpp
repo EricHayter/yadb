@@ -7,7 +7,7 @@ bool EphemeralTableFactory::TableExists(std::string_view table_name) const
     return tables_m.find(std::string(table_name)) != tables_m.end();
 }
 
-bool EphemeralTableFactory::CreateTable(std::string_view table_name, const Schema& /*schema*/)
+bool EphemeralTableFactory::CreateTable(std::string_view table_name)
 {
     {
         std::shared_lock<std::shared_mutex> lock(registry_mutex_m);

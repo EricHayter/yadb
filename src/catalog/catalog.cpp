@@ -18,34 +18,37 @@ const Schema Catalog::column_catalog_schema = {
     { "position", DataType::INTEGER },
 };
 
-Catalog::Catalog(ITableFactory& table_factory)
+Catalog::Catalog(ITableFactory& factory)
 {
-    InitTables(table_factory);
+    CreateCatalogTables(factory);
     LoadTableSchemas();
     LoadColumnSchemas();
 }
 
-void Catalog::InitTables(ITableFactory& table_factory)
+void Catalog::CreateCatalogTables(ITableFactory& factory)
 {
-    // Create catalog tables if they don't exist
-    if (!table_factory.TableExists(TABLE_CATALOG_TABLE_NAME)) {
-        if (!table_factory.CreateTable(TABLE_CATALOG_TABLE_NAME, Catalog::table_catalog_schema))
-            throw std::runtime_error("Catalog initialization failed: could not create table_catalog table");
-    }
-    if (!table_factory.TableExists(COLUMN_CATALOG_TABLE_NAME)) {
-        if (!table_factory.CreateTable(COLUMN_CATALOG_TABLE_NAME, Catalog::column_catalog_schema))
-            throw std::runtime_error("Catalog initialization failed: could not create column_catalog table");
-    }
+    bool table_catalog_new = !factory.TableExists(TABLE_CATALOG_TABLE_NAME);
+    if (table_catalog_new && !factory.CreateTable(TABLE_CATALOG_TABLE_NAME))
+        throw std::runtime_error("Catalog initialization failed: could not create table_catalog table");
 
-    auto table_catalog_storage = table_factory.GetTable(TABLE_CATALOG_TABLE_NAME);
+    bool column_catalog_new = !factory.TableExists(COLUMN_CATALOG_TABLE_NAME);
+    if (column_catalog_new && !factory.CreateTable(COLUMN_CATALOG_TABLE_NAME))
+        throw std::runtime_error("Catalog initialization failed: could not create column_catalog table");
+
+    auto table_catalog_storage = factory.GetTable(TABLE_CATALOG_TABLE_NAME);
     if (!table_catalog_storage)
         throw std::runtime_error("Catalog initialization failed: could not get table_catalog table");
     table_catalog_table_m = TableHandle(table_catalog_storage, table_catalog_schema);
 
-    auto column_catalog_storage = table_factory.GetTable(COLUMN_CATALOG_TABLE_NAME);
+    auto column_catalog_storage = factory.GetTable(COLUMN_CATALOG_TABLE_NAME);
     if (!column_catalog_storage)
         throw std::runtime_error("Catalog initialization failed: could not get column_catalog table");
     column_catalog_table_m = TableHandle(column_catalog_storage, column_catalog_schema);
+
+    if (table_catalog_new)
+        InitializeTableCatalogTable();
+    if (column_catalog_new)
+        InitializeColumnCatalogTable();
 }
 
 void Catalog::LoadTableSchemas()
@@ -168,25 +171,25 @@ TableType Catalog::GetTableType(std::string_view table_name) const
     return table_info_m.at(table_name_str).type;
 }
 
-void Catalog::InitializeTableCatalogTable(TableHandle& table_catalog)
+void Catalog::InitializeTableCatalogTable()
 {
-    table_catalog.insert_row({
+    table_catalog_table_m->insert_row({
         Value(std::string("table_catalog")),
         Value(static_cast<std::int32_t>(TableType::InMemory)),
         Value(static_cast<std::int32_t>(table_catalog_schema.size())),
     });
-    table_catalog.insert_row({
+    table_catalog_table_m->insert_row({
         Value(std::string("column_catalog")),
         Value(static_cast<std::int32_t>(TableType::InMemory)),
         Value(static_cast<std::int32_t>(column_catalog_schema.size())),
     });
 }
 
-void Catalog::InitializeColumnCatalogTable(TableHandle& column_catalog)
+void Catalog::InitializeColumnCatalogTable()
 {
     std::int32_t position = 0;
     for (const auto& attribute : table_catalog_schema) {
-        column_catalog.insert_row({
+        column_catalog_table_m->insert_row({
             Value(std::string(attribute.name)),
             Value(std::string("table_catalog")),
             Value(static_cast<std::int32_t>(attribute.type)),
@@ -197,7 +200,7 @@ void Catalog::InitializeColumnCatalogTable(TableHandle& column_catalog)
 
     position = 0;
     for (const auto& attribute : column_catalog_schema) {
-        column_catalog.insert_row({
+        column_catalog_table_m->insert_row({
             Value(std::string(attribute.name)),
             Value(std::string("column_catalog")),
             Value(static_cast<std::int32_t>(attribute.type)),

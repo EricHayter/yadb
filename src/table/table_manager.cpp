@@ -20,9 +20,7 @@ TableManager::TableManager(TableType default_storage_engine)
 
     factories_m[default_storage_engine] = default_factory;
 
-    // Initialize catalog using the default factory
     catalog_m = std::make_unique<Catalog>(*default_factory);
-    default_factory->SetCatalog(*catalog_m);
 }
 
 ITableFactory& TableManager::GetFactory(TableType type)
@@ -45,9 +43,6 @@ ITableFactory& TableManager::GetFactory(TableType type)
         throw std::runtime_error("Unknown table type");
     }
 
-    // Set catalog on newly created factory
-    factory->SetCatalog(*catalog_m);
-
     factories_m[type] = factory;
     return *factory;
 }
@@ -59,7 +54,7 @@ bool TableManager::CreateTable(std::string_view name, TableType type, const Sche
         return false;
 
     ITableFactory& factory = GetFactory(type);
-    bool created_table = factory.CreateTable(name, schema);
+    bool created_table = factory.CreateTable(name);
 
     if (!created_table)
         return false;
