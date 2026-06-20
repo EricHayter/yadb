@@ -69,8 +69,14 @@ row_id_t DiskTable::insert_row(std::span<const std::byte> row)
         inserted_row_id = MakeRowId(new_page_id, *insert_loc);
     }
 
-    // update pointers
-    heap_page::SetNextPage(page.GetMutView(), new_page_id);
+    // Link the new (non-full) page into the partial list so later inserts reuse
+    // it and the iterator can reach it. When the partial list was empty, `page`
+    // is the root and the new page becomes the partial head; otherwise it is
+    // appended after the last full partial page we visited.
+    if (current_page_id == ROOT_PAGE_ID)
+        heap_page::SetPrevPage(page.GetMutView(), new_page_id);
+    else
+        heap_page::SetNextPage(page.GetMutView(), new_page_id);
 
     return inserted_row_id;
 }
