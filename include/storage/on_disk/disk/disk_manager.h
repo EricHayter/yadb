@@ -36,6 +36,11 @@ public:
     std::optional<yadb::Error::Ptr> CreateFile(file_id_t file_id);
 
     /*
+     * Returns whether the backing file for the given file_id already exists.
+     */
+    bool FileExists(file_id_t file_id) const;
+
+    /*
      * Allocates a new page in the database file for writing to.
      *
      * This function will either a) use a "free" page already existing in the

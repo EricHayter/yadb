@@ -44,6 +44,11 @@ std::optional<yadb::Error::Ptr> PageBufferManager::CreateFile(file_id_t file_id)
     return disk_manager_m.CreateFile(file_id);
 }
 
+bool PageBufferManager::FileExists(file_id_t file_id) const
+{
+    return disk_manager_m.FileExists(file_id);
+}
+
 std::optional<yadb::Error::Ptr> PageBufferManager::DeleteFile(file_id_t file_id)
 {
     std::unique_lock<std::mutex> lk(mut_m);

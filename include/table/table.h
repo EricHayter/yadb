@@ -6,6 +6,7 @@
 
 class Table {
 public:
+    using Ptr = std::shared_ptr<Table>;
     virtual ~Table() = 0;
 
     virtual TableCursor begin() = 0;

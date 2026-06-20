@@ -111,6 +111,11 @@ std::optional<yadb::Error::Ptr> DiskManager::CreateFile(file_id_t file_id)
     return std::nullopt;
 }
 
+bool DiskManager::FileExists(file_id_t file_id) const
+{
+    return std::filesystem::exists(GetFilePath(file_id));
+}
+
 std::optional<yadb::Error::Ptr> DiskManager::DeleteFile(file_id_t file_id)
 {
     std::lock_guard<std::mutex> lg(mut_m);

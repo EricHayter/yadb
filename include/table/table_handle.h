@@ -17,7 +17,7 @@ public:
     row_id_t update_row(const row_id_t& rid, const std::vector<Value>& values);
     void delete_row(const row_id_t& rid);
 
-    TableCursor begin();
+    TableCursor begin() const;
     std::default_sentinel_t end() const { return std::default_sentinel; }
 
     const Schema& GetSchema() const;

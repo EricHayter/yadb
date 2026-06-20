@@ -8,8 +8,10 @@
 constexpr file_id_t INVALID_FILE_ID = UINT32_MAX;
 
 // Reserved file IDs
-constexpr file_id_t TABLE_CATALOG_FILE_ID = 0;
-constexpr file_id_t COLUMN_CATALOG_FILE_ID = 1;
+// Only the mapping table needs a fixed id: it is the bootstrap root that every
+// other table (including the catalogs) is looked up through, so it can't be
+// resolved via the mapping itself. All other tables get auto-allocated ids.
+constexpr file_id_t DISK_TABLE_MAPPING_FILE_ID = 0;
 
 // File name constants
 constexpr std::string_view DISK_TABLE_MAPPING_FILE = "disk_table_mapping";
@@ -26,5 +28,5 @@ constexpr uint32_t MAX_FILE_ID_RETRIES = 10;
 // Helper function to check if a file ID is reserved
 constexpr bool IsReservedFileId(file_id_t file_id)
 {
-    return file_id == TABLE_CATALOG_FILE_ID || file_id == COLUMN_CATALOG_FILE_ID;
+    return file_id == DISK_TABLE_MAPPING_FILE_ID;
 }

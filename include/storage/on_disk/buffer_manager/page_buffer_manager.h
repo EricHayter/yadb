@@ -51,6 +51,8 @@ public:
     std::expected<file_id_t, yadb::Error::Ptr> CreateFile();
     std::optional<yadb::Error::Ptr> CreateFile(file_id_t file_id);
 
+    bool FileExists(file_id_t file_id) const;
+
     /**
      * Evicts all cached pages belonging to file_id and deletes the physical
      * file. Blocks until all pinned pages are released, up to a 5-second

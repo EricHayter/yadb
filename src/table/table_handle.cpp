@@ -56,7 +56,7 @@ void TableHandle::delete_row(const row_id_t& rid)
     storage_m->delete_row(rid);
 }
 
-TableCursor TableHandle::begin()
+TableCursor TableHandle::begin() const
 {
     return storage_m->begin();
 }

@@ -1,10 +1,8 @@
 #include "storage/on_disk/table/disk_table_factory.h"
-#include "catalog/catalog.h"
 #include "storage/on_disk/constants.h"
 #include "core/assert.h"
-#include "core/row_builder.h"
 #include "core/row_reader.h"
-#include "storage/on_disk/page/page_format.h"
+#include "storage/on_disk/heap/heap_page.h"
 #include "storage/on_disk/table/disk_table.h"
 #include <memory>
 
@@ -27,32 +25,52 @@ bool DiskTableFactory::CreateTableFile(std::string_view table_name, std::optiona
         actual_file_id = *result;
     }
 
-    mapping_manager_m.SaveMapping(table_name, actual_file_id);
+    // Reserved tables (mapping table) are resolved by their fixed
+    // file id and are never recorded in the mapping table.
+    if (!IsReservedFileId(actual_file_id))
+        mapping_manager_m.SaveMapping(table_name, actual_file_id);
 
-    auto page_result = page_buffer_manager_m->GetPage({ actual_file_id, 0 });
+    InitTableRootPage(actual_file_id);
+    return true;
+}
+
+void DiskTableFactory::InitTableRootPage(file_id_t file_id)
+{
+    // A freshly created file has no pages; allocate the root page to grow it.
+    auto alloc = page_buffer_manager_m->AllocatePage(file_id);
+    YADB_ASSERT(alloc.has_value(), alloc.error()->what().c_str());
+    YADB_ASSERT(*alloc == ROOT_PAGE_ID, "First allocated page must be the root page");
+
+    auto page_result = page_buffer_manager_m->GetPage({ file_id, ROOT_PAGE_ID });
     YADB_ASSERT(page_result.has_value(), page_result.error()->what().c_str());
     Page page = std::move(*page_result);
     std::lock_guard<Page> lk(page);
-    page::InitPage(page.GetMutView(), page::PageType::Data);
 
-    return true;
+    // Initialize as a heap page so the root's next/prev fields (which double as
+    // the full/partial page-list heads) start as NULL_PAGE_ID, i.e. empty table.
+    heap_page::InitPage(page.GetMutView());
+}
+
+TableHandle DiskTableFactory::OpenOrCreateMappingTable()
+{
+    if (!page_buffer_manager_m->FileExists(DISK_TABLE_MAPPING_FILE_ID)) {
+        auto err = page_buffer_manager_m->CreateFile(DISK_TABLE_MAPPING_FILE_ID);
+        YADB_ASSERT(!err.has_value(), (*err)->what().c_str());
+        InitTableRootPage(DISK_TABLE_MAPPING_FILE_ID);
+    }
+
+    auto storage = std::shared_ptr<Table>(new DiskTable(DISK_TABLE_MAPPING_FILE_ID, *page_buffer_manager_m));
+    return TableHandle { std::move(storage), MappingManager::MAPPING_SCHEMA };
 }
 
 DiskTableFactory::DiskTableFactory()
     : page_buffer_manager_m(std::make_unique<PageBufferManager>())
-    , mapping_manager_m()
+    , mapping_manager_m(OpenOrCreateMappingTable())
 {
 }
 
 bool DiskTableFactory::CreateTable(std::string_view table_name)
 {
-    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME || table_name == Catalog::COLUMN_CATALOG_TABLE_NAME) {
-        file_id_t reserved_id = (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
-            ? TABLE_CATALOG_FILE_ID
-            : COLUMN_CATALOG_FILE_ID;
-        return CreateTableFile(table_name, reserved_id);
-    }
-
     return CreateTableFile(table_name);
 }
 
@@ -78,23 +96,13 @@ bool DiskTableFactory::DeleteTable(std::string_view table_name)
     return true;
 }
 
-std::optional<file_id_t> DiskTableFactory::MappingManager::GetReservedFileId(std::string_view table_name)
-{
-    if (table_name == Catalog::TABLE_CATALOG_TABLE_NAME)
-        return TABLE_CATALOG_FILE_ID;
-    if (table_name == Catalog::COLUMN_CATALOG_TABLE_NAME)
-        return COLUMN_CATALOG_FILE_ID;
-    return {};
-}
+DiskTableFactory::MappingManager::MappingManager(TableHandle mapping_table)
+    : mapping_table_m(std::move(mapping_table))
+{}
 
 std::optional<file_id_t> DiskTableFactory::MappingManager::GetFileId(std::string_view table_name) const
 {
-    if (auto reserved = GetReservedFileId(table_name))
-        return reserved;
-
-    YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before looking up non-reserved table names");
-
-    for (auto [row_id, data] : *mapping_table_m) {
+    for (auto [row_id, data] : mapping_table_m) {
         RowReader rr(data, MAPPING_SCHEMA);
         if (rr.Get<DataType::TEXT>(0) == table_name)
             return static_cast<file_id_t>(rr.Get<DataType::INTEGER>(1));
@@ -104,34 +112,25 @@ std::optional<file_id_t> DiskTableFactory::MappingManager::GetFileId(std::string
 
 bool DiskTableFactory::MappingManager::SaveMapping(std::string_view table_name, file_id_t file_id)
 {
-    YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before saving non-reserved table mappings");
-
-    RowBuilder rb;
-    rb.Push<DataType::TEXT>(table_name);
-    rb.Push<DataType::INTEGER>(static_cast<std::int32_t>(file_id));
-    mapping_table_m->insert_row(rb.Data());
+    mapping_table_m.insert_row({
+        Value(std::string(table_name)),
+        Value(static_cast<std::int32_t>(file_id)),
+    });
     return true;
 }
 
 bool DiskTableFactory::MappingManager::DeleteMapping(std::string_view table_name)
 {
-    YADB_ASSERT(!GetReservedFileId(table_name).has_value(),
-        "Cannot delete mappings for reserved catalog tables");
-
-    YADB_ASSERT(mapping_table_m != nullptr, "Mapping table must be initialized before deleting non-reserved table mappings");
-
     std::optional<row_id_t> found_rid;
-    {
-        for (auto [row_id, data] : *mapping_table_m) {
-            RowReader rr(data, MAPPING_SCHEMA);
-            if (rr.Get<DataType::TEXT>(0) == table_name) {
-                found_rid = row_id;
-                break;
-            }
+    for (auto [row_id, data] : mapping_table_m) {
+        RowReader rr(data, MAPPING_SCHEMA);
+        if (rr.Get<DataType::TEXT>(0) == table_name) {
+            found_rid = row_id;
+            break;
         }
     }
     if (found_rid) {
-        mapping_table_m->delete_row(*found_rid);
+        mapping_table_m.delete_row(*found_rid);
         return true;
     }
     return false;

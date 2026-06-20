@@ -6,6 +6,8 @@
 #include "storage/on_disk/types.h"
 #include "storage/on_disk/buffer_manager/page_buffer_manager.h"
 #include "table/table_factory_interface.h"
+#include "table/table.h"
+#include "table/table_handle.h"
 
 class DiskTable;
 
@@ -44,18 +46,24 @@ class DiskTableFactory : public ITableFactory {
             { "file_id",   DataType::INTEGER },
         };
 
-        MappingManager() = default;
+        MappingManager(TableHandle mapping_table);
         std::optional<file_id_t> GetFileId(std::string_view table_name) const;
         bool SaveMapping(std::string_view table_name, file_id_t file_id);
         bool DeleteMapping(std::string_view table_name);
 
         private:
-        static std::optional<file_id_t> GetReservedFileId(std::string_view table_name);
-
-        std::shared_ptr<DiskTable> mapping_table_m;
+        TableHandle mapping_table_m;
     };
 
     bool CreateTableFile(std::string_view table_name, std::optional<file_id_t> file_id = {});
+
+    // Initializes the root page of a freshly created table file.
+    void InitTableRootPage(file_id_t file_id);
+
+    // Bootstraps the mapping table: creates and initializes its file on first
+    // run (it is itself a reserved table, so it can't be looked up via the
+    // mapping manager), then returns a handle over it for the manager to use.
+    TableHandle OpenOrCreateMappingTable();
 
     std::unique_ptr<PageBufferManager> page_buffer_manager_m;
     MappingManager mapping_manager_m;
