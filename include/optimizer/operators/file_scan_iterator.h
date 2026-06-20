@@ -1,17 +1,16 @@
 #pragma once
 
 #include "optimizer/operators/iterator.h"
-#include "table/table_iterator.h"
-#include <memory>
+#include "table/table_cursor.h"
 
 class FileScanIterator : public Iterator {
 public:
-    FileScanIterator(std::unique_ptr<TableIterator> table_iter);
+    explicit FileScanIterator(TableCursor table_iter);
 
     Iterator& operator++() override;
 
 private:
     void load_current();
 
-    std::unique_ptr<TableIterator> table_iter_m;
+    TableCursor table_iter_m;
 };

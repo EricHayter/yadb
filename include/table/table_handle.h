@@ -17,7 +17,9 @@ public:
     row_id_t update_row(const row_id_t& rid, const std::vector<Value>& values);
     void delete_row(const row_id_t& rid);
 
-    std::unique_ptr<TableIterator> iter();
+    TableCursor begin();
+    std::default_sentinel_t end() const { return std::default_sentinel; }
+
     const Schema& GetSchema() const;
     TableType GetType() const;
 

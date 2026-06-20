@@ -21,9 +21,9 @@ DiskTable::DiskTable(file_id_t file_id, PageBufferManager& page_buffer_manager)
 {
 }
 
-std::unique_ptr<TableIterator> DiskTable::iter()
+TableCursor DiskTable::begin()
 {
-    return std::make_unique<DiskTableIterator>(file_id_m, page_buffer_manager_m);
+    return TableCursor { std::make_unique<DiskTableIterator>(file_id_m, page_buffer_manager_m) };
 }
 
 row_id_t DiskTable::insert_row(std::span<const std::byte> row)

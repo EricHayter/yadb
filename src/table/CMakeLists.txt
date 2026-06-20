@@ -1,7 +1,6 @@
 add_library(yadb_table
     table.cpp
     table_handle.cpp
-    table_iterator.cpp
     table_manager.cpp
 )
 

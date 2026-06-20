@@ -1,4 +1,5 @@
 #include "storage/ephemeral/ephemeral_table_iterator.h"
+#include "core/assert.h"
 #include <stdexcept>
 
 EphemeralTableIterator::EphemeralTableIterator(std::map<row_id_t, std::vector<std::byte>>& data)
@@ -8,11 +9,23 @@ EphemeralTableIterator::EphemeralTableIterator(std::map<row_id_t, std::vector<st
     load_current();
 }
 
+TableIterator::value_type EphemeralTableIterator::operator*() const
+{
+    YADB_ASSERT(current_m.has_value(),
+        "Dereferencing a past-the-end table iterator");
+    return *current_m;
+}
+
 TableIterator& EphemeralTableIterator::operator++()
 {
     ++iterator_m;
     load_current();
     return *this;
+}
+
+bool EphemeralTableIterator::operator==(std::default_sentinel_t) const
+{
+    return iterator_m == data_m.end();
 }
 
 void EphemeralTableIterator::seek(row_id_t rid)

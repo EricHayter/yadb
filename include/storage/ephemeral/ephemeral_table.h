@@ -12,7 +12,7 @@ public:
     ~EphemeralTable() override = default;
 
     // Iterator interface
-    std::unique_ptr<TableIterator> iter() override;
+    TableCursor begin() override;
 
     // CRUD operations
     row_id_t insert_row(std::span<const std::byte> row) override;

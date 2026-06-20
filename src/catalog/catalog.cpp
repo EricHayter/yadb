@@ -53,8 +53,7 @@ void Catalog::CreateCatalogTables(ITableFactory& factory)
 
 void Catalog::LoadTableSchemas()
 {
-    auto iter = table_catalog_table_m->iter();
-    for (const auto& [row_id, row_data] : *iter) {
+    for (auto [row_id, row_data] : *table_catalog_table_m) {
         RowReader rr(row_data, table_catalog_schema);
         std::string table_name = rr.Get<DataType::TEXT>(0);
         std::int32_t table_type_int = rr.Get<DataType::INTEGER>(1);
@@ -69,8 +68,7 @@ void Catalog::LoadTableSchemas()
 
 void Catalog::LoadColumnSchemas()
 {
-    auto iter = column_catalog_table_m->iter();
-    for (const auto& [row_id, row_data] : *iter) {
+    for (auto [row_id, row_data] : *column_catalog_table_m) {
         RowReader rr(row_data, column_catalog_schema);
         std::string attribute_name = rr.Get<DataType::TEXT>(0);
         std::string relation_name = rr.Get<DataType::TEXT>(1);
@@ -119,8 +117,7 @@ bool Catalog::RemoveTable(std::string_view table_name)
     // invalidating the iterator while traversing.
     {
         std::vector<row_id_t> to_delete;
-        auto column_iter = column_catalog_table_m->iter();
-        for (const auto& [row_id, row_data] : *column_iter) {
+        for (auto [row_id, row_data] : *column_catalog_table_m) {
             RowReader rr(row_data, column_catalog_schema);
             if (rr.Get<DataType::TEXT>(1) == table_name)
                 to_delete.push_back(row_id);
@@ -132,8 +129,7 @@ bool Catalog::RemoveTable(std::string_view table_name)
     // Find and delete the table's entry from table_catalog.
     {
         std::optional<row_id_t> table_rid;
-        auto table_iter = table_catalog_table_m->iter();
-        for (const auto& [row_id, row_data] : *table_iter) {
+        for (auto [row_id, row_data] : *table_catalog_table_m) {
             RowReader rr(row_data, table_catalog_schema);
             if (rr.Get<DataType::TEXT>(0) == table_name) {
                 table_rid = row_id;

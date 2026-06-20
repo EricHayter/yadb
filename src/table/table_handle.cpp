@@ -56,9 +56,9 @@ void TableHandle::delete_row(const row_id_t& rid)
     storage_m->delete_row(rid);
 }
 
-std::unique_ptr<TableIterator> TableHandle::iter()
+TableCursor TableHandle::begin()
 {
-    return storage_m->iter();
+    return storage_m->begin();
 }
 
 const Schema& TableHandle::GetSchema() const

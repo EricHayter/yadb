@@ -11,7 +11,7 @@ class DiskTable : public Table {
 public:
     ~DiskTable() override = default;
 
-    std::unique_ptr<TableIterator> iter() override;
+    TableCursor begin() override;
     row_id_t insert_row(std::span<const std::byte> row) override;
     row_id_t update_row(const row_id_t& rid, std::span<const std::byte> data) override;
     void delete_row(const row_id_t& rid) override;

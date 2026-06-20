@@ -8,7 +8,9 @@
 class DiskTableIterator : public TableIterator {
 public:
     DiskTableIterator(file_id_t file_id, PageBufferManager& pbm);
+    TableIterator::value_type operator*() const override;
     TableIterator& operator++() override;
+    bool operator==(std::default_sentinel_t) const override;
     void seek(row_id_t rid) override;
 
 private:
@@ -22,5 +24,8 @@ private:
     page_id_t partial_pages_head_m;
     bool in_partial_list_m;
 
+    // Owns the bytes of the current row. The page it was read from is only
+    // pinned momentarily during advance, so we copy the record here to back the
+    // span handed out by operator*. Valid until the next advance.
     std::vector<std::byte> row_buffer_m;
 };

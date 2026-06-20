@@ -36,11 +36,26 @@ DiskTableIterator::DiskTableIterator(file_id_t file_id, PageBufferManager& pbm)
     advance_to_next_valid();
 }
 
+TableIterator::value_type DiskTableIterator::operator*() const
+{
+    YADB_ASSERT(current_page_id_m != NULL_PAGE_ID,
+        "Dereferencing a past-the-end table iterator");
+
+    // The returned Row's span points into row_buffer_m, which is refreshed on
+    // every advance. It is valid until the next operator++.
+    return Row{ MakeRowId(current_page_id_m, current_slot_m), row_buffer_m };
+}
+
 TableIterator& DiskTableIterator::operator++()
 {
     current_slot_m++;
     advance_to_next_valid();
     return *this;
+}
+
+bool DiskTableIterator::operator==(std::default_sentinel_t) const
+{
+    return current_page_id_m == NULL_PAGE_ID;
 }
 
 void DiskTableIterator::seek(row_id_t rid)
@@ -59,7 +74,6 @@ void DiskTableIterator::seek(row_id_t rid)
     row_buffer_m.assign(record.begin(), record.end());
     current_page_id_m = page_id;
     current_slot_m = slot_id;
-    current_m = Row(rid, std::span<const std::byte>(row_buffer_m.data(), row_buffer_m.size()));
 }
 
 void DiskTableIterator::advance_to_next_valid()
@@ -75,11 +89,10 @@ void DiskTableIterator::advance_to_next_valid()
 
             while (current_slot_m < capacity) {
                 if (!page::IsSlotDeleted(view, current_slot_m)) {
+                    // Copy the record out while we still hold the page lock; the
+                    // pinned page is released as soon as this scope exits.
                     auto record = page::ReadRecord(view, current_slot_m);
                     row_buffer_m.assign(record.begin(), record.end());
-                    current_m = Row(
-                        MakeRowId(current_page_id_m, current_slot_m),
-                        std::span<const std::byte>(row_buffer_m.data(), row_buffer_m.size()));
                     return;
                 }
                 current_slot_m++;
@@ -98,6 +111,4 @@ void DiskTableIterator::advance_to_next_valid()
         }
         current_slot_m = 0;
     }
-
-    current_m = std::nullopt;
 }

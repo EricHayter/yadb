@@ -26,7 +26,7 @@ std::unique_ptr<Iterator> Optimizer::get_execution_iterator(const SelectStmt& st
     const Schema& schema = table->GetSchema();
 
     // Create base FileScanIterator from table's iterator
-    std::unique_ptr<Iterator> iter = std::make_unique<FileScanIterator>(table->iter());
+    std::unique_ptr<Iterator> iter = std::make_unique<FileScanIterator>(table->begin());
 
     // Apply WHERE clause if present (selection)
     if (stmt.where_clause) {

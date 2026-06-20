@@ -23,9 +23,9 @@ row_id_t EphemeralTable::GenerateRowId()
     return MakeRowId(page_id, slot_id);
 }
 
-std::unique_ptr<TableIterator> EphemeralTable::iter()
+TableCursor EphemeralTable::begin()
 {
-    return std::make_unique<EphemeralTableIterator>(table_data_m);
+    return TableCursor { std::make_unique<EphemeralTableIterator>(table_data_m) };
 }
 
 row_id_t EphemeralTable::insert_row(std::span<const std::byte> row)

@@ -149,8 +149,8 @@ TEST_P(TableManagerTest, DeleteAndRecreate)
     auto table = table_manager->GetTable(name);
     ASSERT_TRUE(table);
 
-    auto iter = table->iter();
-    EXPECT_TRUE(*iter == std::default_sentinel_t {}); // empty after recreation
+    auto iter = table->begin();
+    EXPECT_TRUE(iter == std::default_sentinel_t {}); // empty after recreation
 }
 
 // --- Data round-trips ---
@@ -170,20 +170,20 @@ TEST_P(TableManagerTest, DataRoundTrip)
     // Read back through a fresh handle to verify persistence
     auto handle = table_manager->GetTable(name);
     ASSERT_TRUE(handle);
-    auto iter = handle->iter();
-    ASSERT_FALSE(*iter == std::default_sentinel_t {});
-    RowReader rr1((**iter).second, schema);
+    auto iter = handle->begin();
+    ASSERT_FALSE(iter == std::default_sentinel_t {});
+    RowReader rr1((*iter).second, schema);
     EXPECT_EQ(rr1.Get<DataType::INTEGER>(0), 1);
     EXPECT_EQ(rr1.Get<DataType::TEXT>(1), "alpha");
 
-    ++(*iter);
-    ASSERT_FALSE(*iter == std::default_sentinel_t {});
-    RowReader rr2((**iter).second, schema);
+    ++iter;
+    ASSERT_FALSE(iter == std::default_sentinel_t {});
+    RowReader rr2((*iter).second, schema);
     EXPECT_EQ(rr2.Get<DataType::INTEGER>(0), 2);
     EXPECT_EQ(rr2.Get<DataType::TEXT>(1), "beta");
 
-    ++(*iter);
-    EXPECT_TRUE(*iter == std::default_sentinel_t {});
+    ++iter;
+    EXPECT_TRUE(iter == std::default_sentinel_t {});
 }
 
 TEST_P(TableManagerTest, MultipleRowsRoundTrip)
@@ -205,9 +205,8 @@ TEST_P(TableManagerTest, MultipleRowsRoundTrip)
         });
     }
 
-    auto iter = table->iter();
     int count = 0;
-    for (const auto& [row_id, row_data] : *iter) {
+    for (auto [row_id, row_data] : *table) {
         RowReader rr(row_data, schema);
         EXPECT_EQ(rr.Get<DataType::INTEGER>(0), count);
         EXPECT_EQ(rr.Get<DataType::TEXT>(1), std::string("name_") + std::to_string(count));
