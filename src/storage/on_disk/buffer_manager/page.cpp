@@ -66,6 +66,9 @@ void Page::unlock_shared()
 
 MutFullPage Page::GetMutView() const
 {
+    // Handing out a mutable view means the page is about to be written, so mark
+    // the frame dirty; otherwise eviction would silently drop the changes.
+    frame_m->is_dirty.store(true, std::memory_order_release);
     return frame_m->data;
 }
 
