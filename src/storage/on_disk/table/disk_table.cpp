@@ -28,40 +28,41 @@ TableCursor DiskTable::begin()
 
 row_id_t DiskTable::insert_row(std::span<const std::byte> row)
 {
-    page_id_t current_page_id = ROOT_PAGE_ID;
-    page_id_t next_page_id = NULL_PAGE_ID;
+    // Read the head of the partial list (pages with room) off the root.
+    page_id_t next_page_id;
+    {
+        Page root = MustGetPage(page_buffer_manager_m, { file_id_m, ROOT_PAGE_ID });
+        std::lock_guard<Page> lg(root);
+        next_page_id = heap_page::GetPartialPagesHead(root.GetView());
+    }
 
-    Page page = MustGetPage(page_buffer_manager_m,{ file_id_m, ROOT_PAGE_ID });
-    std::unique_lock<Page> lk(page);
-    next_page_id = heap_page::GetPartialPagesHead(page.GetView());
-
-    // Finding a place for insert
+    // Walk the partial list one page at a time looking for room.
+    page_id_t last_partial_id = NULL_PAGE_ID;
     while (next_page_id != NULL_PAGE_ID) {
-        Page next_page = MustGetPage(page_buffer_manager_m,{ file_id_m, next_page_id });
-        std::unique_lock<Page> new_lk(next_page);
-        std::swap(new_lk, lk);
-        std::swap(page, next_page);
+        Page page = MustGetPage(page_buffer_manager_m, { file_id_m, next_page_id });
+        std::lock_guard<Page> lg(page);
+
         std::optional<slot_id_t> insert_loc = page::AllocateSlot(page.GetMutView(), row.size());
         if (insert_loc) {
             auto slot_span = page::WriteRecord(page.GetMutView(), *insert_loc);
             std::copy(row.begin(), row.end(), slot_span.begin());
-            return MakeRowId(page.GetFilePageId().page_id, *insert_loc);
+            return MakeRowId(next_page_id, *insert_loc);
         }
 
-        current_page_id = next_page_id;
+        last_partial_id = next_page_id;
         next_page_id = heap_page::GetNextPage(page.GetView());
     }
 
-    row_id_t inserted_row_id;
+    // No partial page had room: allocate a new page and write the row.
     auto alloc = page_buffer_manager_m.AllocatePage(file_id_m);
     YADB_ASSERT(alloc.has_value(), alloc.error()->what().c_str());
     page_id_t new_page_id = *alloc;
-    // create new node in the linked list
+
+    row_id_t inserted_row_id;
     {
-        Page new_page = MustGetPage(page_buffer_manager_m,{ file_id_m, new_page_id });
+        Page new_page = MustGetPage(page_buffer_manager_m, { file_id_m, new_page_id });
         std::lock_guard<Page> lg(new_page);
         heap_page::InitPage(new_page.GetMutView());
-        heap_page::SetPrevPage(new_page.GetMutView(), current_page_id);
 
         std::optional<slot_id_t> insert_loc = page::AllocateSlot(new_page.GetMutView(), row.size());
         auto slot_span = page::WriteRecord(new_page.GetMutView(), *insert_loc);
@@ -69,14 +70,18 @@ row_id_t DiskTable::insert_row(std::span<const std::byte> row)
         inserted_row_id = MakeRowId(new_page_id, *insert_loc);
     }
 
-    // Link the new (non-full) page into the partial list so later inserts reuse
-    // it and the iterator can reach it. When the partial list was empty, `page`
-    // is the root and the new page becomes the partial head; otherwise it is
-    // appended after the last full partial page we visited.
-    if (current_page_id == ROOT_PAGE_ID)
-        heap_page::SetPrevPage(page.GetMutView(), new_page_id);
-    else
-        heap_page::SetNextPage(page.GetMutView(), new_page_id);
+    // Link the new page into the partial list so later inserts reuse it and the
+    // iterator reaches it: it becomes the head (the root's partial-list pointer)
+    // when the list was empty, otherwise it is appended after the last page.
+    if (last_partial_id == NULL_PAGE_ID) {
+        Page root = MustGetPage(page_buffer_manager_m, { file_id_m, ROOT_PAGE_ID });
+        std::lock_guard<Page> lg(root);
+        heap_page::SetPrevPage(root.GetMutView(), new_page_id);
+    } else {
+        Page last_page = MustGetPage(page_buffer_manager_m, { file_id_m, last_partial_id });
+        std::lock_guard<Page> lg(last_page);
+        heap_page::SetNextPage(last_page.GetMutView(), new_page_id);
+    }
 
     return inserted_row_id;
 }
