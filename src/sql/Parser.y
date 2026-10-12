@@ -134,7 +134,7 @@
 %type <DropTableStmt> drop_stmt
 %type <DeleteStmt> delete_stmt
 %type <UpdateStmt> update_stmt
-%type <bool> column_list
+%type <std::vector<std::string>> select_list column_list
 %type <Schema> column_def_list
 %type <RelationAttribute> column_def
 %type <TypeId> data_type
@@ -161,26 +161,39 @@ sql_stmt:
     ;
 
 select_stmt:
-    SELECT column_list FROM table_name {
+    SELECT select_list FROM table_name {
         SelectStmt stmt;
-        stmt.select_all = $2;
+        // an empty select list means SELECT *
+        stmt.select_all = $2.empty();
+        stmt.columns = $2;
         stmt.table_name = $4;
         stmt.where_clause = nullptr;
         $$ = std::move(stmt);
     }
-    | SELECT column_list FROM table_name WHERE condition {
+    | SELECT select_list FROM table_name WHERE condition {
         SelectStmt stmt;
-        stmt.select_all = $2;
+        // an empty select list means SELECT *
+        stmt.select_all = $2.empty();
+        stmt.columns = $2;
         stmt.table_name = $4;
         stmt.where_clause = std::move($6);
         $$ = std::move(stmt);
     }
     ;
 
+select_list:
+    STAR                        { $$ = std::vector<std::string>{}; }
+    | column_list               { $$ = $1; }
+    ;
+
 column_list:
-    STAR                        { $$ = true; }
-    | column_name               { $$ = false; }
-    | column_list COMMA column_name { $$ = false; }
+    column_name {
+        $$ = std::vector<std::string>{$1};
+    }
+    | column_list COMMA column_name {
+        $1.push_back($3);
+        $$ = $1;
+    }
     ;
 
 insert_stmt:
@@ -193,7 +206,7 @@ insert_stmt:
     | INSERT INTO table_name LPAREN column_list RPAREN VALUES LPAREN value_list RPAREN {
         InsertStmt stmt;
         stmt.table_name = $3;
-        // TODO: capture column names from $5
+        stmt.columns = $5;
         stmt.values = $9;
         $$ = stmt;
     }
