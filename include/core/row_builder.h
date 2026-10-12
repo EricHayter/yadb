@@ -1,10 +1,8 @@
 #pragma once
 
-#include "common/definitions.h"
-#include <cstring>
+#include "common/datatypes.h"
 #include <span>
-#include <string_view>
-#include <type_traits>
+#include <stdexcept>
 
 class RowBuilder {
 public:
@@ -19,8 +17,8 @@ public:
     RowBuilder(RowBuilder&& other) noexcept;
     RowBuilder& operator=(RowBuilder&& other) noexcept;
 
-    template <DataType T>
-    void Push(auto data);
+    void Push(const DataType auto& value);
+    void Push(const Value& value);
 
     std::span<const std::byte> Data() const { return { data_m, size_m }; };
 
@@ -35,34 +33,14 @@ private:
     std::byte* data_m { nullptr };
 };
 
-template <DataType T>
-void RowBuilder::Push(auto data)
+void RowBuilder::Push(const DataType auto& value)
 {
-    if constexpr (T == DataType::INTEGER) {
-        using IntegerType = type_for<DataType::INTEGER>;
-        static_assert(std::is_convertible_v<decltype(data), IntegerType>,
-            "Push<DataType::INTEGER> requires data convertible to integer type");
-        IntegerType integer_data = static_cast<IntegerType>(data);
-        std::size_t required_size = size_m + sizeof(integer_data);
-        if (required_size > capacity_m)
-            AllocateSpace(required_size);
-        std::memcpy(data_m + size_m, &integer_data, sizeof(integer_data));
-        size_m += sizeof(integer_data);
-    } else if constexpr (T == DataType::TEXT) {
-        static_assert(std::is_convertible_v<decltype(data), std::string_view>,
-            "Push<DataType::TEXT> requires data convertible to std::string_view");
-        std::string_view string_data = static_cast<std::string_view>(data);
-        string_length_t string_length = static_cast<string_length_t>(string_data.size());
-        std::size_t required_size = size_m + string_length + sizeof(string_length);
-        if (capacity_m < required_size)
-            AllocateSpace(required_size);
+    std::size_t required_size = size_m + value.serialized_size();
+    if (required_size > capacity_m)
+        AllocateSpace(required_size);
 
-        // write string length first
-        std::memcpy(data_m + size_m, &string_length, sizeof(string_length));
-        size_m += sizeof(string_length);
-
-        // write string data
-        std::memcpy(data_m + size_m, string_data.data(), string_length);
-        size_m += string_length;
-    }
+    auto err = value.to_bytes({ data_m + size_m, capacity_m - size_m });
+    if (err)
+        throw std::runtime_error((*err)->what());
+    size_m = required_size;
 }

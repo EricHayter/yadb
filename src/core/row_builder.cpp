@@ -39,6 +39,11 @@ RowBuilder& RowBuilder::operator=(RowBuilder&& other) noexcept
     return *this;
 }
 
+void RowBuilder::Push(const Value& value)
+{
+    std::visit([this](const auto& v) { Push(v); }, value);
+}
+
 void RowBuilder::AllocateSpace()
 {
     void* new_data;

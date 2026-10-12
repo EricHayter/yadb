@@ -3,19 +3,20 @@
 #include "core/assert.h"
 #include "core/row_reader.h"
 #include "table/table_factory_interface.h"
+#include <format>
 #include <stdexcept>
 
 const Schema Catalog::table_catalog_schema = {
-    { "table_name", DataType::TEXT },
-    { "type", DataType::INTEGER },
-    { "num_attributes", DataType::INTEGER },
+    { "table_name", type_id<String> },
+    { "type", type_id<I32> },
+    { "num_attributes", type_id<I32> },
 };
 
 const Schema Catalog::column_catalog_schema = {
-    { "attr_name", DataType::TEXT },
-    { "rel_name", DataType::TEXT },
-    { "type", DataType::INTEGER },
-    { "position", DataType::INTEGER },
+    { "attr_name", type_id<String> },
+    { "rel_name", type_id<String> },
+    { "type", type_id<I32> },
+    { "position", type_id<I32> },
 };
 
 Catalog::Catalog(ITableFactory& factory)
@@ -55,9 +56,9 @@ void Catalog::LoadTableSchemas()
 {
     for (auto [row_id, row_data] : *table_catalog_table_m) {
         RowReader rr(row_data, table_catalog_schema);
-        std::string table_name = rr.Get<DataType::TEXT>(0);
-        std::int32_t table_type_int = rr.Get<DataType::INTEGER>(1);
-        std::int32_t num_attributes = rr.Get<DataType::INTEGER>(2);
+        std::string table_name = rr.Get<String>(0).value;
+        std::int32_t table_type_int = rr.Get<I32>(1).value;
+        std::int32_t num_attributes = rr.Get<I32>(2).value;
 
         table_info_m[table_name] = TableInfo {
             .type = static_cast<TableType>(table_type_int),
@@ -70,13 +71,15 @@ void Catalog::LoadColumnSchemas()
 {
     for (auto [row_id, row_data] : *column_catalog_table_m) {
         RowReader rr(row_data, column_catalog_schema);
-        std::string attribute_name = rr.Get<DataType::TEXT>(0);
-        std::string relation_name = rr.Get<DataType::TEXT>(1);
-        DataType attribute_type = static_cast<DataType>(rr.Get<DataType::INTEGER>(2));
-        std::int32_t position = rr.Get<DataType::INTEGER>(3);
+        std::string attribute_name = rr.Get<String>(0).value;
+        std::string relation_name = rr.Get<String>(1).value;
+        std::int32_t attribute_type = rr.Get<I32>(2).value;
+        if (!IsValidTypeId(attribute_type))
+            throw std::runtime_error(std::format("Catalog corrupted: column {} has unknown type id {}", attribute_name, attribute_type));
+        std::int32_t position = rr.Get<I32>(3).value;
 
         table_info_m[relation_name].schema[static_cast<std::size_t>(position)].name = attribute_name;
-        table_info_m[relation_name].schema[static_cast<std::size_t>(position)].type = attribute_type;
+        table_info_m[relation_name].schema[static_cast<std::size_t>(position)].type = static_cast<TypeId>(attribute_type);
     }
 }
 
@@ -86,18 +89,18 @@ bool Catalog::AddTable(std::string_view table_name, TableType table_type, const 
         return false;
 
     table_catalog_table_m->insert_row({
-        Value(std::string(table_name)),
-        Value(static_cast<std::int32_t>(table_type)),
-        Value(static_cast<std::int32_t>(schema.size())),
+        Value(String { std::string(table_name) }),
+        Value(I32 { static_cast<std::int32_t>(table_type) }),
+        Value(I32 { static_cast<std::int32_t>(schema.size()) }),
     });
 
     std::int32_t position = 0;
     for (const auto& attribute : schema) {
         column_catalog_table_m->insert_row({
-            Value(std::string(attribute.name)),
-            Value(std::string(table_name)),
-            Value(static_cast<std::int32_t>(attribute.type)),
-            Value(position),
+            Value(String { std::string(attribute.name) }),
+            Value(String { std::string(table_name) }),
+            Value(I32 { static_cast<std::int32_t>(attribute.type) }),
+            Value(I32 { position }),
         });
         position++;
     }
@@ -119,7 +122,7 @@ bool Catalog::RemoveTable(std::string_view table_name)
         std::vector<row_id_t> to_delete;
         for (auto [row_id, row_data] : *column_catalog_table_m) {
             RowReader rr(row_data, column_catalog_schema);
-            if (rr.Get<DataType::TEXT>(1) == table_name)
+            if (rr.Get<String>(1).value == table_name)
                 to_delete.push_back(row_id);
         }
         for (row_id_t rid : to_delete)
@@ -131,7 +134,7 @@ bool Catalog::RemoveTable(std::string_view table_name)
         std::optional<row_id_t> table_rid;
         for (auto [row_id, row_data] : *table_catalog_table_m) {
             RowReader rr(row_data, table_catalog_schema);
-            if (rr.Get<DataType::TEXT>(0) == table_name) {
+            if (rr.Get<String>(0).value == table_name) {
                 table_rid = row_id;
                 break;
             }
@@ -170,14 +173,14 @@ TableType Catalog::GetTableType(std::string_view table_name) const
 void Catalog::InitializeTableCatalogTable()
 {
     table_catalog_table_m->insert_row({
-        Value(std::string("table_catalog")),
-        Value(static_cast<std::int32_t>(TableType::InMemory)),
-        Value(static_cast<std::int32_t>(table_catalog_schema.size())),
+        Value(String { std::string("table_catalog") }),
+        Value(I32 { static_cast<std::int32_t>(TableType::InMemory) }),
+        Value(I32 { static_cast<std::int32_t>(table_catalog_schema.size()) }),
     });
     table_catalog_table_m->insert_row({
-        Value(std::string("column_catalog")),
-        Value(static_cast<std::int32_t>(TableType::InMemory)),
-        Value(static_cast<std::int32_t>(column_catalog_schema.size())),
+        Value(String { std::string("column_catalog") }),
+        Value(I32 { static_cast<std::int32_t>(TableType::InMemory) }),
+        Value(I32 { static_cast<std::int32_t>(column_catalog_schema.size()) }),
     });
 }
 
@@ -186,10 +189,10 @@ void Catalog::InitializeColumnCatalogTable()
     std::int32_t position = 0;
     for (const auto& attribute : table_catalog_schema) {
         column_catalog_table_m->insert_row({
-            Value(std::string(attribute.name)),
-            Value(std::string("table_catalog")),
-            Value(static_cast<std::int32_t>(attribute.type)),
-            Value(position),
+            Value(String { std::string(attribute.name) }),
+            Value(String { std::string("table_catalog") }),
+            Value(I32 { static_cast<std::int32_t>(attribute.type) }),
+            Value(I32 { position }),
         });
         position++;
     }
@@ -197,10 +200,10 @@ void Catalog::InitializeColumnCatalogTable()
     position = 0;
     for (const auto& attribute : column_catalog_schema) {
         column_catalog_table_m->insert_row({
-            Value(std::string(attribute.name)),
-            Value(std::string("column_catalog")),
-            Value(static_cast<std::int32_t>(attribute.type)),
-            Value(position),
+            Value(String { std::string(attribute.name) }),
+            Value(String { std::string("column_catalog") }),
+            Value(I32 { static_cast<std::int32_t>(attribute.type) }),
+            Value(I32 { position }),
         });
         position++;
     }

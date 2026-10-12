@@ -3,7 +3,6 @@
 #include "catalog/catalog.h"
 #include "common/definitions.h"
 #include "core/assert.h"
-#include <cstring>
 #include <format>
 
 class RowReader {
@@ -11,7 +10,10 @@ public:
     RowReader(std::span<const std::byte> data, const Schema& schema);
 
     template <DataType T>
-    type_for<T> Get(std::size_t pos);
+    T Get(std::size_t pos);
+
+    // Reads the value at pos as whatever type the schema says it is.
+    Value GetValue(std::size_t pos);
 
     // TODO maybe create an iterator for more efficient reading if there's lots
     // of variable length types in the row. Not super high priority I don't
@@ -28,30 +30,24 @@ private:
     // Calculates the offset of the pos inside of the row based on the schema
     // information.
     std::size_t CalculateOffset(size_t pos);
+    // Size of the encoded value of the given type at the start of offset.
+    std::size_t SizeAt(TypeId type, std::size_t offset);
 
     const Schema& schema_m;
     std::span<const std::byte> data_m;
 };
 
 template <DataType T>
-type_for<T> RowReader::Get(std::size_t pos)
+T RowReader::Get(std::size_t pos)
 {
-    YADB_ASSERT(T == schema_m[pos].type,
+    YADB_ASSERT(type_id<T> == schema_m[pos].type,
         std::format("Popped type does not conform with schema. Expected: {}, Actual: {}",
-            ToString(T),
-            ToString(schema_m[pos].type))
+            T::type_str,
+            TypeName(schema_m[pos].type))
             .c_str());
 
-    std::size_t offset = CalculateOffset(pos);
-
-    if constexpr (T == DataType::INTEGER) {
-        type_for<T> popped;
-        std::memcpy(&popped, data_m.data() + offset, sizeof(popped));
-        return popped;
-    } else if constexpr (T == DataType::TEXT) {
-        string_length_t str_len;
-        std::memcpy(&str_len, data_m.data() + offset, sizeof(string_length_t));
-        offset += sizeof(string_length_t);
-        return std::string(reinterpret_cast<const char*>(data_m.data() + offset), str_len);
-    }
+    auto value = T::from_bytes(data_m.subspan(CalculateOffset(pos)));
+    YADB_ASSERT(value.has_value(),
+        std::format("Failed to read {} at position {}: {}", T::type_str, pos, value ? "" : value.error()->what()).c_str());
+    return std::move(*value);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/definitions.h"
+#include "core/row_builder.h"
 #include "table/table.h"
 #include <memory>
 #include <vector>
@@ -24,6 +25,8 @@ public:
     TableType GetType() const;
 
 private:
+    RowBuilder BuildRow(const std::vector<Value>& values) const;
+
     std::shared_ptr<Table> storage_m;
     Schema schema_m;
 };

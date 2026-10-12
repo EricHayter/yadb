@@ -1,6 +1,6 @@
 %{
 #include <string>
-#include <cstdlib>
+#include <iostream>
 #include "Parser.h"
 
 // yylval will be passed as a parameter
@@ -30,8 +30,6 @@
 "SET"                   { return yy::parser::token::SET; }
 "AND"                   { return yy::parser::token::AND; }
 "OR"                    { return yy::parser::token::OR; }
-"INTEGER"               { return yy::parser::token::INTEGER; }
-"TEXT"                  { return yy::parser::token::TEXT; }
 
 "*"                     { return yy::parser::token::STAR; }
 "("                     { return yy::parser::token::LPAREN; }
@@ -49,12 +47,13 @@
     yylval->build<std::string>(yytext);
     return yy::parser::token::IDENTIFIER;
 }
-[0-9]+                  {
-    yylval->build<int>(std::atoi(yytext));
+-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)? {
+    yylval->build<std::string>(yytext);
     return yy::parser::token::NUMBER;
 }
 '[^']*'                 {
-    yylval->build<std::string>(yytext);
+    // strip the surrounding quotes
+    yylval->build<std::string>(std::string(yytext + 1, static_cast<std::size_t>(yyleng) - 2));
     return yy::parser::token::STRING;
 }
 

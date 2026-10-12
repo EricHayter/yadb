@@ -36,16 +36,16 @@ protected:
 
     Schema CreateSimpleSchema()
     {
-        return { { "id", DataType::INTEGER } };
+        return { { "id", type_id<I32> } };
     }
 
     Schema CreateComplexSchema()
     {
         return {
-            { "id", DataType::INTEGER },
-            { "name", DataType::TEXT },
-            { "value", DataType::INTEGER },
-            { "flag", DataType::INTEGER }
+            { "id", type_id<I32> },
+            { "name", type_id<String> },
+            { "value", type_id<I32> },
+            { "flag", type_id<I32> }
         };
     }
 
@@ -158,14 +158,14 @@ TEST_P(TableManagerTest, DeleteAndRecreate)
 TEST_P(TableManagerTest, DataRoundTrip)
 {
     auto name = GenerateUniqueTableName();
-    Schema schema = { { "id", DataType::INTEGER }, { "label", DataType::TEXT } };
+    Schema schema = { { "id", type_id<I32> }, { "label", type_id<String> } };
     ASSERT_TRUE(CreateAndTrackTable(name, GetParam(), schema));
 
     auto table = table_manager->GetTable(name);
     ASSERT_TRUE(table);
 
-    table->insert_row({ Value(1), Value(std::string("alpha")) });
-    table->insert_row({ Value(2), Value(std::string("beta")) });
+    table->insert_row({ Value(I32 { 1 }), Value(String { "alpha" }) });
+    table->insert_row({ Value(I32 { 2 }), Value(String { "beta" }) });
 
     // Read back through a fresh handle to verify persistence
     auto handle = table_manager->GetTable(name);
@@ -173,14 +173,14 @@ TEST_P(TableManagerTest, DataRoundTrip)
     auto iter = handle->begin();
     ASSERT_FALSE(iter == std::default_sentinel_t {});
     RowReader rr1((*iter).second, schema);
-    EXPECT_EQ(rr1.Get<DataType::INTEGER>(0), 1);
-    EXPECT_EQ(rr1.Get<DataType::TEXT>(1), "alpha");
+    EXPECT_EQ(rr1.Get<I32>(0).value, 1);
+    EXPECT_EQ(rr1.Get<String>(1).value, "alpha");
 
     ++iter;
     ASSERT_FALSE(iter == std::default_sentinel_t {});
     RowReader rr2((*iter).second, schema);
-    EXPECT_EQ(rr2.Get<DataType::INTEGER>(0), 2);
-    EXPECT_EQ(rr2.Get<DataType::TEXT>(1), "beta");
+    EXPECT_EQ(rr2.Get<I32>(0).value, 2);
+    EXPECT_EQ(rr2.Get<String>(1).value, "beta");
 
     ++iter;
     EXPECT_TRUE(iter == std::default_sentinel_t {});
@@ -198,20 +198,20 @@ TEST_P(TableManagerTest, MultipleRowsRoundTrip)
     constexpr int ROW_COUNT = 10;
     for (int i = 0; i < ROW_COUNT; ++i) {
         table->insert_row({
-            Value(std::int32_t(i)),
-            Value(std::string("name_") + std::to_string(i)),
-            Value(i * 10),
-            Value(i % 2),
+            Value(I32 { std::int32_t(i) }),
+            Value(String { std::string("name_") + std::to_string(i) }),
+            Value(I32 { i * 10 }),
+            Value(I32 { i % 2 }),
         });
     }
 
     int count = 0;
     for (auto [row_id, row_data] : *table) {
         RowReader rr(row_data, schema);
-        EXPECT_EQ(rr.Get<DataType::INTEGER>(0), count);
-        EXPECT_EQ(rr.Get<DataType::TEXT>(1), std::string("name_") + std::to_string(count));
-        EXPECT_EQ(rr.Get<DataType::INTEGER>(2), count * 10);
-        EXPECT_EQ(rr.Get<DataType::INTEGER>(3), count % 2);
+        EXPECT_EQ(rr.Get<I32>(0).value, count);
+        EXPECT_EQ(rr.Get<String>(1).value, std::string("name_") + std::to_string(count));
+        EXPECT_EQ(rr.Get<I32>(2).value, count * 10);
+        EXPECT_EQ(rr.Get<I32>(3).value, count % 2);
         ++count;
     }
     EXPECT_EQ(count, ROW_COUNT);

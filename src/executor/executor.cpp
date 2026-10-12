@@ -79,8 +79,21 @@ Executor::ExecutionResult Executor::execute(const InsertStmt& stmt)
     if (!table)
         return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };
 
+    const Schema& schema = table->GetSchema();
+    if (stmt.values.size() != schema.size())
+        return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };
+
+    std::vector<Value> values;
+    values.reserve(stmt.values.size());
+    for (std::size_t i = 0; i < stmt.values.size(); ++i) {
+        auto value = ValueFromString(schema[i].type, stmt.values[i].text);
+        if (!value)
+            return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };
+        values.push_back(std::move(*value));
+    }
+
     try {
-        table->insert_row(stmt.values);
+        table->insert_row(values);
         return ExecutionResult { .success = true, .rows = std::nullopt, .schema = std::nullopt };
     } catch (const std::exception&) {
         return ExecutionResult { .success = false, .rows = std::nullopt, .schema = std::nullopt };

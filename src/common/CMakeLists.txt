@@ -1,5 +1,5 @@
 add_library(yadb_common
-    definitions.cpp
+    datatypes.cpp
 )
 
 target_include_directories(yadb_common PUBLIC ${CMAKE_SOURCE_DIR}/include)

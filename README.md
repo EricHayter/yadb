@@ -87,9 +87,9 @@ Here's a quick demo of what YADB can currently do:
 CREATE TABLE users (name TEXT, age INTEGER);
 
 -- Insert some data
-INSERT INTO users VALUES (Alice, 30);
-INSERT INTO users VALUES (Bob, 25);
-INSERT INTO users VALUES (Charlie, 35);
+INSERT INTO users VALUES ('Alice', 30);
+INSERT INTO users VALUES ('Bob', 25);
+INSERT INTO users VALUES ('Charlie', 35);
 
 -- Query the data
 SELECT * FROM users;
@@ -155,8 +155,16 @@ CREATE TABLE table_name (
 ```
 
 **Supported Types:**
-- `INTEGER` - 32-bit signed integer
-- `TEXT` - Variable-length string
+
+| Type | Aliases | Description |
+|------|---------|-------------|
+| `I32` | `INTEGER`, `INT` | 32-bit signed integer |
+| `U32` | | 32-bit unsigned integer |
+| `I64` | `BIGINT` | 64-bit signed integer |
+| `F64` | `DOUBLE` | 64-bit floating point |
+| `String` | `TEXT` | Variable-length string (up to 65,535 bytes) |
+
+Type names are case-insensitive, so `i64`, `I64` and `bigint` are all accepted.
 
 **Example:**
 ```sql
@@ -170,12 +178,13 @@ INSERT INTO table_name VALUES (value1, value2, ...);
 ```
 
 **Notes:**
-- Values must match the column order and types from the table definition
-- TEXT values do not require quotes
+- Values must match the column order from the table definition
+- String values must be wrapped in single quotes (`'Alice'`); numbers are written as-is (`30`, `-2.5`, `1e9`)
+- Each value is parsed as the type of its column, so a value that doesn't fit (e.g. `-1` for a `U32` column) is rejected
 
 **Example:**
 ```sql
-INSERT INTO users VALUES (Alice, 30);
+INSERT INTO users VALUES ('Alice', 30);
 ```
 
 ### SELECT
@@ -193,12 +202,16 @@ SELECT * FROM table_name [WHERE condition];
 - `<=` - Less than or equal
 - `>=` - Greater than or equal
 
+**Notes:**
+- Unquoted names refer to columns and quoted values are literals, so compare against strings with `name = 'Alice'`
+- A literal takes on the type of the column it is compared with; comparing two columns of different types is an error
+
 **Examples:**
 ```sql
 SELECT * FROM users;
 SELECT name FROM users;
 SELECT name, age FROM users WHERE age > 25;
-SELECT * FROM users WHERE name = Alice;
+SELECT * FROM users WHERE name = 'Alice';
 ```
 
 ---

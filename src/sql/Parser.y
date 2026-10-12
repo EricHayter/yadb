@@ -30,11 +30,24 @@
         OR
     };
 
-    // Simple comparison: operands are Values (either literals or will be resolved from column names)
+    // A literal as written in the query. It is untyped until it meets a column
+    // (or the schema in an INSERT), at which point it is parsed with
+    // ValueFromString for that column's type.
+    struct Literal {
+        std::string text;
+    };
+
+    struct ColumnRef {
+        std::string name;
+    };
+
+    using Operand = std::variant<ColumnRef, Literal>;
+
+    // Simple comparison between columns and/or literals
     struct Comparison {
-        Value left;
+        Operand left;
         ComparisonOp op;
-        Value right;
+        Operand right;
     };
 
     // Compound condition: condition AND/OR condition
@@ -60,7 +73,7 @@
     struct InsertStmt {
         std::string table_name;
         std::vector<std::string> columns;  // Optional: empty if not specified
-        std::vector<Value> values;
+        std::vector<Literal> values;
     };
 
     struct CreateTableStmt {
@@ -105,11 +118,10 @@
 }
 
 %token SELECT FROM WHERE INSERT INTO VALUES CREATE TABLE DROP DELETE UPDATE SET
-%token AND OR INTEGER TEXT
+%token AND OR
 %token STAR LPAREN RPAREN COMMA SEMICOLON
 %token EQ NEQ LT GT LE GE
-%token <std::string> IDENTIFIER STRING
-%token <int> NUMBER
+%token <std::string> IDENTIFIER STRING NUMBER
 
 %left OR
 %left AND
@@ -125,9 +137,10 @@
 %type <bool> column_list
 %type <Schema> column_def_list
 %type <RelationAttribute> column_def
-%type <DataType> data_type
-%type <Value> value
-%type <std::vector<Value>> value_list
+%type <TypeId> data_type
+%type <Literal> literal
+%type <Operand> operand
+%type <std::vector<Literal>> value_list
 %type <std::unique_ptr<Condition>> condition
 %type <ComparisonOp> comparison_op
 
@@ -245,7 +258,7 @@ assignment_list:
     ;
 
 assignment:
-    column_name EQ value
+    column_name EQ literal
     ;
 
 column_def_list:
@@ -268,12 +281,18 @@ column_def:
     ;
 
 data_type:
-    INTEGER     { $$ = DataType::INTEGER; }
-    | TEXT      { $$ = DataType::TEXT; }
+    IDENTIFIER {
+        auto type = TypeFromName($1);
+        if (!type) {
+            error("unknown type " + $1);
+            YYERROR;
+        }
+        $$ = *type;
+    }
     ;
 
 condition:
-    value comparison_op value {
+    operand comparison_op operand {
         auto cond = std::make_unique<Condition>();
         Comparison cmp;
         cmp.left = $1;
@@ -315,19 +334,23 @@ comparison_op:
     ;
 
 value_list:
-    value {
-        $$ = std::vector<Value>{$1};
+    literal {
+        $$ = std::vector<Literal>{$1};
     }
-    | value_list COMMA value {
+    | value_list COMMA literal {
         $1.push_back($3);
         $$ = $1;
     }
     ;
 
-value:
-    NUMBER      { $$ = Value{static_cast<std::int32_t>($1)}; }
-    | STRING    { $$ = Value{$1}; }
-    | IDENTIFIER { $$ = Value{$1}; }
+literal:
+    NUMBER      { $$ = Literal{$1}; }
+    | STRING    { $$ = Literal{$1}; }
+    ;
+
+operand:
+    literal     { $$ = Operand{$1}; }
+    | IDENTIFIER { $$ = Operand{ColumnRef{$1}}; }
     ;
 
 column_name:

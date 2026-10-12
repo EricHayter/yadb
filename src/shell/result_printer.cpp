@@ -82,15 +82,7 @@ std::string ResultPrinter::value_to_string(
     size_t col_idx)
 {
     RowReader reader(row_bytes, schema);
-    const auto& attr = schema[col_idx];
-
-    if (attr.type == DataType::INTEGER) {
-        return std::to_string(reader.Get<DataType::INTEGER>(col_idx));
-    } else if (attr.type == DataType::TEXT) {
-        return reader.Get<DataType::TEXT>(col_idx);
-    }
-
-    return "???"; // Unknown type
+    return ToString(reader.GetValue(col_idx));
 }
 
 std::vector<size_t> ResultPrinter::calculate_column_widths(

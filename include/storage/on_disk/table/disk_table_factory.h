@@ -42,8 +42,8 @@ class DiskTableFactory : public ITableFactory {
     class MappingManager {
         public:
         static inline const Schema MAPPING_SCHEMA = {
-            { "file_name", DataType::TEXT },
-            { "file_id",   DataType::INTEGER },
+            { "file_name", type_id<String> },
+            { "file_id",   type_id<U32> },
         };
 
         MappingManager(TableHandle mapping_table);

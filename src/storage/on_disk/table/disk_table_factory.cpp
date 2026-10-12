@@ -104,8 +104,8 @@ std::optional<file_id_t> DiskTableFactory::MappingManager::GetFileId(std::string
 {
     for (auto [row_id, data] : mapping_table_m) {
         RowReader rr(data, MAPPING_SCHEMA);
-        if (rr.Get<DataType::TEXT>(0) == table_name)
-            return static_cast<file_id_t>(rr.Get<DataType::INTEGER>(1));
+        if (rr.Get<String>(0).value == table_name)
+            return rr.Get<U32>(1).value;
     }
     return {};
 }
@@ -113,8 +113,8 @@ std::optional<file_id_t> DiskTableFactory::MappingManager::GetFileId(std::string
 bool DiskTableFactory::MappingManager::SaveMapping(std::string_view table_name, file_id_t file_id)
 {
     mapping_table_m.insert_row({
-        Value(std::string(table_name)),
-        Value(static_cast<std::int32_t>(file_id)),
+        Value(String { std::string(table_name) }),
+        Value(U32 { file_id }),
     });
     return true;
 }
@@ -124,7 +124,7 @@ bool DiskTableFactory::MappingManager::DeleteMapping(std::string_view table_name
     std::optional<row_id_t> found_rid;
     for (auto [row_id, data] : mapping_table_m) {
         RowReader rr(data, MAPPING_SCHEMA);
-        if (rr.Get<DataType::TEXT>(0) == table_name) {
+        if (rr.Get<String>(0).value == table_name) {
             found_rid = row_id;
             break;
         }
